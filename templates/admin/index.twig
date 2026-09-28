@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ultima Vox CMS</title>
+    <link rel="stylesheet" href="/assets/admin.css">
+</head>
+<body class="admin-shell">
+    <aside class="admin-shell__sidebar">
+        <div class="admin-brand">ULTIMA VOX</div>
+        <nav class="admin-nav" aria-label="Основная навигация">
+            <a class="admin-nav__item admin-nav__item--active" href="/admin">Обзор</a>
+            <a class="admin-nav__item" href="/admin/structure">Структура</a>
+            <a class="admin-nav__item" href="/admin/infosystems">Инфосистемы</a>
+            <a class="admin-nav__item" href="/admin/layouts">Макеты</a>
+        </nav>
+    </aside>
+
+    <main class="admin-shell__main">
+        <header class="admin-header">
+            <h1 class="admin-header__title">Панель управления</h1>
+        </header>
+
+        <section class="admin-panel">
+            <h2 class="admin-panel__title">Система готова к настройке</h2>
+            <p class="admin-panel__text">Production Core подключён. Следующий слой — авторизация и CRUD-модули.</p>
+        </section>
+
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    </main>
+</body>
+</html>
