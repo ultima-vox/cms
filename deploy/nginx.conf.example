@@ -1,0 +1,31 @@
+server {
+    listen 80;
+    server_name example.com;
+
+    root /var/www/ultima-vox-cms/public;
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param HTTP_PROXY "";
+        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
+        fastcgi_read_timeout 60s;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+
+    location ~* \.(?:css|js|jpg|jpeg|gif|png|webp|avif|svg|ico|woff2)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    client_max_body_size 32m;
+}
