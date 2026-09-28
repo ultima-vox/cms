@@ -19,15 +19,21 @@
 
     <main class="admin-shell__main">
         <header class="admin-header">
-            <h1 class="admin-header__title">Панель управления</h1>
+            <div>
+                <h1 class="admin-header__title">Панель управления</h1>
+                <div class="admin-header__user">{{ user.display_name }} · {{ user.email }}</div>
+            </div>
+
+            <form action="/admin/logout" method="post">
+                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                <button class="admin-button admin-button--secondary" type="submit">Выйти</button>
+            </form>
         </header>
 
         <section class="admin-panel">
-            <h2 class="admin-panel__title">Система готова к настройке</h2>
-            <p class="admin-panel__text">Production Core подключён. Следующий слой — авторизация и CRUD-модули.</p>
+            <h2 class="admin-panel__title">Production Core</h2>
+            <p class="admin-panel__text">Ядро, маршрутизация, PostgreSQL, Twig, авторизация и RBAC подключены.</p>
         </section>
-
-        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
     </main>
 </body>
 </html>
