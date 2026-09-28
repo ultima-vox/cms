@@ -29,7 +29,8 @@ php bin/console health
 Create the first administrator without putting the password into shell history:
 
 ```bash
-export CMS_ADMIN_PASSWORD='replace-with-a-strong-password'
+read -rsp 'Admin password: ' CMS_ADMIN_PASSWORD; echo
+export CMS_ADMIN_PASSWORD
 php bin/console user:create admin@example.com 'Administrator'
 unset CMS_ADMIN_PASSWORD
 ```
