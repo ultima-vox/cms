@@ -12,8 +12,8 @@
     <main>
         <h1>{{ node.title ?: node.name }}</h1>
 
-        {% if node.content %}
-            <div class="content">{{ node.content|raw }}</div>
+        {% if content %}
+            <div class="content">{{ content|raw }}</div>
         {% endif %}
 
         {% if items is not empty %}

@@ -46,6 +46,7 @@ final class NodeController
 
         return Response::html($this->view->render($template, [
             'node' => $node,
+            'content' => (string) ($node['content'] ?? ''),
             'items' => $items,
         ]));
     }

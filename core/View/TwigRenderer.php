@@ -14,7 +14,18 @@ final class TwigRenderer
 
     public function __construct(string $rootPath)
     {
-        $loader = new FilesystemLoader($rootPath . '/templates');
+        $runtimeTemplates = $rootPath . '/storage/templates';
+        $packagedTemplates = $rootPath . '/templates';
+
+        if (!is_dir($runtimeTemplates)) {
+            @mkdir($runtimeTemplates, 0775, true);
+        }
+
+        $paths = is_dir($runtimeTemplates)
+            ? [$runtimeTemplates, $packagedTemplates]
+            : [$packagedTemplates];
+
+        $loader = new FilesystemLoader($paths);
 
         $cacheDirectory = $rootPath . '/storage/cache/twig';
         $cache = Config::environment() === 'production' ? $cacheDirectory : false;

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ layout.id ? 'Редактирование макета' : 'Новый макет' }} — Ultima Vox CMS</title>
+    <link rel="stylesheet" href="/assets/admin.css">
+    <link rel="stylesheet" href="/assets/layouts.css">
+</head>
+<body class="admin-shell">
+    <aside class="admin-shell__sidebar">
+        <div class="admin-brand">ULTIMA VOX</div>
+        <nav class="admin-nav" aria-label="Основная навигация">
+            <a class="admin-nav__item" href="/admin">Обзор</a>
+            <a class="admin-nav__item" href="/admin/structure">Структура</a>
+            <a class="admin-nav__item" href="/admin/infosystems">Инфосистемы</a>
+            <a class="admin-nav__item admin-nav__item--active" href="/admin/layouts">Макеты</a>
+        </nav>
+    </aside>
+
+    <main class="admin-shell__main">
+        <header class="admin-page-header">
+            <div>
+                <p class="admin-eyebrow">Layout</p>
+                <h1 class="admin-header__title">{{ layout.id ? layout.name : 'Новый макет' }}</h1>
+                {% if layout.template_path %}<p class="admin-page-header__description"><code>{{ layout.template_path }}</code></p>{% endif %}
+            </div>
+            <a class="admin-button" href="/admin/layouts">К макетам</a>
+        </header>
+
+        {% if saved %}<div class="admin-notice">Макет сохранён.</div>{% endif %}
+        {% if error %}<div class="admin-notice admin-notice--error">{{ error }}</div>{% endif %}
+
+        <form class="admin-form" method="post" action="{{ layout.id ? '/admin/layouts/' ~ layout.id : '/admin/layouts' }}">
+            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+            <section class="admin-panel">
+                <h2 class="admin-panel__title">Основное</h2>
+                <div class="admin-form__grid">
+                    <label class="admin-field">
+                        <span class="admin-field__label">Название</span>
+                        <input class="admin-input" name="name" maxlength="255" required value="{{ layout.name }}">
+                    </label>
+                    <label class="admin-field">
+                        <span class="admin-field__label">Код макета</span>
+                        <input class="admin-input" name="code" maxlength="80" pattern="[a-z0-9][a-z0-9_-]*" required value="{{ layout.code }}" {% if layout.id %}readonly{% endif %}>
+                        <span class="admin-field__hint">Логический путь: <code>layouts/&lt;code&gt;.twig</code>. После создания код не меняется.</span>
+                    </label>
+                    <label class="admin-field admin-field--wide">
+                        <span class="admin-field__label">Описание</span>
+                        <textarea class="admin-textarea admin-textarea--small" name="description">{{ layout.description }}</textarea>
+                    </label>
+                </div>
+            </section>
+
+            <section class="admin-panel">
+                <div class="layout-editor__header">
+                    <div>
+                        <h2 class="admin-panel__title">Twig-шаблон</h2>
+                        <p class="admin-field__hint">Доступны <code>node</code>, <code>content</code> и <code>items</code>. Синтаксис проверяется до записи.</p>
+                    </div>
+                    {% if layout.is_system %}
+                        <span class="admin-badge">{{ layout.has_override ? 'runtime override' : 'штатная версия' }}</span>
+                    {% endif %}
+                </div>
+                <textarea class="admin-textarea layout-editor" name="source" spellcheck="false" required>{{ layout.source }}</textarea>
+                <p class="admin-field__hint">Редакторские изменения сохраняются в <code>storage/templates/layouts</code>; код CMS остаётся read-only.</p>
+            </section>
+
+            <div class="admin-actions">
+                <button class="admin-button admin-button--primary" type="submit">Сохранить</button>
+                <a class="admin-button" href="/admin/layouts">Отмена</a>
+            </div>
+        </form>
+
+        {% if layout.id %}
+            <section class="layout-usage">
+                <strong>Использование:</strong> {{ layout.node_count }} узл.
+                {% if layout.is_system %}<span class="admin-badge">системный макет</span>{% endif %}
+            </section>
+        {% endif %}
+
+        {% if layout.id and layout.is_system and layout.has_override %}
+            <form class="admin-reset-zone" method="post" action="/admin/layouts/{{ layout.id }}/reset" onsubmit="return confirm('Вернуть штатную версию макета из поставки CMS?');">
+                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                <div>
+                    <strong>Вернуть штатный шаблон</strong>
+                    <p>Runtime-override будет удалён, после чего CMS снова использует файл из поставки.</p>
+                </div>
+                <button class="admin-button" type="submit">Вернуть штатный</button>
+            </form>
+        {% endif %}
+
+        {% if layout.id and not layout.is_system %}
+            <form class="admin-danger-zone" method="post" action="/admin/layouts/{{ layout.id }}/delete" onsubmit="return confirm('Удалить макет и его Twig-файл?');">
+                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                <div>
+                    <strong>Удаление макета</strong>
+                    <p>{% if layout.node_count > 0 %}Сначала назначьте другой макет всем использующим его узлам.{% else %}Макет и его runtime Twig-файл будут удалены.{% endif %}</p>
+                </div>
+                <button class="admin-button admin-button--danger" type="submit" {% if layout.node_count > 0 %}disabled{% endif %}>Удалить</button>
+            </form>
+        {% endif %}
+    </main>
+</body>
+</html>
