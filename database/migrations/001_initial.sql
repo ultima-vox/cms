@@ -1,22 +1,18 @@
-BEGIN;
-
 CREATE TABLE layouts (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    template_path VARCHAR(255) NOT NULL,
+    template_path VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT layouts_template_path_unique UNIQUE (template_path)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE infosystems (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    code VARCHAR(120) NOT NULL,
+    code VARCHAR(120) NOT NULL UNIQUE,
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT infosystems_code_unique UNIQUE (code)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE nodes (
@@ -25,19 +21,17 @@ CREATE TABLE nodes (
     layout_id BIGINT REFERENCES layouts(id) ON DELETE SET NULL,
     infosystem_id BIGINT REFERENCES infosystems(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
-    path VARCHAR(1024) NOT NULL,
+    path VARCHAR(1024) NOT NULL UNIQUE,
     title VARCHAR(255),
     content TEXT NOT NULL DEFAULT '',
     meta_description VARCHAR(320),
-    status VARCHAR(20) NOT NULL DEFAULT 'draft',
+    status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     sorting INTEGER NOT NULL DEFAULT 0,
     publish_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT nodes_path_unique UNIQUE (path),
-    CONSTRAINT nodes_status_check CHECK (status IN ('draft', 'published', 'archived')),
-    CONSTRAINT nodes_path_check CHECK (left(path, 1) = '/')
+    CHECK (left(path, 1) = '/')
 );
 
 CREATE TABLE infosystem_items (
@@ -47,42 +41,37 @@ CREATE TABLE infosystem_items (
     is_group BOOLEAN NOT NULL DEFAULT FALSE,
     name VARCHAR(255) NOT NULL,
     path VARCHAR(1024) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'draft',
+    status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     sorting INTEGER NOT NULL DEFAULT 0,
-    properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+    properties JSONB NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(properties) = 'object'),
     publish_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT infosystem_items_path_unique UNIQUE (infosystem_id, path),
-    CONSTRAINT infosystem_items_status_check CHECK (status IN ('draft', 'published', 'archived')),
-    CONSTRAINT infosystem_items_properties_object CHECK (jsonb_typeof(properties) = 'object')
+    UNIQUE (infosystem_id, path)
 );
 
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
-    email VARCHAR(320) NOT NULL,
+    email VARCHAR(320) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     display_name VARCHAR(255) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT users_email_unique UNIQUE (email)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE roles (
     id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(100) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    CONSTRAINT roles_code_unique UNIQUE (code)
+    code VARCHAR(100) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE permissions (
     id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(150) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    CONSTRAINT permissions_code_unique UNIQUE (code)
+    code VARCHAR(150) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE user_roles (
@@ -120,5 +109,3 @@ INSERT INTO roles (code, name) VALUES
     ('superadmin', 'Super Administrator'),
     ('admin', 'Administrator'),
     ('editor', 'Content Editor');
-
-COMMIT;

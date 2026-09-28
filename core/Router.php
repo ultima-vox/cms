@@ -4,89 +4,85 @@ declare(strict_types=1);
 
 namespace Core;
 
+use Core\Controller\AdminController;
+use Core\Controller\AuthController;
+use Core\Controller\HealthController;
+use Core\Controller\NodeController;
+use Core\Http\Request;
+use Core\Http\Response;
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
 use RuntimeException;
 
-use function FastRoute\simpleDispatcher;
+use function FastRoute\cachedDispatcher;
 
 final class Router
 {
-    private function __construct()
-    {
+    public function __construct(
+        private readonly AuthController $authController,
+        private readonly AdminController $adminController,
+        private readonly HealthController $healthController,
+        private readonly NodeController $nodeController,
+        private readonly string $rootPath,
+    ) {
     }
 
-    public static function dispatch(string $httpMethod, string $uri): void
+    public function dispatch(Request $request): Response
     {
-        $dispatcher = simpleDispatcher(
+        $dispatcher = cachedDispatcher(
             static function (RouteCollector $router): void {
-                $router->addRoute('GET', '/admin', 'AdminController@index');
-                $router->addRoute('GET', '/', 'NodeController@resolve');
-                $router->addRoute('GET', '/{path:.+}', 'NodeController@resolve');
-            }
+                $router->addRoute('GET', '/health', 'health.index');
+                $router->addRoute('GET', '/admin/login', 'auth.form');
+                $router->addRoute('POST', '/admin/login', 'auth.login');
+                $router->addRoute('POST', '/admin/logout', 'auth.logout');
+                $router->addRoute('GET', '/admin', 'admin.index');
+                $router->addRoute('GET', '/', 'node.resolve');
+                $router->addRoute('GET', '/{path:.+}', 'node.resolve');
+            },
+            [
+                'cacheFile' => $this->rootPath . '/storage/cache/routes.php',
+                'cacheDisabled' => Config::environment() !== 'production',
+            ],
         );
 
-        $path = parse_url($uri, PHP_URL_PATH);
-        $path = is_string($path) && $path !== '' ? $path : '/';
+        $routeInfo = $dispatcher->dispatch($request->method, $request->path);
 
-        $routeInfo = $dispatcher->dispatch($httpMethod, $path);
-
-        switch ($routeInfo[0]) {
-            case Dispatcher::NOT_FOUND:
-                http_response_code(404);
-                echo '404 Not Found';
-                return;
-
-            case Dispatcher::METHOD_NOT_ALLOWED:
-                http_response_code(405);
-                header('Allow: ' . implode(', ', $routeInfo[1]));
-                echo '405 Method Not Allowed';
-                return;
-
-            case Dispatcher::FOUND:
-                $handler = $routeInfo[1];
-                $variables = $routeInfo[2] ?? [];
-
-                if (!is_string($handler) || !str_contains($handler, '@')) {
-                    throw new RuntimeException('Некорректный обработчик маршрута.');
-                }
-
-                [$controller, $method] = explode('@', $handler, 2);
-
-                self::invokeController($controller, $method, $variables);
-                return;
+        if ($routeInfo[0] === Dispatcher::NOT_FOUND) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
         }
+
+        if ($routeInfo[0] === Dispatcher::METHOD_NOT_ALLOWED) {
+            return Response::html('<h1>405 Method Not Allowed</h1>', 405)
+                ->withHeader('Allow', implode(', ', $routeInfo[1]));
+        }
+
+        $routeId = $routeInfo[1];
+        $variables = $routeInfo[2] ?? [];
+
+        if (!is_string($routeId)) {
+            throw new RuntimeException('Маршрут содержит некорректный идентификатор обработчика.');
+        }
+
+        $handler = $this->resolveHandler($routeId);
+        $response = $handler($request, $variables);
+
+        if (!$response instanceof Response) {
+            throw new RuntimeException('Контроллер должен вернуть Core\\Http\\Response.');
+        }
+
+        return $response;
     }
 
-    /**
-     * @param array<string, string> $variables
-     */
-    private static function invokeController(
-        string $controller,
-        string $method,
-        array $variables,
-    ): void {
-        $class = str_contains($controller, '\\')
-            ? $controller
-            : 'Core\\Controller\\' . $controller;
-
-        if (!class_exists($class)) {
-            throw new RuntimeException(sprintf(
-                'Контроллер %s не найден.',
-                $class,
-            ));
-        }
-
-        $instance = new $class();
-
-        if (!is_callable([$instance, $method])) {
-            throw new RuntimeException(sprintf(
-                'Метод %s::%s() не найден или недоступен.',
-                $class,
-                $method,
-            ));
-        }
-
-        $instance->{$method}($variables);
+    private function resolveHandler(string $routeId): callable
+    {
+        return match ($routeId) {
+            'health.index' => [$this->healthController, 'index'],
+            'auth.form' => [$this->authController, 'form'],
+            'auth.login' => [$this->authController, 'login'],
+            'auth.logout' => [$this->authController, 'logout'],
+            'admin.index' => [$this->adminController, 'index'],
+            'node.resolve' => [$this->nodeController, 'resolve'],
+            default => throw new RuntimeException(sprintf('Неизвестный route ID: %s.', $routeId)),
+        };
     }
 }

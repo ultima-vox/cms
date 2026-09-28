@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**", "fix/**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cms_db
+          POSTGRES_USER: cms
+          POSTGRES_PASSWORD: cms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cms -d cms_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: testing
+      APP_DEBUG: true
+      APP_URL: http://127.0.0.1:8080
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: cms_db
+      DB_USER: cms
+      DB_PASS: cms
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_pgsql
+          coverage: none
+
+      - name: Validate Composer metadata
+        run: composer validate --strict --no-check-lock
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHP syntax check
+        run: find core public bin -type f \( -name '*.php' -o -name 'console' \) -print0 | xargs -0 -n1 php -l
+
+      - name: Apply migrations
+        run: php bin/console migrate
+
+      - name: Database health check
+        run: php bin/console health
+
+      - name: Seed smoke-test page
+        run: |
+          psql -h 127.0.0.1 -U cms -d cms_db <<'SQL'
+          INSERT INTO layouts (name, template_path) VALUES ('Main', 'layouts/main.twig');
+          INSERT INTO nodes (name, path, title, content, layout_id, status)
+          VALUES ('Home', '/', 'Ultima Vox CMS', '<p>Production Core</p>', 1, 'published');
+          SQL
+        env:
+          PGPASSWORD: cms
+
+      - name: HTTP smoke test
+        run: |
+          php -S 127.0.0.1:8080 -t public public/index.php > /tmp/cms-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
+          sleep 1
+          curl --fail --silent http://127.0.0.1:8080/health | grep '"status":"ok"'
+          curl --fail --silent http://127.0.0.1:8080/ | grep 'Ultima Vox CMS'

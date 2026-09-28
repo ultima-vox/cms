@@ -1,0 +1,11 @@
+/.env
+/vendor/
+/storage/cache/*
+/storage/logs/*
+!/storage/cache/.gitkeep
+!/storage/logs/.gitkeep
+/.phpunit.cache/
+/.phpstan.cache/
+/.idea/
+/.vscode/
+.DS_Store

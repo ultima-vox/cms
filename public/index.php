@@ -2,14 +2,16 @@
 
 declare(strict_types=1);
 
-use Core\Router;
+use Core\Application;
+use Core\ErrorHandler;
+use Core\Http\Request;
 use Dotenv\Dotenv;
 
-require dirname(__DIR__) . '/vendor/autoload.php';
+$rootPath = dirname(__DIR__);
 
-Dotenv::createImmutable(dirname(__DIR__))->safeLoad();
+require $rootPath . '/vendor/autoload.php';
 
-$httpMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$uri = $_SERVER['REQUEST_URI'] ?? '/';
+Dotenv::createImmutable($rootPath)->safeLoad();
+ErrorHandler::register();
 
-Router::dispatch($httpMethod, $uri);
+(new Application($rootPath))->run(Request::fromGlobals());
