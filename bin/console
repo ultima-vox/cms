@@ -33,7 +33,57 @@ switch ($command) {
         fwrite(STDOUT, "OK\n");
         exit(0);
 
+    case 'user:create':
+        $email = trim((string) ($argv[2] ?? ''));
+        $displayName = trim((string) ($argv[3] ?? ''));
+        $password = getenv('CMS_ADMIN_PASSWORD');
+
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false || $displayName === '') {
+            fwrite(STDERR, "Usage: CMS_ADMIN_PASSWORD='strong-password' php bin/console user:create admin@example.com 'Administrator'\n");
+            exit(1);
+        }
+
+        if (!is_string($password) || strlen($password) < 12) {
+            fwrite(STDERR, "CMS_ADMIN_PASSWORD must contain at least 12 characters.\n");
+            exit(1);
+        }
+
+        $db = Database::connection();
+        $db->beginTransaction();
+
+        try {
+            $statement = $db->prepare(
+                'INSERT INTO users (email, password_hash, display_name) VALUES (:email, :password_hash, :display_name) RETURNING id'
+            );
+            $statement->execute([
+                'email' => $email,
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                'display_name' => $displayName,
+            ]);
+            $userId = (int) $statement->fetchColumn();
+
+            $roleStatement = $db->prepare(
+                "INSERT INTO user_roles (user_id, role_id) SELECT :user_id, id FROM roles WHERE code = 'superadmin'"
+            );
+            $roleStatement->execute(['user_id' => $userId]);
+
+            if ($roleStatement->rowCount() !== 1) {
+                throw new RuntimeException('Role superadmin is missing. Run migrations first.');
+            }
+
+            $db->commit();
+            fwrite(STDOUT, sprintf("Created superadmin: %s\n", $email));
+            exit(0);
+        } catch (Throwable $exception) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+
+            fwrite(STDERR, $exception->getMessage() . "\n");
+            exit(1);
+        }
+
     default:
-        fwrite(STDOUT, "Ultima Vox CMS\n\nCommands:\n  migrate  Apply pending SQL migrations\n  health   Check database connectivity\n");
+        fwrite(STDOUT, "Ultima Vox CMS\n\nCommands:\n  migrate      Apply pending SQL migrations\n  health       Check database connectivity\n  user:create  Create the initial super administrator\n");
         exit($command === 'help' ? 0 : 1);
 }
