@@ -43,6 +43,7 @@ final class Application
                 new InfosystemRepository($db),
                 $view,
             ),
+            $this->rootPath,
         );
 
         $response = SecurityHeaders::apply($router->dispatch($request));
