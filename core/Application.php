@@ -7,11 +7,14 @@ namespace Core;
 use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
+use Core\Controller\LayoutController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
 use Core\Http\Request;
+use Core\Layout\LayoutTemplateService;
 use Core\Repository\AuditLogRepository;
 use Core\Repository\InfosystemRepository;
+use Core\Repository\LayoutRepository;
 use Core\Repository\LoginAttemptRepository;
 use Core\Repository\NodeRepository;
 use Core\Repository\StructureRepository;
@@ -36,6 +39,7 @@ final class Application
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
+        $audit = new AuditLogRepository($db);
 
         $router = new Router(
             new AuthController($auth, $view),
@@ -43,7 +47,14 @@ final class Application
             new StructureController(
                 $auth,
                 new StructureRepository($db),
-                new AuditLogRepository($db),
+                $audit,
+                $view,
+            ),
+            new LayoutController(
+                $auth,
+                new LayoutRepository($db),
+                new LayoutTemplateService($this->rootPath),
+                $audit,
                 $view,
             ),
             new HealthController($db),

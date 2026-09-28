@@ -7,6 +7,7 @@ namespace Core;
 use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
+use Core\Controller\LayoutController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
 use Core\Http\Request;
@@ -23,6 +24,7 @@ final class Router
         private readonly AuthController $authController,
         private readonly AdminController $adminController,
         private readonly StructureController $structureController,
+        private readonly LayoutController $layoutController,
         private readonly HealthController $healthController,
         private readonly NodeController $nodeController,
         private readonly string $rootPath,
@@ -31,6 +33,8 @@ final class Router
 
     public function dispatch(Request $request): Response
     {
+        $routeCacheVersion = (string) (filemtime(__FILE__) ?: 0);
+
         $dispatcher = cachedDispatcher(
             static function (RouteCollector $router): void {
                 $router->addRoute('GET', '/health', 'health.index');
@@ -47,11 +51,19 @@ final class Router
                 $router->addRoute('POST', '/admin/structure/{id:\\d+}', 'structure.update');
                 $router->addRoute('POST', '/admin/structure/{id:\\d+}/delete', 'structure.delete');
 
+                $router->addRoute('GET', '/admin/layouts', 'layout.index');
+                $router->addRoute('GET', '/admin/layouts/create', 'layout.create');
+                $router->addRoute('POST', '/admin/layouts', 'layout.store');
+                $router->addRoute('GET', '/admin/layouts/{id:\\d+}/edit', 'layout.edit');
+                $router->addRoute('POST', '/admin/layouts/{id:\\d+}', 'layout.update');
+                $router->addRoute('POST', '/admin/layouts/{id:\\d+}/reset', 'layout.reset');
+                $router->addRoute('POST', '/admin/layouts/{id:\\d+}/delete', 'layout.delete');
+
                 $router->addRoute('GET', '/', 'node.resolve');
                 $router->addRoute('GET', '/{path:.+}', 'node.resolve');
             },
             [
-                'cacheFile' => $this->rootPath . '/storage/cache/routes.php',
+                'cacheFile' => $this->rootPath . '/storage/cache/routes-' . $routeCacheVersion . '.php',
                 'cacheDisabled' => Config::environment() !== 'production',
             ],
         );
@@ -99,6 +111,13 @@ final class Router
             'structure.update' => [$this->structureController, 'update'],
             'structure.delete' => [$this->structureController, 'delete'],
             'structure.reorder' => [$this->structureController, 'reorder'],
+            'layout.index' => [$this->layoutController, 'index'],
+            'layout.create' => [$this->layoutController, 'createForm'],
+            'layout.store' => [$this->layoutController, 'store'],
+            'layout.edit' => [$this->layoutController, 'editForm'],
+            'layout.update' => [$this->layoutController, 'update'],
+            'layout.reset' => [$this->layoutController, 'reset'],
+            'layout.delete' => [$this->layoutController, 'delete'],
             'node.resolve' => [$this->nodeController, 'resolve'],
             default => throw new RuntimeException(sprintf('Неизвестный route ID: %s.', $routeId)),
         };

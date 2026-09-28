@@ -2,8 +2,10 @@
 /vendor/
 /storage/cache/*
 /storage/logs/*
+/storage/templates/layouts/*
 !/storage/cache/.gitkeep
 !/storage/logs/.gitkeep
+!/storage/templates/layouts/.gitkeep
 /.phpunit.cache/
 /.phpstan.cache/
 /.idea/
