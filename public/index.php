@@ -1,13 +1,6 @@
-load();
+safeLoad();
 
-echo "
+$(httpMethod =\)_SERVER['REQUEST_METHOD'];
+$(uri =\)_SERVER['REQUEST_URI'];
 
-
-# Чистота без компромиссов
-
-";
-echo "
-
-Система инициализирована. PHP " . PHP_VERSION . "
-
-";
+Router::dispatch($(httpMethod,$)uri);
