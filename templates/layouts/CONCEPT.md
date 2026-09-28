@@ -1,0 +1,1 @@
+Layouts are plain Twig templates. The CMS stores only metadata and the relative template path in PostgreSQL; template source remains in the repository filesystem for normal version control and deployment workflows.
