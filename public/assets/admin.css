@@ -6,6 +6,7 @@
     --uv-text: #f4f7fa;
     --uv-muted: #95a2b2;
     --uv-accent: #d5b56a;
+    --uv-danger: #e46f6f;
     --uv-radius: 12px;
     --uv-space-1: 8px;
     --uv-space-2: 16px;
@@ -22,6 +23,11 @@ body {
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: var(--uv-bg);
     color: var(--uv-text);
+}
+
+button,
+input {
+    font: inherit;
 }
 
 .admin-shell {
@@ -67,12 +73,26 @@ body {
 }
 
 .admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--uv-space-3);
     margin-bottom: var(--uv-space-4);
 }
 
 .admin-header__title,
-.admin-panel__title {
+.admin-panel__title,
+.admin-login__title {
     margin-top: 0;
+}
+
+.admin-header__title {
+    margin-bottom: var(--uv-space-1);
+}
+
+.admin-header__user,
+.admin-panel__text {
+    color: var(--uv-muted);
 }
 
 .admin-panel {
@@ -85,7 +105,76 @@ body {
 
 .admin-panel__text {
     margin-bottom: 0;
+}
+
+.admin-login {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: var(--uv-space-3);
+}
+
+.admin-login__panel {
+    width: min(100%, 420px);
+    padding: var(--uv-space-4);
+    border: 1px solid var(--uv-border);
+    border-radius: var(--uv-radius);
+    background: var(--uv-surface);
+}
+
+.admin-form {
+    display: grid;
+    gap: var(--uv-space-2);
+}
+
+.admin-field {
+    display: grid;
+    gap: var(--uv-space-1);
+}
+
+.admin-field__label {
     color: var(--uv-muted);
+    font-size: 14px;
+}
+
+.admin-field__input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--uv-border);
+    border-radius: 8px;
+    outline: none;
+    background: var(--uv-bg);
+    color: var(--uv-text);
+}
+
+.admin-field__input:focus {
+    border-color: var(--uv-accent);
+}
+
+.admin-button {
+    min-height: 42px;
+    padding: 10px 16px;
+    border: 1px solid var(--uv-accent);
+    border-radius: 8px;
+    background: var(--uv-accent);
+    color: #11161c;
+    cursor: pointer;
+    font-weight: 650;
+}
+
+.admin-button--secondary {
+    border-color: var(--uv-border);
+    background: transparent;
+    color: var(--uv-text);
+}
+
+.admin-alert {
+    margin-bottom: var(--uv-space-2);
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--uv-danger) 55%, var(--uv-border));
+    border-radius: 8px;
+    color: var(--uv-danger);
 }
 
 @media (max-width: 800px) {
@@ -100,5 +189,10 @@ body {
 
     .admin-shell__main {
         padding: var(--uv-space-3);
+    }
+
+    .admin-header {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }
