@@ -4,89 +4,58 @@ declare(strict_types=1);
 
 namespace Core;
 
+use Core\Controller\AdminController;
+use Core\Controller\HealthController;
+use Core\Controller\NodeController;
+use Core\Http\Request;
+use Core\Http\Response;
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
-use RuntimeException;
 
 use function FastRoute\simpleDispatcher;
 
 final class Router
 {
-    private function __construct()
-    {
+    public function __construct(
+        private readonly AdminController $adminController,
+        private readonly HealthController $healthController,
+        private readonly NodeController $nodeController,
+    ) {
     }
 
-    public static function dispatch(string $httpMethod, string $uri): void
+    public function dispatch(Request $request): Response
     {
-        $dispatcher = simpleDispatcher(
-            static function (RouteCollector $router): void {
-                $router->addRoute('GET', '/admin', 'AdminController@index');
-                $router->addRoute('GET', '/', 'NodeController@resolve');
-                $router->addRoute('GET', '/{path:.+}', 'NodeController@resolve');
-            }
-        );
+        $dispatcher = simpleDispatcher(function (RouteCollector $router): void {
+            $router->addRoute('GET', '/health', [$this->healthController, 'index']);
+            $router->addRoute('GET', '/admin', [$this->adminController, 'index']);
+            $router->addRoute('GET', '/', [$this->nodeController, 'resolve']);
+            $router->addRoute('GET', '/{path:.+}', [$this->nodeController, 'resolve']);
+        });
 
-        $path = parse_url($uri, PHP_URL_PATH);
-        $path = is_string($path) && $path !== '' ? $path : '/';
+        $routeInfo = $dispatcher->dispatch($request->method, $request->path);
 
-        $routeInfo = $dispatcher->dispatch($httpMethod, $path);
-
-        switch ($routeInfo[0]) {
-            case Dispatcher::NOT_FOUND:
-                http_response_code(404);
-                echo '404 Not Found';
-                return;
-
-            case Dispatcher::METHOD_NOT_ALLOWED:
-                http_response_code(405);
-                header('Allow: ' . implode(', ', $routeInfo[1]));
-                echo '405 Method Not Allowed';
-                return;
-
-            case Dispatcher::FOUND:
-                $handler = $routeInfo[1];
-                $variables = $routeInfo[2] ?? [];
-
-                if (!is_string($handler) || !str_contains($handler, '@')) {
-                    throw new RuntimeException('Некорректный обработчик маршрута.');
-                }
-
-                [$controller, $method] = explode('@', $handler, 2);
-
-                self::invokeController($controller, $method, $variables);
-                return;
-        }
-    }
-
-    /**
-     * @param array<string, string> $variables
-     */
-    private static function invokeController(
-        string $controller,
-        string $method,
-        array $variables,
-    ): void {
-        $class = str_contains($controller, '\\')
-            ? $controller
-            : 'Core\\Controller\\' . $controller;
-
-        if (!class_exists($class)) {
-            throw new RuntimeException(sprintf(
-                'Контроллер %s не найден.',
-                $class,
-            ));
+        if ($routeInfo[0] === Dispatcher::NOT_FOUND) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
         }
 
-        $instance = new $class();
-
-        if (!is_callable([$instance, $method])) {
-            throw new RuntimeException(sprintf(
-                'Метод %s::%s() не найден или недоступен.',
-                $class,
-                $method,
-            ));
+        if ($routeInfo[0] === Dispatcher::METHOD_NOT_ALLOWED) {
+            return Response::html('<h1>405 Method Not Allowed</h1>', 405)
+                ->withHeader('Allow', implode(', ', $routeInfo[1]));
         }
 
-        $instance->{$method}($variables);
+        $handler = $routeInfo[1];
+        $variables = $routeInfo[2] ?? [];
+
+        if (!is_callable($handler)) {
+            throw new \RuntimeException('Маршрут содержит некорректный обработчик.');
+        }
+
+        $response = $handler($request, $variables);
+
+        if (!$response instanceof Response) {
+            throw new \RuntimeException('Контроллер должен вернуть Core\\Http\\Response.');
+        }
+
+        return $response;
     }
 }
