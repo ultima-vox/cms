@@ -1,5 +1,3 @@
-BEGIN;
-
 CREATE TABLE layouts (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -111,5 +109,3 @@ INSERT INTO roles (code, name) VALUES
     ('superadmin', 'Super Administrator'),
     ('admin', 'Administrator'),
     ('editor', 'Content Editor');
-
-COMMIT;
