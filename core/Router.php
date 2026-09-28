@@ -8,6 +8,7 @@ use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
 use Core\Controller\NodeController;
+use Core\Controller\StructureController;
 use Core\Http\Request;
 use Core\Http\Response;
 use FastRoute\Dispatcher;
@@ -21,6 +22,7 @@ final class Router
     public function __construct(
         private readonly AuthController $authController,
         private readonly AdminController $adminController,
+        private readonly StructureController $structureController,
         private readonly HealthController $healthController,
         private readonly NodeController $nodeController,
         private readonly string $rootPath,
@@ -36,6 +38,15 @@ final class Router
                 $router->addRoute('POST', '/admin/login', 'auth.login');
                 $router->addRoute('POST', '/admin/logout', 'auth.logout');
                 $router->addRoute('GET', '/admin', 'admin.index');
+
+                $router->addRoute('GET', '/admin/structure', 'structure.index');
+                $router->addRoute('GET', '/admin/structure/create', 'structure.create');
+                $router->addRoute('POST', '/admin/structure', 'structure.store');
+                $router->addRoute('POST', '/admin/structure/reorder', 'structure.reorder');
+                $router->addRoute('GET', '/admin/structure/{id:\\d+}/edit', 'structure.edit');
+                $router->addRoute('POST', '/admin/structure/{id:\\d+}', 'structure.update');
+                $router->addRoute('POST', '/admin/structure/{id:\\d+}/delete', 'structure.delete');
+
                 $router->addRoute('GET', '/', 'node.resolve');
                 $router->addRoute('GET', '/{path:.+}', 'node.resolve');
             },
@@ -81,6 +92,13 @@ final class Router
             'auth.login' => [$this->authController, 'login'],
             'auth.logout' => [$this->authController, 'logout'],
             'admin.index' => [$this->adminController, 'index'],
+            'structure.index' => [$this->structureController, 'index'],
+            'structure.create' => [$this->structureController, 'createForm'],
+            'structure.store' => [$this->structureController, 'store'],
+            'structure.edit' => [$this->structureController, 'editForm'],
+            'structure.update' => [$this->structureController, 'update'],
+            'structure.delete' => [$this->structureController, 'delete'],
+            'structure.reorder' => [$this->structureController, 'reorder'],
             'node.resolve' => [$this->nodeController, 'resolve'],
             default => throw new RuntimeException(sprintf('Неизвестный route ID: %s.', $routeId)),
         };
