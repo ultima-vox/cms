@@ -4,18 +4,24 @@ declare(strict_types=1);
 
 namespace Core\Controller;
 
+use Core\Http\Request;
+use Core\Http\Response;
+use Core\Security\Csrf;
+use Core\View\TwigRenderer;
+
 final class AdminController
 {
-    /**
-     * @param array<string, string> $variables
-     */
-    public function index(array $variables = []): void
+    public function __construct(private readonly TwigRenderer $view)
     {
-        unset($variables);
+    }
 
-        http_response_code(200);
-        header('Content-Type: text/plain; charset=UTF-8');
+    /** @param array<string, string> $variables */
+    public function index(Request $request, array $variables = []): Response
+    {
+        unset($request, $variables);
 
-        echo 'Admin area';
+        return Response::html($this->view->render('admin/index.twig', [
+            'csrf_token' => Csrf::token(),
+        ]));
     }
 }
