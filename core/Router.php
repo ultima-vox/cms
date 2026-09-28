@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Core;
 
 use Core\Controller\AdminController;
+use Core\Controller\AuthController;
 use Core\Controller\HealthController;
 use Core\Controller\NodeController;
 use Core\Http\Request;
@@ -17,6 +18,7 @@ use function FastRoute\simpleDispatcher;
 final class Router
 {
     public function __construct(
+        private readonly AuthController $authController,
         private readonly AdminController $adminController,
         private readonly HealthController $healthController,
         private readonly NodeController $nodeController,
@@ -27,6 +29,9 @@ final class Router
     {
         $dispatcher = simpleDispatcher(function (RouteCollector $router): void {
             $router->addRoute('GET', '/health', [$this->healthController, 'index']);
+            $router->addRoute('GET', '/admin/login', [$this->authController, 'form']);
+            $router->addRoute('POST', '/admin/login', [$this->authController, 'login']);
+            $router->addRoute('POST', '/admin/logout', [$this->authController, 'logout']);
             $router->addRoute('GET', '/admin', [$this->adminController, 'index']);
             $router->addRoute('GET', '/', [$this->nodeController, 'resolve']);
             $router->addRoute('GET', '/{path:.+}', [$this->nodeController, 'resolve']);
