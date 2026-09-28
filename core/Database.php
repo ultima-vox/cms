@@ -4,7 +4,7 @@
             ];
 
             try {
-                self::\(instance = new PDO(\)dsn, \(user,\)pass, $options);
+                self::$(instance = new PDO($)dsn, $(user,$)pass, $options);
             } catch (PDOException $e) {
                 // Прячем реальную ошибку БД в продакшене, оставляя ее в логах
                 throw new RuntimeException('Ошибка подключения к базе данных. Проверьте .env файл.');

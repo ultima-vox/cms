@@ -3,7 +3,7 @@
         'name' => 'ultima-vox/cms',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '1bcfe6b572053c58ed76574178a8953cbd3f4ea7',
+        'reference' => '22406d2bd91b33f9b2d11c35c7ba36d3e77c2927',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -85,7 +85,7 @@
         'ultima-vox/cms' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '1bcfe6b572053c58ed76574178a8953cbd3f4ea7',
+            'reference' => '22406d2bd91b33f9b2d11c35c7ba36d3e77c2927',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

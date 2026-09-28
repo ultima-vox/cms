@@ -1,9 +1,6 @@
+
 addRoute('GET', '/admin', 'AdminController@index');
-            
-            // 2. Главная страница сайта (корень)
             $r->addRoute('GET', '/', 'NodeController@resolve');
-            
-            // 3. Динамический маршрут для вложенных страниц (узлов)
             $r->addRoute('GET', '/{path:.+}', 'NodeController@resolve');
         });
 
@@ -14,34 +11,22 @@ addRoute('GET', '/admin', 'AdminController@index');
                 http_response_code(404);
                 echo "
 
-
-
 # 404 Not Found
-
 Узел не найден в структуре сайта.
-
 ";
 break;
 case Dispatcher::METHOD_NOT_ALLOWED:
 http_response_code(405);
 echo "
-
 # 405 Method Not Allowed
-
 ";
 break;
 case Dispatcher::FOUND:
 $handler =$routeInfo[1];
 $vars =$routeInfo[2] ?? [];
 
-
             [\(class,\)method] = explode('@', $handler);
             
-            echo "
-
-
-
-";
 echo "**Чистота без компромиссов.**
 
 
