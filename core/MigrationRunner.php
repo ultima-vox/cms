@@ -50,20 +50,35 @@ final class MigrationRunner
                     throw new RuntimeException(sprintf('Не удалось прочитать миграцию %s.', $name));
                 }
 
-                $this->db->exec($sql);
-
-                $statement = $this->db->prepare(
-                    'INSERT INTO schema_migrations (migration) VALUES (:migration)'
-                );
-                $statement->execute(['migration' => $name]);
+                $this->applyMigration($name, $sql);
                 $applied[] = $name;
             }
 
             return $applied;
-        } catch (Throwable $exception) {
-            throw $exception;
         } finally {
             $this->db->query("SELECT pg_advisory_unlock(hashtext('ultima_vox_cms_migrations'))");
+        }
+    }
+
+    private function applyMigration(string $name, string $sql): void
+    {
+        $this->db->beginTransaction();
+
+        try {
+            $this->db->exec($sql);
+
+            $statement = $this->db->prepare(
+                'INSERT INTO schema_migrations (migration) VALUES (:migration)'
+            );
+            $statement->execute(['migration' => $name]);
+
+            $this->db->commit();
+        } catch (Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+
+            throw $exception;
         }
     }
 
