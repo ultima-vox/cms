@@ -12,8 +12,9 @@ use Core\Http\Request;
 use Core\Http\Response;
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
+use RuntimeException;
 
-use function FastRoute\simpleDispatcher;
+use function FastRoute\cachedDispatcher;
 
 final class Router
 {
@@ -22,20 +23,27 @@ final class Router
         private readonly AdminController $adminController,
         private readonly HealthController $healthController,
         private readonly NodeController $nodeController,
+        private readonly string $rootPath,
     ) {
     }
 
     public function dispatch(Request $request): Response
     {
-        $dispatcher = simpleDispatcher(function (RouteCollector $router): void {
-            $router->addRoute('GET', '/health', [$this->healthController, 'index']);
-            $router->addRoute('GET', '/admin/login', [$this->authController, 'form']);
-            $router->addRoute('POST', '/admin/login', [$this->authController, 'login']);
-            $router->addRoute('POST', '/admin/logout', [$this->authController, 'logout']);
-            $router->addRoute('GET', '/admin', [$this->adminController, 'index']);
-            $router->addRoute('GET', '/', [$this->nodeController, 'resolve']);
-            $router->addRoute('GET', '/{path:.+}', [$this->nodeController, 'resolve']);
-        });
+        $dispatcher = cachedDispatcher(
+            static function (RouteCollector $router): void {
+                $router->addRoute('GET', '/health', 'health.index');
+                $router->addRoute('GET', '/admin/login', 'auth.form');
+                $router->addRoute('POST', '/admin/login', 'auth.login');
+                $router->addRoute('POST', '/admin/logout', 'auth.logout');
+                $router->addRoute('GET', '/admin', 'admin.index');
+                $router->addRoute('GET', '/', 'node.resolve');
+                $router->addRoute('GET', '/{path:.+}', 'node.resolve');
+            },
+            [
+                'cacheFile' => $this->rootPath . '/storage/cache/routes.php',
+                'cacheDisabled' => Config::environment() !== 'production',
+            ],
+        );
 
         $routeInfo = $dispatcher->dispatch($request->method, $request->path);
 
@@ -48,19 +56,33 @@ final class Router
                 ->withHeader('Allow', implode(', ', $routeInfo[1]));
         }
 
-        $handler = $routeInfo[1];
+        $routeId = $routeInfo[1];
         $variables = $routeInfo[2] ?? [];
 
-        if (!is_callable($handler)) {
-            throw new \RuntimeException('Маршрут содержит некорректный обработчик.');
+        if (!is_string($routeId)) {
+            throw new RuntimeException('Маршрут содержит некорректный идентификатор обработчика.');
         }
 
+        $handler = $this->resolveHandler($routeId);
         $response = $handler($request, $variables);
 
         if (!$response instanceof Response) {
-            throw new \RuntimeException('Контроллер должен вернуть Core\\Http\\Response.');
+            throw new RuntimeException('Контроллер должен вернуть Core\\Http\\Response.');
         }
 
         return $response;
+    }
+
+    private function resolveHandler(string $routeId): callable
+    {
+        return match ($routeId) {
+            'health.index' => [$this->healthController, 'index'],
+            'auth.form' => [$this->authController, 'form'],
+            'auth.login' => [$this->authController, 'login'],
+            'auth.logout' => [$this->authController, 'logout'],
+            'admin.index' => [$this->adminController, 'index'],
+            'node.resolve' => [$this->nodeController, 'resolve'],
+            default => throw new RuntimeException(sprintf('Неизвестный route ID: %s.', $routeId)),
+        };
     }
 }
