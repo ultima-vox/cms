@@ -1,5 +1,3 @@
-BEGIN;
-
 CREATE TABLE login_attempts (
     id BIGSERIAL PRIMARY KEY,
     email VARCHAR(320) NOT NULL,
@@ -38,5 +36,3 @@ FROM roles r
 JOIN permissions p ON p.code IN ('admin.access', 'structure.manage', 'infosystems.manage')
 WHERE r.code = 'editor'
 ON CONFLICT DO NOTHING;
-
-COMMIT;
