@@ -6,6 +6,7 @@ namespace Core;
 
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
+use RuntimeException;
 
 use function FastRoute\simpleDispatcher;
 
@@ -47,7 +48,7 @@ final class Router
                 $variables = $routeInfo[2] ?? [];
 
                 if (!is_string($handler) || !str_contains($handler, '@')) {
-                    throw new \RuntimeException('Некорректный обработчик маршрута.');
+                    throw new RuntimeException('Некорректный обработчик маршрута.');
                 }
 
                 [$controller, $method] = explode('@', $handler, 2);
@@ -67,10 +68,10 @@ final class Router
     ): void {
         $class = str_contains($controller, '\\')
             ? $controller
-            : 'App\\Controller\\' . $controller;
+            : 'Core\\Controller\\' . $controller;
 
         if (!class_exists($class)) {
-            throw new \RuntimeException(sprintf(
+            throw new RuntimeException(sprintf(
                 'Контроллер %s не найден.',
                 $class,
             ));
@@ -79,7 +80,7 @@ final class Router
         $instance = new $class();
 
         if (!is_callable([$instance, $method])) {
-            throw new \RuntimeException(sprintf(
+            throw new RuntimeException(sprintf(
                 'Метод %s::%s() не найден или недоступен.',
                 $class,
                 $method,
