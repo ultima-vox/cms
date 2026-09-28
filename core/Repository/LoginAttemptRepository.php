@@ -8,8 +8,8 @@ use PDO;
 
 final class LoginAttemptRepository
 {
-    private const MAX_ATTEMPTS = 5;
-    private const WINDOW_MINUTES = 15;
+    private const MAX_IDENTITY_ATTEMPTS = 5;
+    private const MAX_IP_ATTEMPTS = 25;
 
     public function __construct(private readonly PDO $db)
     {
@@ -19,11 +19,20 @@ final class LoginAttemptRepository
     {
         $statement = $this->db->prepare(
             <<<'SQL'
-            SELECT COUNT(*)
-            FROM login_attempts
-            WHERE lower(email) = lower(:email)
-              AND ip_address = CAST(:ip_address AS inet)
-              AND attempted_at >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'
+            SELECT
+                (
+                    SELECT COUNT(*)
+                    FROM login_attempts
+                    WHERE lower(email) = lower(:email)
+                      AND ip_address = CAST(:ip_address AS inet)
+                      AND attempted_at >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'
+                ) AS identity_attempts,
+                (
+                    SELECT COUNT(*)
+                    FROM login_attempts
+                    WHERE ip_address = CAST(:ip_address AS inet)
+                      AND attempted_at >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'
+                ) AS ip_attempts
             SQL
         );
         $statement->execute([
@@ -31,7 +40,14 @@ final class LoginAttemptRepository
             'ip_address' => $ipAddress,
         ]);
 
-        return (int) $statement->fetchColumn() >= self::MAX_ATTEMPTS;
+        $counts = $statement->fetch();
+
+        if (!is_array($counts)) {
+            return false;
+        }
+
+        return (int) $counts['identity_attempts'] >= self::MAX_IDENTITY_ATTEMPTS
+            || (int) $counts['ip_attempts'] >= self::MAX_IP_ATTEMPTS;
     }
 
     public function recordFailure(string $email, string $ipAddress): void
