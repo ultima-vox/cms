@@ -2,6 +2,7 @@
     "name": "ultima-vox/cms",
     "description": "Lightweight, high-performance CMS (PHP 8.4 + PostgreSQL)",
     "type": "project",
+    "license": "proprietary",
     "require": {
         "php": ">=8.4",
         "ext-json": "*",
