@@ -8,10 +8,13 @@ use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
 use Core\Controller\NodeController;
+use Core\Controller\StructureController;
 use Core\Http\Request;
+use Core\Repository\AuditLogRepository;
 use Core\Repository\InfosystemRepository;
 use Core\Repository\LoginAttemptRepository;
 use Core\Repository\NodeRepository;
+use Core\Repository\StructureRepository;
 use Core\Repository\UserRepository;
 use Core\Security\AuthService;
 use Core\Security\SecurityHeaders;
@@ -37,6 +40,12 @@ final class Application
         $router = new Router(
             new AuthController($auth, $view),
             new AdminController($auth, $view),
+            new StructureController(
+                $auth,
+                new StructureRepository($db),
+                new AuditLogRepository($db),
+                $view,
+            ),
             new HealthController($db),
             new NodeController(
                 new NodeRepository($db),

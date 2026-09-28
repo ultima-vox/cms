@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ node.id ? 'Редактирование узла' : 'Новый узел' }} — Ultima Vox CMS</title>
+    <link rel="stylesheet" href="/assets/admin.css">
+    <link rel="stylesheet" href="/assets/structure.css">
+</head>
+<body class="admin-shell">
+    <aside class="admin-shell__sidebar">
+        <div class="admin-brand">ULTIMA VOX</div>
+        <nav class="admin-nav" aria-label="Основная навигация">
+            <a class="admin-nav__item" href="/admin">Обзор</a>
+            <a class="admin-nav__item admin-nav__item--active" href="/admin/structure">Структура</a>
+            <a class="admin-nav__item" href="/admin/infosystems">Инфосистемы</a>
+            <a class="admin-nav__item" href="/admin/layouts">Макеты</a>
+        </nav>
+    </aside>
+
+    <main class="admin-shell__main">
+        <header class="admin-page-header">
+            <div>
+                <p class="admin-eyebrow">Structure</p>
+                <h1 class="admin-header__title">{{ node.id ? node.name : 'Новый узел' }}</h1>
+                {% if node.path %}<p class="admin-page-header__description"><code>{{ node.path }}</code></p>{% endif %}
+            </div>
+            <a class="admin-button" href="/admin/structure">К структуре</a>
+        </header>
+
+        {% if error %}<div class="admin-notice admin-notice--error">{{ error }}</div>{% endif %}
+
+        <form class="admin-form" method="post" action="{{ node.id ? '/admin/structure/' ~ node.id : '/admin/structure' }}">
+            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+            <section class="admin-panel">
+                <h2 class="admin-panel__title">Основное</h2>
+                <div class="admin-form__grid">
+                    <label class="admin-field admin-field--wide"><span class="admin-field__label">Название</span><input class="admin-input" name="name" required maxlength="255" value="{{ node.name }}"></label>
+                    <label class="admin-field">
+                        <span class="admin-field__label">Родитель</span>
+                        <select class="admin-select" name="parent_id" {% if node.id and node.parent_id is null %}disabled{% endif %}>
+                            <option value="">Корень</option>
+                            {% for candidate in nodes %}{% if not node.id or candidate.id != node.id %}<option value="{{ candidate.id }}" {% if node.parent_id == candidate.id %}selected{% endif %}>{{ candidate.path }} — {{ candidate.name }}</option>{% endif %}{% endfor %}
+                        </select>
+                        {% if node.id and node.parent_id is null %}<input type="hidden" name="parent_id" value="">{% endif %}
+                    </label>
+                    <label class="admin-field"><span class="admin-field__label">Slug</span><input class="admin-input" name="slug" maxlength="255" pattern="[a-z0-9][a-z0-9-]*" value="{{ node.slug }}" {% if node.id and node.parent_id is null %}disabled{% endif %}><span class="admin-field__hint">a-z, 0-9 и дефис. Для корневого узла пусто.</span></label>
+                    <label class="admin-field admin-field--wide"><span class="admin-field__label">Title</span><input class="admin-input" name="title" maxlength="255" value="{{ node.title }}"></label>
+                    <label class="admin-field admin-field--wide"><span class="admin-field__label">Meta description</span><textarea class="admin-textarea admin-textarea--small" name="meta_description" maxlength="320">{{ node.meta_description }}</textarea></label>
+                </div>
+            </section>
+
+            <section class="admin-panel">
+                <h2 class="admin-panel__title">Представление</h2>
+                <div class="admin-form__grid">
+                    <label class="admin-field"><span class="admin-field__label">Макет</span><select class="admin-select" name="layout_id"><option value="">Без макета</option>{% for layout in layouts %}<option value="{{ layout.id }}" {% if node.layout_id == layout.id %}selected{% endif %}>{{ layout.name }}</option>{% endfor %}</select></label>
+                    <label class="admin-field"><span class="admin-field__label">Инфосистема</span><select class="admin-select" name="infosystem_id"><option value="">Не привязана</option>{% for infosystem in infosystems %}<option value="{{ infosystem.id }}" {% if node.infosystem_id == infosystem.id %}selected{% endif %}>{{ infosystem.name }}</option>{% endfor %}</select></label>
+                    <label class="admin-field admin-field--wide"><span class="admin-field__label">Контент</span><textarea class="admin-textarea" name="content">{{ node.content }}</textarea><span class="admin-field__hint">HTML хранится как редакционный контент и выводится макетом.</span></label>
+                </div>
+            </section>
+
+            <section class="admin-panel">
+                <h2 class="admin-panel__title">Публикация</h2>
+                <div class="admin-form__grid">
+                    <label class="admin-field"><span class="admin-field__label">Статус</span><select class="admin-select" name="status">{% for status in ['draft','published','archived'] %}<option value="{{ status }}" {% if node.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select></label>
+                    <label class="admin-field"><span class="admin-field__label">Дата публикации</span><input class="admin-input" type="datetime-local" name="publish_at" value="{{ node.publish_at ? node.publish_at|date('Y-m-d\\TH:i') : '' }}"></label>
+                    <label class="admin-field"><span class="admin-field__label">Сортировка</span><input class="admin-input" type="number" min="0" name="sorting" value="{{ node.sorting }}"></label>
+                    <label class="admin-check"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1" {% if node.is_active == true or node.is_active == '1' %}checked{% endif %}><span>Узел активен</span></label>
+                </div>
+            </section>
+
+            <div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="/admin/structure">Отмена</a></div>
+        </form>
+
+        {% if node.id and node.parent_id is not null %}
+            <form class="admin-danger-zone" method="post" action="/admin/structure/{{ node.id }}/delete" onsubmit="return confirm('Удалить узел и всё его поддерево?');"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><div><strong>Удаление узла</strong><p>Дочерние узлы будут удалены каскадно.</p></div><button class="admin-button admin-button--danger" type="submit">Удалить</button></form>
+        {% endif %}
+    </main>
+</body>
+</html>

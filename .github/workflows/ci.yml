@@ -59,12 +59,14 @@ jobs:
       - name: Database health check
         run: php bin/console health
 
-      - name: Seed smoke-test page
+      - name: Seed smoke-test structure
         run: |
           psql -h 127.0.0.1 -U cms -d cms_db <<'SQL'
           INSERT INTO layouts (name, template_path) VALUES ('Main', 'layouts/main.twig');
-          INSERT INTO nodes (name, path, title, content, layout_id, status)
-          VALUES ('Home', '/', 'Ultima Vox CMS', '<p>Production Core</p>', 1, 'published');
+          INSERT INTO nodes (name, slug, path, title, content, layout_id, status)
+          VALUES ('Home', '', '/', 'Ultima Vox CMS', '<p>Production Core</p>', 1, 'published');
+          INSERT INTO nodes (parent_id, name, slug, path, title, layout_id, status)
+          VALUES (1, 'About', 'about', '/about', 'About', 1, 'published');
           SQL
         env:
           PGPASSWORD: cms
@@ -77,3 +79,5 @@ jobs:
           sleep 1
           curl --fail --silent http://127.0.0.1:8080/health | grep '"status":"ok"'
           curl --fail --silent http://127.0.0.1:8080/ | grep 'Ultima Vox CMS'
+          curl --fail --silent http://127.0.0.1:8080/about | grep 'About'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/structure)" = "302"
