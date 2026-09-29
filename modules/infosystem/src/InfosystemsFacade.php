@@ -6,6 +6,7 @@ namespace UltimaVox\Modules\Infosystem;
 
 use Core\Extension\Api\ContentApi;
 use Core\Repository\InfosystemRepository;
+use Core\Site\SiteContext;
 use Core\View\Render\TemplateFacadeContext;
 use RuntimeException;
 
@@ -35,9 +36,9 @@ final class InfosystemsFacade
             return $this->byCode[$code];
         }
 
-        $record = $this->repository->findActiveByCode($code);
+        $record = $this->repository->findActiveByCode($this->siteId(), $code);
         if ($record === null) {
-            throw new RuntimeException(sprintf('Active infosystem "%s" was not found.', $code));
+            throw new RuntimeException(sprintf('Active infosystem "%s" was not found for the current site.', $code));
         }
 
         return $this->remember($record);
@@ -62,9 +63,19 @@ final class InfosystemsFacade
             return $this->byId[$id];
         }
 
-        $record = $this->repository->findActiveById($id);
+        $record = $this->repository->findActiveById($this->siteId(), $id);
 
         return $record !== null ? $this->remember($record) : null;
+    }
+
+    private function siteId(): int
+    {
+        $site = $this->context->variables()['site'] ?? null;
+        if (!$site instanceof SiteContext) {
+            throw new RuntimeException('Infosystem frontend access requires a resolved SiteContext.');
+        }
+
+        return $site->id;
     }
 
     /** @param array<string, mixed> $record */

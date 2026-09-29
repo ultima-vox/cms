@@ -10,14 +10,19 @@ use Throwable;
 
 final class InfosystemManagementRepository
 {
-    public function __construct(private readonly PDO $db)
-    {
+    public function __construct(
+        private readonly PDO $db,
+        private readonly int $siteId = 1,
+    ) {
+        if ($this->siteId < 1) {
+            throw new RuntimeException('Site id must be positive.');
+        }
     }
 
     /** @return list<array<string, mixed>> */
     public function all(): array
     {
-        $statement = $this->db->query(
+        $statement = $this->db->prepare(
             <<<'SQL'
             SELECT i.*,
                    COUNT(DISTINCT g.id) AS group_count,
@@ -26,11 +31,13 @@ final class InfosystemManagementRepository
             FROM infosystems i
             LEFT JOIN infosystem_groups g ON g.infosystem_id = i.id
             LEFT JOIN infosystem_items item ON item.infosystem_id = i.id
-            LEFT JOIN nodes n ON n.infosystem_id = i.id
+            LEFT JOIN nodes n ON n.infosystem_id = i.id AND n.site_id = i.site_id
+            WHERE i.site_id = :site_id
             GROUP BY i.id
             ORDER BY i.name, i.id
             SQL
         );
+        $statement->execute(['site_id' => $this->siteId]);
 
         return $statement->fetchAll();
     }
@@ -43,13 +50,17 @@ final class InfosystemManagementRepository
             SELECT i.*,
                    (SELECT COUNT(*) FROM infosystem_groups g WHERE g.infosystem_id = i.id) AS group_count,
                    (SELECT COUNT(*) FROM infosystem_items item WHERE item.infosystem_id = i.id) AS item_count,
-                   (SELECT COUNT(*) FROM nodes n WHERE n.infosystem_id = i.id) AS node_count
+                   (SELECT COUNT(*) FROM nodes n WHERE n.infosystem_id = i.id AND n.site_id = i.site_id) AS node_count
             FROM infosystems i
             WHERE i.id = :id
+              AND i.site_id = :site_id
             LIMIT 1
             SQL
         );
-        $statement->execute(['id' => $id]);
+        $statement->execute([
+            'id' => $id,
+            'site_id' => $this->siteId,
+        ]);
         $row = $statement->fetch();
 
         if ($row === false) {
@@ -67,12 +78,13 @@ final class InfosystemManagementRepository
     {
         $statement = $this->db->prepare(
             <<<'SQL'
-            INSERT INTO infosystems (name, code, description, field_schema, is_active)
-            VALUES (:name, :code, :description, CAST(:field_schema AS jsonb), :is_active)
+            INSERT INTO infosystems (site_id, name, code, description, field_schema, is_active)
+            VALUES (:site_id, :name, :code, :description, CAST(:field_schema AS jsonb), :is_active)
             RETURNING id
             SQL
         );
         $statement->execute([
+            'site_id' => $this->siteId,
             'name' => $name,
             'code' => $code,
             'description' => $description,
@@ -94,10 +106,12 @@ final class InfosystemManagementRepository
                 is_active = :is_active,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
+              AND site_id = :site_id
             SQL
         );
         $statement->execute([
             'id' => $id,
+            'site_id' => $this->siteId,
             'name' => $name,
             'description' => $description,
             'field_schema' => json_encode($fieldSchema, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
@@ -115,13 +129,20 @@ final class InfosystemManagementRepository
             throw new RuntimeException('Инфосистема используется в структуре сайта.');
         }
 
-        $statement = $this->db->prepare('DELETE FROM infosystems WHERE id = :id');
-        $statement->execute(['id' => $id]);
+        $statement = $this->db->prepare('DELETE FROM infosystems WHERE id = :id AND site_id = :site_id');
+        $statement->execute([
+            'id' => $id,
+            'site_id' => $this->siteId,
+        ]);
     }
 
     /** @return list<array<string, mixed>> */
     public function groups(int $infosystemId): array
     {
+        if (!$this->belongsToSite($infosystemId)) {
+            return [];
+        }
+
         $statement = $this->db->prepare(
             <<<'SQL'
             SELECT g.*,
@@ -139,6 +160,10 @@ final class InfosystemManagementRepository
     /** @return array<string, mixed>|null */
     public function findGroup(int $infosystemId, int $id): ?array
     {
+        if (!$this->belongsToSite($infosystemId)) {
+            return null;
+        }
+
         $statement = $this->db->prepare(
             <<<'SQL'
             SELECT g.*,
@@ -163,6 +188,7 @@ final class InfosystemManagementRepository
         int $sorting = 0,
         bool $isActive = true,
     ): int {
+        $this->assertBelongsToSite($infosystemId);
         $path = $this->groupPath($infosystemId, $parentId, $slug);
         $statement = $this->db->prepare(
             <<<'SQL'
@@ -196,6 +222,7 @@ final class InfosystemManagementRepository
         int $sorting,
         bool $isActive,
     ): void {
+        $this->assertBelongsToSite($infosystemId);
         $group = $this->findGroup($infosystemId, $id);
         if ($group === null) {
             throw new RuntimeException('Группа не найдена.');
@@ -280,6 +307,7 @@ final class InfosystemManagementRepository
 
     public function deleteGroup(int $infosystemId, int $id): void
     {
+        $this->assertBelongsToSite($infosystemId);
         $group = $this->findGroup($infosystemId, $id);
         if ($group === null) {
             return;
@@ -298,6 +326,7 @@ final class InfosystemManagementRepository
     /** @return list<array<string, mixed>> */
     public function items(int $infosystemId, int $limit = 200, int $offset = 0): array
     {
+        $this->assertBelongsToSite($infosystemId);
         if ($limit < 1 || $limit > 500) {
             throw new RuntimeException('Limit должен быть в диапазоне 1..500.');
         }
@@ -334,6 +363,10 @@ final class InfosystemManagementRepository
     /** @return array<string, mixed>|null */
     public function findItem(int $infosystemId, int $id): ?array
     {
+        if (!$this->belongsToSite($infosystemId)) {
+            return null;
+        }
+
         $statement = $this->db->prepare(
             'SELECT * FROM infosystem_items WHERE infosystem_id = :infosystem_id AND id = :id LIMIT 1'
         );
@@ -353,6 +386,7 @@ final class InfosystemManagementRepository
     /** @param array<string, mixed> $data */
     public function saveItem(?int $id, int $infosystemId, ?int $groupId, array $data): int
     {
+        $this->assertBelongsToSite($infosystemId);
         $path = $this->itemPath($infosystemId, $groupId, (string) $data['slug']);
         $properties = json_encode(
             $data['properties'],
@@ -420,6 +454,7 @@ final class InfosystemManagementRepository
 
     public function deleteItem(int $infosystemId, int $id): void
     {
+        $this->assertBelongsToSite($infosystemId);
         $statement = $this->db->prepare(
             'DELETE FROM infosystem_items WHERE infosystem_id = :infosystem_id AND id = :id'
         );
@@ -471,5 +506,25 @@ final class InfosystemManagementRepository
         $statement->execute(['ancestor' => $ancestorId, 'candidate' => $candidateId]);
 
         return $statement->fetchColumn() !== false;
+    }
+
+    private function belongsToSite(int $infosystemId): bool
+    {
+        $statement = $this->db->prepare(
+            'SELECT 1 FROM infosystems WHERE id = :id AND site_id = :site_id LIMIT 1'
+        );
+        $statement->execute([
+            'id' => $infosystemId,
+            'site_id' => $this->siteId,
+        ]);
+
+        return $statement->fetchColumn() !== false;
+    }
+
+    private function assertBelongsToSite(int $infosystemId): void
+    {
+        if (!$this->belongsToSite($infosystemId)) {
+            throw new RuntimeException('Инфосистема не найдена для текущего сайта.');
+        }
     }
 }

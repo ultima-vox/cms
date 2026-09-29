@@ -119,22 +119,24 @@ jobs:
       - name: Seed smoke-test content
         run: |
           psql -h 127.0.0.1 -U cms -d cms_db <<'SQL'
-          INSERT INTO nodes (name, slug, path, title, content, layout_id, status)
+          INSERT INTO nodes (site_id, name, slug, path, title, content, layout_id, status)
           VALUES (
-            'Home', '', '/', 'Ultima Vox CMS', '<p>Production Core</p>',
+            1, 'Home', '', '/', 'Ultima Vox CMS', '<p>Production Core</p>',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
             'published'
           );
-          INSERT INTO nodes (parent_id, name, slug, path, title, layout_id, status)
+          INSERT INTO nodes (site_id, parent_id, name, slug, path, title, layout_id, status)
           VALUES (
-            (SELECT id FROM nodes WHERE path = '/'),
+            1,
+            (SELECT id FROM nodes WHERE site_id = 1 AND path = '/'),
             'About', 'about', '/about', 'About',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
             'published'
           );
 
-          INSERT INTO infosystems (name, code, description, field_schema)
+          INSERT INTO infosystems (site_id, name, code, description, field_schema)
           VALUES (
+            1,
             'Catalog',
             'catalog',
             'CI catalog',
@@ -142,14 +144,17 @@ jobs:
           );
 
           INSERT INTO infosystem_groups (infosystem_id, name, slug, path)
-          VALUES ((SELECT id FROM infosystems WHERE code = 'catalog'), 'Stations', 'stations', '/stations');
+          VALUES (
+            (SELECT id FROM infosystems WHERE site_id = 1 AND code = 'catalog'),
+            'Stations', 'stations', '/stations'
+          );
 
           INSERT INTO infosystem_items (
             infosystem_id, group_id, name, slug, path, status, properties, content
           )
           VALUES (
-            (SELECT id FROM infosystems WHERE code = 'catalog'),
-            (SELECT id FROM infosystem_groups WHERE path = '/stations'),
+            (SELECT id FROM infosystems WHERE site_id = 1 AND code = 'catalog'),
+            (SELECT g.id FROM infosystem_groups g JOIN infosystems s ON s.id = g.infosystem_id WHERE s.site_id = 1 AND g.path = '/stations'),
             'Tank 5', 'tank-5', '/stations/tank-5', 'published',
             '{"kind":"bio","capacity":5}'::jsonb,
             '<p>Tank content</p>'
@@ -159,8 +164,8 @@ jobs:
             infosystem_id, group_id, name, slug, path, status, properties
           )
           SELECT
-            (SELECT id FROM infosystems WHERE code = 'catalog'),
-            (SELECT id FROM infosystem_groups WHERE path = '/stations'),
+            (SELECT id FROM infosystems WHERE site_id = 1 AND code = 'catalog'),
+            (SELECT g.id FROM infosystem_groups g JOIN infosystems s ON s.id = g.infosystem_id WHERE s.site_id = 1 AND g.path = '/stations'),
             'Septic ' || n,
             'septic-' || n,
             '/stations/septic-' || n,
@@ -169,11 +174,50 @@ jobs:
           FROM generate_series(1, 60) AS n;
 
           UPDATE nodes
-          SET infosystem_id = (SELECT id FROM infosystems WHERE code = 'catalog')
-          WHERE path = '/';
+          SET infosystem_id = (SELECT id FROM infosystems WHERE site_id = 1 AND code = 'catalog')
+          WHERE site_id = 1 AND path = '/';
+
+          INSERT INTO sites (code, name)
+          VALUES ('second', 'Second Site');
+
+          INSERT INTO site_domains (site_id, host, is_primary)
+          VALUES ((SELECT id FROM sites WHERE code = 'second'), 'second.test', TRUE);
+
+          INSERT INTO infosystems (site_id, name, code, description, field_schema)
+          VALUES (
+            (SELECT id FROM sites WHERE code = 'second'),
+            'Second Catalog',
+            'catalog',
+            'Second site catalog',
+            '[]'::jsonb
+          );
+
+          INSERT INTO infosystem_items (
+            infosystem_id, name, slug, path, status, properties, content
+          )
+          VALUES (
+            (SELECT i.id FROM infosystems i JOIN sites s ON s.id = i.site_id WHERE s.code = 'second' AND i.code = 'catalog'),
+            'Second Tank', 'second-tank', '/second-tank', 'published',
+            '{"kind":"second"}'::jsonb,
+            '<p>Second tank content</p>'
+          );
+
+          INSERT INTO nodes (
+            site_id, infosystem_id, name, slug, path, title, content, layout_id, status
+          )
+          VALUES (
+            (SELECT id FROM sites WHERE code = 'second'),
+            (SELECT i.id FROM infosystems i JOIN sites s ON s.id = i.site_id WHERE s.code = 'second' AND i.code = 'catalog'),
+            'Home', '', '/', 'Second Site', '<p>Second Site Content</p>',
+            (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
+            'published'
+          );
           SQL
         env:
           PGPASSWORD: cms
+
+      - name: Site resolution and isolation smoke test
+        run: php tests/site_resolution_smoke.php
 
       - name: JSONB repository smoke test
         run: php tests/jsonb_repository_smoke.php
@@ -193,10 +237,20 @@ jobs:
           curl --fail --silent http://127.0.0.1:8080/health | grep '"status":"ok"'
           curl --fail --silent http://127.0.0.1:8080/health/live | grep '"check":"liveness"'
           curl --fail --silent http://127.0.0.1:8080/health/ready | grep '"database":"up"'
-          curl --fail --silent http://127.0.0.1:8080/ | grep 'Production Core'
-          curl --fail --silent http://127.0.0.1:8080/ | grep 'data-infosystem="catalog"'
-          curl --fail --silent http://127.0.0.1:8080/ | grep 'Tank 5'
+
+          DEFAULT_HTML="$(curl --fail --silent http://127.0.0.1:8080/)"
+          echo "$DEFAULT_HTML" | grep 'Production Core'
+          echo "$DEFAULT_HTML" | grep 'data-infosystem="catalog"'
+          echo "$DEFAULT_HTML" | grep 'Tank 5'
+          if echo "$DEFAULT_HTML" | grep -q 'Second Tank'; then exit 1; fi
+
+          SECOND_HTML="$(curl --fail --silent --header 'Host: second.test' http://127.0.0.1:8080/)"
+          echo "$SECOND_HTML" | grep 'Second Site'
+          echo "$SECOND_HTML" | grep 'Second Tank'
+          if echo "$SECOND_HTML" | grep -q 'Tank 5'; then exit 1; fi
+
           curl --fail --silent http://127.0.0.1:8080/about | grep 'About'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' --header 'Host: unknown.test' http://127.0.0.1:8080/)" = "404"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/api/not-implemented)" = "404"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/media/not-implemented)" = "404"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/structure)" = "302"

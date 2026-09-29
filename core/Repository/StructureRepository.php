@@ -10,17 +10,23 @@ use Throwable;
 
 final class StructureRepository
 {
-    public function __construct(private readonly PDO $db)
-    {
+    public function __construct(
+        private readonly PDO $db,
+        private readonly int $siteId = 1,
+    ) {
+        if ($this->siteId < 1) {
+            throw new RuntimeException('Site id must be positive.');
+        }
     }
 
     /** @return list<array<string, mixed>> */
     public function all(): array
     {
-        $statement = $this->db->query(
+        $statement = $this->db->prepare(
             <<<'SQL'
             SELECT
                 n.id,
+                n.site_id,
                 n.parent_id,
                 n.name,
                 n.slug,
@@ -37,9 +43,11 @@ final class StructureRepository
             FROM nodes n
             LEFT JOIN layouts l ON l.id = n.layout_id
             LEFT JOIN infosystems i ON i.id = n.infosystem_id
+            WHERE n.site_id = :site_id
             ORDER BY n.parent_id NULLS FIRST, n.sorting, n.name, n.id
             SQL
         );
+        $statement->execute(['site_id' => $this->siteId]);
 
         $rows = $statement->fetchAll();
 
@@ -49,8 +57,13 @@ final class StructureRepository
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        $statement = $this->db->prepare('SELECT * FROM nodes WHERE id = :id LIMIT 1');
-        $statement->execute(['id' => $id]);
+        $statement = $this->db->prepare(
+            'SELECT * FROM nodes WHERE id = :id AND site_id = :site_id LIMIT 1'
+        );
+        $statement->execute([
+            'id' => $id,
+            'site_id' => $this->siteId,
+        ]);
         $row = $statement->fetch();
 
         return is_array($row) ? $row : null;
@@ -66,7 +79,12 @@ final class StructureRepository
     /** @return list<array{id:int,name:string,code:string}> */
     public function infosystems(): array
     {
-        $rows = $this->db->query('SELECT id, name, code FROM infosystems ORDER BY name, id')->fetchAll();
+        $statement = $this->db->prepare(
+            'SELECT id, name, code FROM infosystems WHERE site_id = :site_id ORDER BY name, id'
+        );
+        $statement->execute(['site_id' => $this->siteId]);
+        $rows = $statement->fetchAll();
+
         return is_array($rows) ? $rows : [];
     }
 
@@ -79,16 +97,17 @@ final class StructureRepository
         $statement = $this->db->prepare(
             <<<'SQL'
             INSERT INTO nodes (
-                parent_id, layout_id, infosystem_id, name, slug, path, title,
+                site_id, parent_id, layout_id, infosystem_id, name, slug, path, title,
                 content, meta_description, status, is_active, sorting, publish_at
             ) VALUES (
-                :parent_id, :layout_id, :infosystem_id, :name, :slug, :path, :title,
+                :site_id, :parent_id, :layout_id, :infosystem_id, :name, :slug, :path, :title,
                 :content, :meta_description, :status, :is_active, :sorting, :publish_at
             )
             RETURNING id
             SQL
         );
         $statement->execute([
+            'site_id' => $this->siteId,
             'parent_id' => $parentId,
             'layout_id' => $data['layout_id'],
             'infosystem_id' => $data['infosystem_id'],
@@ -143,10 +162,12 @@ final class StructureRepository
                     publish_at = :publish_at,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND site_id = :site_id
                 SQL
             );
             $statement->execute([
                 'id' => $id,
+                'site_id' => $this->siteId,
                 'parent_id' => $parentId,
                 'layout_id' => $data['layout_id'],
                 'infosystem_id' => $data['infosystem_id'],
@@ -177,8 +198,11 @@ final class StructureRepository
 
     public function delete(int $id): void
     {
-        $statement = $this->db->prepare('DELETE FROM nodes WHERE id = :id');
-        $statement->execute(['id' => $id]);
+        $statement = $this->db->prepare('DELETE FROM nodes WHERE id = :id AND site_id = :site_id');
+        $statement->execute([
+            'id' => $id,
+            'site_id' => $this->siteId,
+        ]);
     }
 
     /** @param list<array{id:int,parent_id:int|null,sorting:int}> $items */
@@ -201,10 +225,11 @@ final class StructureRepository
                 $newPath = $this->buildPath($parentId, (string) $node['slug']);
 
                 $statement = $this->db->prepare(
-                    'UPDATE nodes SET parent_id = :parent_id, sorting = :sorting, path = :path, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+                    'UPDATE nodes SET parent_id = :parent_id, sorting = :sorting, path = :path, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND site_id = :site_id'
                 );
                 $statement->execute([
                     'id' => $item['id'],
+                    'site_id' => $this->siteId,
                     'parent_id' => $parentId,
                     'sorting' => $item['sorting'],
                     'path' => $newPath,
@@ -256,11 +281,13 @@ final class StructureRepository
             UPDATE nodes
             SET path = :new_prefix || substring(path FROM :offset),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id <> :id
+            WHERE site_id = :site_id
+              AND id <> :id
               AND path LIKE :pattern
             SQL
         );
         $statement->execute([
+            'site_id' => $this->siteId,
             'id' => $id,
             'new_prefix' => $newPrefix,
             'offset' => strlen($oldPrefix) + 1,
@@ -273,16 +300,23 @@ final class StructureRepository
         $statement = $this->db->prepare(
             <<<'SQL'
             WITH RECURSIVE descendants AS (
-                SELECT id FROM nodes WHERE parent_id = :node_id
+                SELECT id
+                FROM nodes
+                WHERE parent_id = :node_id
+                  AND site_id = :site_id
+
                 UNION ALL
+
                 SELECT n.id
                 FROM nodes n
                 JOIN descendants d ON n.parent_id = d.id
+                WHERE n.site_id = :site_id
             )
             SELECT 1 FROM descendants WHERE id = :candidate_parent_id LIMIT 1
             SQL
         );
         $statement->execute([
+            'site_id' => $this->siteId,
             'node_id' => $nodeId,
             'candidate_parent_id' => $candidateParentId,
         ]);

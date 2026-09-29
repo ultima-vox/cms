@@ -9,6 +9,7 @@ use Core\Http\Response;
 use Core\Repository\InfosystemRepository;
 use Core\Repository\NodeRepository;
 use Core\Routing\SystemPathPolicy;
+use Core\Site\SiteResolver;
 use Core\View\FrontendRenderer;
 use Core\View\PageViewModel;
 use Core\View\SafeHtml;
@@ -18,6 +19,7 @@ final class NodeController
     public function __construct(
         private readonly NodeRepository $nodes,
         private readonly InfosystemRepository $infosystems,
+        private readonly SiteResolver $sites,
         private readonly FrontendRenderer $view,
     ) {
     }
@@ -31,7 +33,12 @@ final class NodeController
             return $this->notFound($request->path);
         }
 
-        $node = $this->nodes->findPublishedByPath($request->path);
+        $site = $this->sites->resolve($request);
+        if ($site === null) {
+            return $this->notFound($request->path);
+        }
+
+        $node = $this->nodes->findPublishedByPath($site->id, $request->path);
 
         if ($node === null) {
             return $this->notFound($request->path);
@@ -47,7 +54,7 @@ final class NodeController
 
         if (str_ends_with($template, '.twig')
             && (is_int($infosystemId) || (is_string($infosystemId) && ctype_digit($infosystemId)))) {
-            $items = $this->infosystems->findPublishedItems((int) $infosystemId);
+            $items = $this->infosystems->findPublishedItems($site->id, (int) $infosystemId);
         }
 
         $title = trim((string) ($node['title'] ?? ''));
@@ -67,6 +74,7 @@ final class NodeController
         );
 
         return Response::html($this->view->render($template, [
+            'site' => $site,
             'page' => $page,
             'node' => $node,
             'content' => (string) ($node['content'] ?? ''),

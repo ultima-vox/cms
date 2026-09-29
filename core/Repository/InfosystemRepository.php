@@ -14,30 +14,38 @@ final class InfosystemRepository
     }
 
     /** @return array<string, mixed>|null */
-    public function findActiveById(int $id): ?array
+    public function findActiveById(int $siteId, int $id): ?array
     {
-        if ($id < 1) {
+        if ($siteId < 1 || $id < 1) {
             return null;
         }
 
         $statement = $this->db->prepare(
             <<<'SQL'
-            SELECT id, name, code, description, field_schema, is_active, created_at, updated_at
+            SELECT id, site_id, name, code, description, field_schema, is_active, created_at, updated_at
             FROM infosystems
-            WHERE id = :id
+            WHERE site_id = :site_id
+              AND id = :id
               AND is_active = TRUE
             LIMIT 1
             SQL
         );
-        $statement->execute(['id' => $id]);
+        $statement->execute([
+            'site_id' => $siteId,
+            'id' => $id,
+        ]);
         $record = $statement->fetch();
 
         return is_array($record) ? $this->normalizeInfosystem($record) : null;
     }
 
     /** @return array<string, mixed>|null */
-    public function findActiveByCode(string $code): ?array
+    public function findActiveByCode(int $siteId, string $code): ?array
     {
+        if ($siteId < 1) {
+            return null;
+        }
+
         $code = strtolower(trim($code));
         if ($code === '') {
             return null;
@@ -45,14 +53,18 @@ final class InfosystemRepository
 
         $statement = $this->db->prepare(
             <<<'SQL'
-            SELECT id, name, code, description, field_schema, is_active, created_at, updated_at
+            SELECT id, site_id, name, code, description, field_schema, is_active, created_at, updated_at
             FROM infosystems
-            WHERE code = :code
+            WHERE site_id = :site_id
+              AND code = :code
               AND is_active = TRUE
             LIMIT 1
             SQL
         );
-        $statement->execute(['code' => $code]);
+        $statement->execute([
+            'site_id' => $siteId,
+            'code' => $code,
+        ]);
         $record = $statement->fetch();
 
         return is_array($record) ? $this->normalizeInfosystem($record) : null;
@@ -63,11 +75,15 @@ final class InfosystemRepository
      * @return list<array<string, mixed>>
      */
     public function findPublishedItems(
+        int $siteId,
         int $infosystemId,
         int $limit = 100,
         int $offset = 0,
         array $filters = [],
     ): array {
+        if ($siteId < 1 || $infosystemId < 1) {
+            return [];
+        }
         if ($limit < 1 || $limit > 500) {
             throw new RuntimeException('Limit должен быть в диапазоне 1..500.');
         }
@@ -77,13 +93,17 @@ final class InfosystemRepository
 
         $where = [
             'i.infosystem_id = :infosystem_id',
+            's.site_id = :site_id',
             's.is_active = TRUE',
             'i.is_active = TRUE',
             "i.status = 'published'",
             '(i.publish_at IS NULL OR i.publish_at <= CURRENT_TIMESTAMP)',
             '(i.group_id IS NULL OR i.group_id IN (SELECT id FROM visible_groups))',
         ];
-        $params = ['infosystem_id' => $infosystemId];
+        $params = [
+            'site_id' => $siteId,
+            'infosystem_id' => $infosystemId,
+        ];
 
         if ($filters !== []) {
             $where[] = 'i.properties @> CAST(:filters AS jsonb)';
@@ -137,6 +157,7 @@ final class InfosystemRepository
         );
 
         $statement = $this->db->prepare($sql);
+        $statement->bindValue(':site_id', $siteId, PDO::PARAM_INT);
         $statement->bindValue(':infosystem_id', $infosystemId, PDO::PARAM_INT);
         if (isset($params['filters'])) {
             $statement->bindValue(':filters', $params['filters'], PDO::PARAM_STR);
