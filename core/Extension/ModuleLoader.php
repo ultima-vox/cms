@@ -8,44 +8,21 @@ use RuntimeException;
 
 final class ModuleLoader
 {
-    /** @var list<string> */
-    private array $moduleRoots;
-
-    public function __construct(string $rootPath)
+    public function __construct(private readonly string $rootPath)
     {
-        // Only the dedicated module code directory is auto-executed.
-        // Generic writable storage must never become an implicit PHP execution path.
-        $this->moduleRoots = [
-            $rootPath . '/modules',
-        ];
     }
 
-    /** @return list<string> Loaded module directory names. */
+    /** @return list<string> Loaded module codes. */
     public function load(Core $core): array
     {
-        $manifests = [];
-
-        foreach ($this->moduleRoots as $root) {
-            if (!is_dir($root)) {
-                continue;
-            }
-
-            $directories = glob($root . '/*', GLOB_ONLYDIR) ?: [];
-            sort($directories, SORT_STRING);
-
-            foreach ($directories as $directory) {
-                $manifest = $directory . '/module.php';
-                if (is_file($manifest)) {
-                    $manifests[$manifest] = basename($directory);
-                }
-            }
-        }
-
-        ksort($manifests, SORT_STRING);
+        $catalog = new ModuleCatalog($this->rootPath);
+        $manifests = $catalog->discover();
+        $state = new ModuleStateRepository($core->runtime()->database());
+        $ordered = $catalog->enabledInLoadOrder($manifests, $state);
         $loaded = [];
 
-        foreach ($manifests as $manifest => $directoryName) {
-            $module = require $manifest;
+        foreach ($ordered as $manifest) {
+            $module = require $manifest->bootstrapPath();
 
             if (is_string($module) && class_exists($module)) {
                 $module = new $module();
@@ -53,13 +30,13 @@ final class ModuleLoader
 
             if (!$module instanceof ModuleInterface) {
                 throw new RuntimeException(sprintf(
-                    'Module manifest %s must return a ModuleInterface instance or class-string.',
-                    $manifest,
+                    'Module bootstrap %s must return a ModuleInterface instance or class-string.',
+                    $manifest->bootstrapPath(),
                 ));
             }
 
             $module->register($core);
-            $loaded[] = $directoryName;
+            $loaded[] = $manifest->code;
         }
 
         return $loaded;

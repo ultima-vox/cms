@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace UltimaVox\Modules\Infosystem;
 
+use Core\Controller\InfosystemController;
+use Core\Controller\InfosystemItemListController;
 use Core\Extension\Core;
 use Core\Extension\ModuleInterface;
+use Core\Infosystem\FieldSchema;
+use Core\Repository\InfosystemItemSearchRepository;
+use Core\Repository\InfosystemManagementRepository;
 use Core\Repository\InfosystemRepository;
 use Core\View\Render\RenderNodeInterface;
 use Core\View\Render\TemplateFacadeContext;
@@ -15,7 +20,24 @@ final class InfosystemModule implements ModuleInterface
 {
     public function register(Core $core): void
     {
-        $repository = new InfosystemRepository($core->runtime()->database());
+        $runtime = $core->runtime();
+        $db = $runtime->database();
+        $repository = new InfosystemRepository($db);
+        $management = new InfosystemManagementRepository($db);
+        $controller = new InfosystemController(
+            $runtime->auth(),
+            $management,
+            new FieldSchema(),
+            $runtime->audit(),
+            $runtime->adminRenderer(),
+        );
+        $itemListController = new InfosystemItemListController(
+            $runtime->auth(),
+            $management,
+            new InfosystemItemSearchRepository($db),
+            $runtime->adminRenderer(),
+        );
+        $routes = $core->routes();
         $content = $core->content();
         $events = $core->events();
 
@@ -31,6 +53,27 @@ final class InfosystemModule implements ModuleInterface
             'infosystems.manage',
             30,
         );
+
+        $routes->get('/admin/infosystems', 'infosystem.index', [$controller, 'index']);
+        $routes->get('/admin/infosystems/create', 'infosystem.create', [$controller, 'createForm']);
+        $routes->post('/admin/infosystems', 'infosystem.store', [$controller, 'store']);
+        $routes->get('/admin/infosystems/{id:\\d+}', 'infosystem.manage', [$itemListController, 'overview']);
+        $routes->get('/admin/infosystems/{id:\\d+}/edit', 'infosystem.edit', [$controller, 'editForm']);
+        $routes->post('/admin/infosystems/{id:\\d+}', 'infosystem.update', [$controller, 'update']);
+        $routes->post('/admin/infosystems/{id:\\d+}/delete', 'infosystem.delete', [$controller, 'delete']);
+
+        $routes->get('/admin/infosystems/{id:\\d+}/groups/create', 'infosystem.group.create', [$controller, 'createGroupForm']);
+        $routes->post('/admin/infosystems/{id:\\d+}/groups', 'infosystem.group.store', [$controller, 'storeGroup']);
+        $routes->get('/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}/edit', 'infosystem.group.edit', [$controller, 'editGroupForm']);
+        $routes->post('/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}', 'infosystem.group.update', [$controller, 'updateGroup']);
+        $routes->post('/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}/delete', 'infosystem.group.delete', [$controller, 'deleteGroup']);
+
+        $routes->get('/admin/infosystems/{id:\\d+}/items', 'infosystem.item.index', [$itemListController, 'index']);
+        $routes->get('/admin/infosystems/{id:\\d+}/items/create', 'infosystem.item.create', [$controller, 'createItemForm']);
+        $routes->post('/admin/infosystems/{id:\\d+}/items', 'infosystem.item.store', [$controller, 'storeItem']);
+        $routes->get('/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}/edit', 'infosystem.item.edit', [$controller, 'editItemForm']);
+        $routes->post('/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}', 'infosystem.item.update', [$controller, 'updateItem']);
+        $routes->post('/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}/delete', 'infosystem.item.delete', [$controller, 'deleteItem']);
 
         $content->source(
             'infosystem.items',

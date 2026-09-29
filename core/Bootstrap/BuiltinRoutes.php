@@ -7,8 +7,6 @@ namespace Core\Bootstrap;
 use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
-use Core\Controller\InfosystemController;
-use Core\Controller\InfosystemItemListController;
 use Core\Controller\LayoutController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
@@ -21,8 +19,6 @@ final readonly class BuiltinRoutes
         private AdminController $adminController,
         private StructureController $structureController,
         private LayoutController $layoutController,
-        private InfosystemController $infosystemController,
-        private InfosystemItemListController $infosystemItemListController,
         private HealthController $healthController,
         private NodeController $nodeController,
     ) {
@@ -51,27 +47,6 @@ final readonly class BuiltinRoutes
         $routes->post('/admin/layouts/{id:\\d+}', 'layout.update', [$this->layoutController, 'update']);
         $routes->post('/admin/layouts/{id:\\d+}/reset', 'layout.reset', [$this->layoutController, 'reset']);
         $routes->post('/admin/layouts/{id:\\d+}/delete', 'layout.delete', [$this->layoutController, 'delete']);
-
-        $routes->get('/admin/infosystems', 'infosystem.index', [$this->infosystemController, 'index']);
-        $routes->get('/admin/infosystems/create', 'infosystem.create', [$this->infosystemController, 'createForm']);
-        $routes->post('/admin/infosystems', 'infosystem.store', [$this->infosystemController, 'store']);
-        $routes->get('/admin/infosystems/{id:\\d+}', 'infosystem.manage', [$this->infosystemItemListController, 'overview']);
-        $routes->get('/admin/infosystems/{id:\\d+}/edit', 'infosystem.edit', [$this->infosystemController, 'editForm']);
-        $routes->post('/admin/infosystems/{id:\\d+}', 'infosystem.update', [$this->infosystemController, 'update']);
-        $routes->post('/admin/infosystems/{id:\\d+}/delete', 'infosystem.delete', [$this->infosystemController, 'delete']);
-
-        $routes->get('/admin/infosystems/{id:\\d+}/groups/create', 'infosystem.group.create', [$this->infosystemController, 'createGroupForm']);
-        $routes->post('/admin/infosystems/{id:\\d+}/groups', 'infosystem.group.store', [$this->infosystemController, 'storeGroup']);
-        $routes->get('/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}/edit', 'infosystem.group.edit', [$this->infosystemController, 'editGroupForm']);
-        $routes->post('/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}', 'infosystem.group.update', [$this->infosystemController, 'updateGroup']);
-        $routes->post('/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}/delete', 'infosystem.group.delete', [$this->infosystemController, 'deleteGroup']);
-
-        $routes->get('/admin/infosystems/{id:\\d+}/items', 'infosystem.item.index', [$this->infosystemItemListController, 'index']);
-        $routes->get('/admin/infosystems/{id:\\d+}/items/create', 'infosystem.item.create', [$this->infosystemController, 'createItemForm']);
-        $routes->post('/admin/infosystems/{id:\\d+}/items', 'infosystem.item.store', [$this->infosystemController, 'storeItem']);
-        $routes->get('/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}/edit', 'infosystem.item.edit', [$this->infosystemController, 'editItemForm']);
-        $routes->post('/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}', 'infosystem.item.update', [$this->infosystemController, 'updateItem']);
-        $routes->post('/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}/delete', 'infosystem.item.delete', [$this->infosystemController, 'deleteItem']);
     }
 
     public function registerPublicFallback(RoutesApi $routes): void

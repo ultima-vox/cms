@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Core\Bootstrap\RuntimeFactory;
 use Core\Database;
-use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
 use Core\Extension\ModuleLoader;
 use Core\View\Render\RenderEngine;
@@ -15,7 +15,7 @@ $rootPath = dirname(__DIR__);
 require $rootPath . '/vendor/autoload.php';
 
 $db = Database::connection();
-$core = new ExtensionCore(new RuntimeApi($db, $rootPath));
+$core = new ExtensionCore((new RuntimeFactory())->create($db, $rootPath));
 $loaded = (new ModuleLoader($rootPath))->load($core);
 
 if (!in_array('infosystem', $loaded, true)) {

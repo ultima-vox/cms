@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Core\Bootstrap\RuntimeFactory;
 use Core\Database;
-use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
 use Core\View\PhpRenderer;
 use Core\View\Render\RenderContext;
@@ -22,7 +22,7 @@ final class SmokeEvent
 }
 
 $projectRoot = dirname(__DIR__);
-$core = new ExtensionCore(new RuntimeApi(Database::connection(), $projectRoot));
+$core = new ExtensionCore((new RuntimeFactory())->create(Database::connection(), $projectRoot));
 $core->routes()->get('/smoke', 'smoke.route', static fn (): null => null);
 $core->extensions()->register('smoke.point', 'smoke.extension', new stdClass());
 $core->admin()->navigation('smoke', 'Smoke', '/admin/smoke', null, 500);

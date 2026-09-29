@@ -1,0 +1,9 @@
+{
+  "code": "infosystem",
+  "name": "Infosystem",
+  "version": "1.0.0",
+  "extension_api": "^1.0",
+  "bootstrap": "module.php",
+  "default_enabled": true,
+  "requires": {}
+}
