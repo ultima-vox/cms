@@ -69,6 +69,12 @@ jobs:
       - name: Apply migrations
         run: php bin/console migrate
 
+      - name: Migration checksum smoke test
+        run: php tests/migration_checksum_smoke.php
+
+      - name: Reserved system path smoke test
+        run: php tests/system_path_smoke.php
+
       - name: Sync extension metadata
         run: php bin/console extensions:sync
 
@@ -182,10 +188,14 @@ jobs:
           trap 'kill $SERVER_PID' EXIT
           sleep 1
           curl --fail --silent http://127.0.0.1:8080/health | grep '"status":"ok"'
+          curl --fail --silent http://127.0.0.1:8080/health/live | grep '"check":"liveness"'
+          curl --fail --silent http://127.0.0.1:8080/health/ready | grep '"database":"up"'
           curl --fail --silent http://127.0.0.1:8080/ | grep 'Production Core'
           curl --fail --silent http://127.0.0.1:8080/ | grep 'data-infosystem="catalog"'
           curl --fail --silent http://127.0.0.1:8080/ | grep 'Tank 5'
           curl --fail --silent http://127.0.0.1:8080/about | grep 'About'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/api/not-implemented)" = "404"
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/media/not-implemented)" = "404"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/structure)" = "302"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/layouts)" = "302"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/infosystems)" = "302"

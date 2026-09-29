@@ -8,6 +8,7 @@ use Core\Http\Request;
 use Core\Http\Response;
 use Core\Repository\InfosystemRepository;
 use Core\Repository\NodeRepository;
+use Core\Routing\SystemPathPolicy;
 use Core\View\FrontendRenderer;
 use Core\View\PageViewModel;
 use Core\View\SafeHtml;
@@ -26,13 +27,14 @@ final class NodeController
     {
         unset($variables);
 
+        if (SystemPathPolicy::isReserved($request->path)) {
+            return $this->notFound($request->path);
+        }
+
         $node = $this->nodes->findPublishedByPath($request->path);
 
         if ($node === null) {
-            return Response::html(
-                $this->view->render('errors/404.html.php', ['path' => $request->path]),
-                404,
-            );
+            return $this->notFound($request->path);
         }
 
         $template = isset($node['template_path']) && is_string($node['template_path']) && $node['template_path'] !== ''
@@ -70,5 +72,13 @@ final class NodeController
             'content' => (string) ($node['content'] ?? ''),
             'items' => $items,
         ]));
+    }
+
+    private function notFound(string $path): Response
+    {
+        return Response::html(
+            $this->view->render('errors/404.html.php', ['path' => $path]),
+            404,
+        );
     }
 }
