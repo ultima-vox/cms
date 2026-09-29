@@ -35,10 +35,16 @@ final class NodeController
             );
         }
 
+        $template = isset($node['template_path']) && is_string($node['template_path']) && $node['template_path'] !== ''
+            ? $node['template_path']
+            : 'layouts/main.html.php';
+
+        // Legacy Twig layouts expect an eager `items` array. PHP layouts resolve content lazily through module facades.
         $items = [];
         $infosystemId = $node['infosystem_id'] ?? null;
 
-        if (is_int($infosystemId) || (is_string($infosystemId) && ctype_digit($infosystemId))) {
+        if (str_ends_with($template, '.twig')
+            && (is_int($infosystemId) || (is_string($infosystemId) && ctype_digit($infosystemId)))) {
             $items = $this->infosystems->findPublishedItems((int) $infosystemId);
         }
 
@@ -57,10 +63,6 @@ final class NodeController
                 ? $node['meta_description']
                 : null,
         );
-
-        $template = isset($node['template_path']) && is_string($node['template_path']) && $node['template_path'] !== ''
-            ? $node['template_path']
-            : 'layouts/main.html.php';
 
         return Response::html($this->view->render($template, [
             'page' => $page,

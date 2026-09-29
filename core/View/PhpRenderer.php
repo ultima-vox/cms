@@ -8,15 +8,19 @@ use Core\Extension\Core as ExtensionCore;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderEngine;
 use Core\View\Render\TemplateFacadeContext;
+use Core\View\Render\ViewTemplateRenderer;
 use RuntimeException;
 
 final class PhpRenderer
 {
+    private ViewTemplateRenderer $viewRenderer;
+
     public function __construct(
         private readonly string $rootPath,
         private readonly ExtensionCore $core,
     ) {
         require_once __DIR__ . '/helpers.php';
+        $this->viewRenderer = new ViewTemplateRenderer($rootPath, $core->templates());
     }
 
     /** @param array<string, mixed> $context */
@@ -25,9 +29,12 @@ final class PhpRenderer
         $file = $this->resolveTemplate($template);
         $renderContext = new RenderContext();
         $renderEngine = new RenderEngine($renderContext);
-        $facades = $this->core->templates()->instantiateFacades(
-            new TemplateFacadeContext($renderEngine, $context),
+        $facadeContext = new TemplateFacadeContext(
+            $renderEngine,
+            $context,
+            $this->viewRenderer,
         );
+        $facades = $this->core->templates()->instantiateFacades($facadeContext);
 
         $variables = array_merge(
             ['core' => $this->core],
