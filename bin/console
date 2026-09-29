@@ -3,6 +3,7 @@
 
 declare(strict_types=1);
 
+use Core\Bootstrap\BuiltinExtensions;
 use Core\Database;
 use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
@@ -36,6 +37,7 @@ switch ($command) {
     case 'extensions:sync':
         $db = Database::connection();
         $core = new ExtensionCore(new RuntimeApi($db, $rootPath));
+        (new BuiltinExtensions())->register($core);
         $loaded = (new ModuleLoader($rootPath))->load($core);
         $core->freeze();
         $synced = (new PermissionSynchronizer($db))->sync($core->permissions());
@@ -48,6 +50,17 @@ switch ($command) {
                 $synced,
             ),
         );
+        exit(0);
+
+    case 'modules:list':
+        $manifests = (new ModuleLoader($rootPath))->discover();
+        if ($manifests === []) {
+            fwrite(STDOUT, "No modules discovered.\n");
+            exit(0);
+        }
+        foreach ($manifests as $manifest) {
+            fwrite(STDOUT, sprintf("%s\t%s\t%s\n", $manifest->code, $manifest->version, $manifest->name));
+        }
         exit(0);
 
     case 'health':
@@ -115,7 +128,8 @@ switch ($command) {
             STDOUT,
             "Ultima Vox CMS\n\nCommands:\n" .
             "  migrate          Apply pending SQL migrations\n" .
-            "  extensions:sync Sync module permission declarations\n" .
+            "  extensions:sync Sync core/module permission declarations\n" .
+            "  modules:list     Validate and list discovered module manifests\n" .
             "  health           Check database connectivity\n" .
             "  templates:lint   Parse all packaged Twig templates\n" .
             "  user:create      Create the initial super administrator\n"
