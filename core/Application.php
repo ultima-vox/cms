@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Core;
 
+use Core\Admin\AdminNavigationContext;
+use Core\Bootstrap\BuiltinExtensions;
 use Core\Bootstrap\BuiltinRoutes;
 use Core\Bootstrap\RuntimeFactory;
 use Core\Controller\AdminController;
@@ -45,6 +47,8 @@ final class Application
             new PhpRenderer($this->rootPath, $core),
         );
 
+        (new BuiltinExtensions())->register($core);
+
         $builtinRoutes = new BuiltinRoutes(
             new AuthController($auth, $twig),
             new AdminController($auth, $twig),
@@ -73,6 +77,11 @@ final class Application
         (new ModuleLoader($this->rootPath))->load($core);
         $builtinRoutes->registerPublicFallback($core->routes());
         $core->freeze();
+
+        $twig->addGlobals([
+            'admin_navigation' => (new AdminNavigationContext($core->admin(), $auth))->forPath($request->path),
+            'can_edit_template_code' => $auth->user() !== null && $auth->can('templates.code.edit'),
+        ]);
 
         $router = new Router($core->routes(), $this->rootPath);
         $response = SecurityHeaders::apply($router->dispatch($request));
