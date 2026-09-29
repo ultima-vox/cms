@@ -13,6 +13,51 @@ final class InfosystemRepository
     {
     }
 
+    /** @return array<string, mixed>|null */
+    public function findActiveById(int $id): ?array
+    {
+        if ($id < 1) {
+            return null;
+        }
+
+        $statement = $this->db->prepare(
+            <<<'SQL'
+            SELECT id, name, code, description, field_schema, is_active, created_at, updated_at
+            FROM infosystems
+            WHERE id = :id
+              AND is_active = TRUE
+            LIMIT 1
+            SQL
+        );
+        $statement->execute(['id' => $id]);
+        $record = $statement->fetch();
+
+        return is_array($record) ? $this->normalizeInfosystem($record) : null;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findActiveByCode(string $code): ?array
+    {
+        $code = strtolower(trim($code));
+        if ($code === '') {
+            return null;
+        }
+
+        $statement = $this->db->prepare(
+            <<<'SQL'
+            SELECT id, name, code, description, field_schema, is_active, created_at, updated_at
+            FROM infosystems
+            WHERE code = :code
+              AND is_active = TRUE
+            LIMIT 1
+            SQL
+        );
+        $statement->execute(['code' => $code]);
+        $record = $statement->fetch();
+
+        return is_array($record) ? $this->normalizeInfosystem($record) : null;
+    }
+
     /**
      * @param array<string, scalar|null> $filters
      * @return list<array<string, mixed>>
@@ -110,5 +155,19 @@ final class InfosystemRepository
         unset($item);
 
         return $items;
+    }
+
+    /** @param array<string, mixed> $record @return array<string, mixed> */
+    private function normalizeInfosystem(array $record): array
+    {
+        if (isset($record['field_schema']) && is_string($record['field_schema'])) {
+            $record['field_schema'] = json_decode(
+                $record['field_schema'],
+                true,
+                flags: JSON_THROW_ON_ERROR,
+            );
+        }
+
+        return $record;
     }
 }

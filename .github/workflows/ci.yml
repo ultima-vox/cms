@@ -52,7 +52,7 @@ jobs:
 
       - name: PHP syntax check
         run: |
-          find core public templates tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find core public templates tests modules -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l bin/console
 
       - name: Legacy/admin Twig syntax check
@@ -63,6 +63,23 @@ jobs:
 
       - name: Apply migrations
         run: php bin/console migrate
+
+      - name: Sync extension metadata
+        run: php bin/console extensions:sync
+
+      - name: Extension permission sync smoke test
+        run: |
+          count="$(psql -h 127.0.0.1 -U cms -d cms_db -Atc "
+            SELECT COUNT(*)
+            FROM role_permissions rp
+            JOIN roles r ON r.id = rp.role_id
+            JOIN permissions p ON p.id = rp.permission_id
+            WHERE p.code = 'infosystems.manage'
+              AND r.code IN ('superadmin', 'admin', 'editor');
+          ")"
+          test "$count" = "3"
+        env:
+          PGPASSWORD: cms
 
       - name: Database health check
         run: php bin/console health
@@ -132,13 +149,18 @@ jobs:
           require "vendor/autoload.php";
           $db = Core\Database::connection();
           $id = (int) $db->query("SELECT id FROM infosystems WHERE code = '\''catalog'\''")->fetchColumn();
-          $items = (new Core\Repository\InfosystemRepository($db))->findPublishedItems($id, 100, 0, ["kind" => "bio"]);
-          if (count($items) !== 1 || ($items[0]["name"] ?? null) !== "Tank 5" || (float) ($items[0]["properties"]["capacity"] ?? 0) !== 5.0) {
+          $repo = new Core\Repository\InfosystemRepository($db);
+          $system = $repo->findActiveByCode("catalog");
+          $items = $repo->findPublishedItems($id, 100, 0, ["kind" => "bio"]);
+          if (($system["id"] ?? null) !== $id || count($items) !== 1 || ($items[0]["name"] ?? null) !== "Tank 5" || (float) ($items[0]["properties"]["capacity"] ?? 0) !== 5.0) {
               fwrite(STDERR, "JSONB repository smoke test failed\n");
               exit(1);
           }
           fwrite(STDOUT, "JSONB OK\n");
           '
+
+      - name: Infosystem module facade smoke test
+        run: php tests/infosystem_module_smoke.php
 
       - name: Admin item search smoke test
         run: |
@@ -168,6 +190,7 @@ jobs:
           sleep 1
           curl --fail --silent http://127.0.0.1:8080/health | grep '"status":"ok"'
           curl --fail --silent http://127.0.0.1:8080/ | grep 'Production Core'
+          curl --fail --silent http://127.0.0.1:8080/ | grep 'data-infosystem="catalog"'
           curl --fail --silent http://127.0.0.1:8080/ | grep 'Tank 5'
           curl --fail --silent http://127.0.0.1:8080/about | grep 'About'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/structure)" = "302"

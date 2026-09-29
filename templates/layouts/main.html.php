@@ -14,14 +14,8 @@
 
         <?= html($page->content) ?>
 
-        <?php if ($items !== []): ?>
-            <section>
-                <?php foreach ($items as $item): ?>
-                    <article>
-                        <h2><?= text((string) ($item['name'] ?? '')) ?></h2>
-                    </article>
-                <?php endforeach; ?>
-            </section>
+        <?php if (isset($infosystems) && ($linkedInfosystem = $infosystems->linked()) !== null): ?>
+            <?= $linkedInfosystem->items()->show() ?>
         <?php endif; ?>
     </main>
 </body>

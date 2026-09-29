@@ -13,6 +13,7 @@ use Core\Controller\InfosystemItemListController;
 use Core\Controller\LayoutController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
+use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
 use Core\Extension\ModuleLoader;
 use Core\Http\Request;
@@ -45,7 +46,7 @@ final class Application
 
         $db = Database::connection();
         $twig = new TwigRenderer($this->rootPath);
-        $core = new ExtensionCore();
+        $core = new ExtensionCore(new RuntimeApi($db, $this->rootPath));
         $frontend = new FrontendRenderer(
             $twig,
             new PhpRenderer($this->rootPath, $core),

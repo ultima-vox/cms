@@ -10,6 +10,7 @@ final readonly class TemplateFacadeContext
     public function __construct(
         private RenderEngine $renderEngine,
         private array $variables,
+        private ViewTemplateRenderer $viewRenderer,
     ) {
     }
 
@@ -22,5 +23,11 @@ final readonly class TemplateFacadeContext
     public function variables(): array
     {
         return $this->variables;
+    }
+
+    /** @param array<string, mixed> $variables */
+    public function renderView(string $viewCode, string $sourceType, array $variables = []): string
+    {
+        return $this->viewRenderer->render($viewCode, $sourceType, $variables);
     }
 }
