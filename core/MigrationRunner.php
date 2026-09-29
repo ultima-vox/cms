@@ -19,17 +19,11 @@ final class MigrationRunner
     /** @return list<string> */
     public function migrate(): array
     {
-        $this->db->exec(
-            'CREATE TABLE IF NOT EXISTS schema_migrations (' .
-            'migration VARCHAR(255) PRIMARY KEY, ' .
-            'applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)'
-        );
-
+        $this->ensureTrackingSchema();
         $this->db->query("SELECT pg_advisory_lock(hashtext('ultima_vox_cms_migrations'))");
 
         try {
             $files = glob($this->migrationsPath . '/*.sql');
-
             if ($files === false) {
                 throw new RuntimeException('Не удалось прочитать каталог миграций.');
             }
@@ -39,18 +33,31 @@ final class MigrationRunner
 
             foreach ($files as $file) {
                 $name = basename($file);
-
-                if ($this->isApplied($name)) {
-                    continue;
-                }
-
                 $sql = file_get_contents($file);
-
                 if ($sql === false) {
                     throw new RuntimeException(sprintf('Не удалось прочитать миграцию %s.', $name));
                 }
 
-                $this->applyMigration($name, $sql);
+                $checksum = hash('sha256', $sql);
+                $recordedChecksum = $this->appliedChecksum($name);
+
+                if ($recordedChecksum !== false) {
+                    if ($recordedChecksum === null || $recordedChecksum === '') {
+                        $this->backfillChecksum($name, $checksum);
+                        continue;
+                    }
+
+                    if (!hash_equals($recordedChecksum, $checksum)) {
+                        throw new RuntimeException(sprintf(
+                            'Миграция %s была изменена после применения. Создайте новую миграцию вместо изменения существующей.',
+                            $name,
+                        ));
+                    }
+
+                    continue;
+                }
+
+                $this->applyMigration($name, $sql, $checksum);
                 $applied[] = $name;
             }
 
@@ -60,7 +67,18 @@ final class MigrationRunner
         }
     }
 
-    private function applyMigration(string $name, string $sql): void
+    private function ensureTrackingSchema(): void
+    {
+        $this->db->exec(
+            'CREATE TABLE IF NOT EXISTS schema_migrations (' .
+            'migration VARCHAR(255) PRIMARY KEY, ' .
+            'checksum CHAR(64) NULL, ' .
+            'applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)'
+        );
+        $this->db->exec('ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS checksum CHAR(64) NULL');
+    }
+
+    private function applyMigration(string $name, string $sql, string $checksum): void
     {
         $this->db->beginTransaction();
 
@@ -68,9 +86,12 @@ final class MigrationRunner
             $this->db->exec($sql);
 
             $statement = $this->db->prepare(
-                'INSERT INTO schema_migrations (migration) VALUES (:migration)'
+                'INSERT INTO schema_migrations (migration, checksum) VALUES (:migration, :checksum)'
             );
-            $statement->execute(['migration' => $name]);
+            $statement->execute([
+                'migration' => $name,
+                'checksum' => $checksum,
+            ]);
 
             $this->db->commit();
         } catch (Throwable $exception) {
@@ -82,13 +103,31 @@ final class MigrationRunner
         }
     }
 
-    private function isApplied(string $migration): bool
+    /** @return string|null|false false means the migration was not applied. */
+    private function appliedChecksum(string $migration): string|null|false
     {
         $statement = $this->db->prepare(
-            'SELECT 1 FROM schema_migrations WHERE migration = :migration LIMIT 1'
+            'SELECT checksum FROM schema_migrations WHERE migration = :migration LIMIT 1'
         );
         $statement->execute(['migration' => $migration]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
 
-        return $statement->fetchColumn() !== false;
+        if (!is_array($row)) {
+            return false;
+        }
+
+        $checksum = $row['checksum'] ?? null;
+        return is_string($checksum) ? trim($checksum) : null;
+    }
+
+    private function backfillChecksum(string $migration, string $checksum): void
+    {
+        $statement = $this->db->prepare(
+            'UPDATE schema_migrations SET checksum = :checksum WHERE migration = :migration AND checksum IS NULL'
+        );
+        $statement->execute([
+            'migration' => $migration,
+            'checksum' => $checksum,
+        ]);
     }
 }

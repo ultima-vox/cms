@@ -29,6 +29,9 @@ final readonly class BuiltinRoutes
     public function register(RoutesApi $routes): void
     {
         $routes->get('/health', 'health.index', [$this->healthController, 'index']);
+        $routes->get('/health/live', 'health.live', [$this->healthController, 'live']);
+        $routes->get('/health/ready', 'health.ready', [$this->healthController, 'ready']);
+
         $routes->get('/admin/login', 'auth.form', [$this->authController, 'form']);
         $routes->post('/admin/login', 'auth.login', [$this->authController, 'login']);
         $routes->post('/admin/logout', 'auth.logout', [$this->authController, 'logout']);
