@@ -61,6 +61,11 @@ jobs:
       - name: Extension and render runtime smoke test
         run: php tests/runtime_smoke.php
 
+      - name: Module manifest smoke test
+        run: |
+          php tests/module_manifest_smoke.php
+          php bin/console modules:list | grep $'^infosystem\t1.0.0\tInfosystems$'
+
       - name: Apply migrations
         run: php bin/console migrate
 
@@ -69,7 +74,7 @@ jobs:
 
       - name: Extension permission sync smoke test
         run: |
-          count="$(psql -h 127.0.0.1 -U cms -d cms_db -Atc "
+          infosystems_count="$(psql -h 127.0.0.1 -U cms -d cms_db -Atc "
             SELECT COUNT(*)
             FROM role_permissions rp
             JOIN roles r ON r.id = rp.role_id
@@ -77,7 +82,25 @@ jobs:
             WHERE p.code = 'infosystems.manage'
               AND r.code IN ('superadmin', 'admin', 'editor');
           ")"
-          test "$count" = "3"
+          code_edit_count="$(psql -h 127.0.0.1 -U cms -d cms_db -Atc "
+            SELECT COUNT(*)
+            FROM role_permissions rp
+            JOIN roles r ON r.id = rp.role_id
+            JOIN permissions p ON p.id = rp.permission_id
+            WHERE p.code = 'templates.code.edit'
+              AND r.code IN ('superadmin', 'admin');
+          ")"
+          editor_code_edit="$(psql -h 127.0.0.1 -U cms -d cms_db -Atc "
+            SELECT COUNT(*)
+            FROM role_permissions rp
+            JOIN roles r ON r.id = rp.role_id
+            JOIN permissions p ON p.id = rp.permission_id
+            WHERE p.code = 'templates.code.edit'
+              AND r.code = 'editor';
+          ")"
+          test "$infosystems_count" = "3"
+          test "$code_edit_count" = "2"
+          test "$editor_code_edit" = "0"
         env:
           PGPASSWORD: cms
 
@@ -144,43 +167,13 @@ jobs:
           PGPASSWORD: cms
 
       - name: JSONB repository smoke test
-        run: |
-          php -r '
-          require "vendor/autoload.php";
-          $db = Core\Database::connection();
-          $id = (int) $db->query("SELECT id FROM infosystems WHERE code = '\''catalog'\''")->fetchColumn();
-          $repo = new Core\Repository\InfosystemRepository($db);
-          $system = $repo->findActiveByCode("catalog");
-          $items = $repo->findPublishedItems($id, 100, 0, ["kind" => "bio"]);
-          if (($system["id"] ?? null) !== $id || count($items) !== 1 || ($items[0]["name"] ?? null) !== "Tank 5" || (float) ($items[0]["properties"]["capacity"] ?? 0) !== 5.0) {
-              fwrite(STDERR, "JSONB repository smoke test failed\n");
-              exit(1);
-          }
-          fwrite(STDOUT, "JSONB OK\n");
-          '
+        run: php tests/jsonb_repository_smoke.php
 
       - name: Infosystem module facade smoke test
         run: php tests/infosystem_module_smoke.php
 
       - name: Admin item search smoke test
-        run: |
-          php -r '
-          require "vendor/autoload.php";
-          $db = Core\Database::connection();
-          $id = (int) $db->query("SELECT id FROM infosystems WHERE code = '\''catalog'\''")->fetchColumn();
-          $repo = new Core\Repository\InfosystemItemSearchRepository($db);
-          $page = $repo->search($id, 2, 25);
-          if ($page["total"] !== 61 || $page["pages"] !== 3 || $page["page"] !== 2 || count($page["items"]) !== 25) {
-              fwrite(STDERR, "Pagination smoke test failed\n");
-              exit(1);
-          }
-          $filtered = $repo->search($id, 1, 25, "Tank", null, "published", ["kind" => "bio"]);
-          if ($filtered["total"] !== 1 || ($filtered["items"][0]["name"] ?? null) !== "Tank 5") {
-              fwrite(STDERR, "Search/filter smoke test failed\n");
-              exit(1);
-          }
-          fwrite(STDOUT, "ADMIN SEARCH OK\n");
-          '
+        run: php tests/admin_search_smoke.php
 
       - name: HTTP smoke test
         run: |
