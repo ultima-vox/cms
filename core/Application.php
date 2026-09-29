@@ -7,12 +7,17 @@ namespace Core;
 use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
+use Core\Controller\InfosystemController;
+use Core\Controller\InfosystemItemListController;
 use Core\Controller\LayoutController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
 use Core\Http\Request;
+use Core\Infosystem\FieldSchema;
 use Core\Layout\LayoutTemplateService;
 use Core\Repository\AuditLogRepository;
+use Core\Repository\InfosystemItemSearchRepository;
+use Core\Repository\InfosystemManagementRepository;
 use Core\Repository\InfosystemRepository;
 use Core\Repository\LayoutRepository;
 use Core\Repository\LoginAttemptRepository;
@@ -40,6 +45,8 @@ final class Application
             new LoginAttemptRepository($db),
         );
         $audit = new AuditLogRepository($db);
+        $publicInfosystems = new InfosystemRepository($db);
+        $infosystemManagement = new InfosystemManagementRepository($db);
 
         $router = new Router(
             new AuthController($auth, $view),
@@ -57,10 +64,23 @@ final class Application
                 $audit,
                 $view,
             ),
+            new InfosystemController(
+                $auth,
+                $infosystemManagement,
+                new FieldSchema(),
+                $audit,
+                $view,
+            ),
+            new InfosystemItemListController(
+                $auth,
+                $infosystemManagement,
+                new InfosystemItemSearchRepository($db),
+                $view,
+            ),
             new HealthController($db),
             new NodeController(
                 new NodeRepository($db),
-                new InfosystemRepository($db),
+                $publicInfosystems,
                 $view,
             ),
             $this->rootPath,

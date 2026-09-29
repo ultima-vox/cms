@@ -53,13 +53,16 @@ jobs:
       - name: PHP syntax check
         run: find core public bin -type f \( -name '*.php' -o -name 'console' \) -print0 | xargs -0 -n1 php -l
 
+      - name: Twig syntax check
+        run: php bin/console templates:lint
+
       - name: Apply migrations
         run: php bin/console migrate
 
       - name: Database health check
         run: php bin/console health
 
-      - name: Seed smoke-test structure
+      - name: Seed smoke-test content
         run: |
           psql -h 127.0.0.1 -U cms -d cms_db <<'SQL'
           INSERT INTO nodes (name, slug, path, title, content, layout_id, status)
@@ -75,9 +78,82 @@ jobs:
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.twig'),
             'published'
           );
+
+          INSERT INTO infosystems (name, code, description, field_schema)
+          VALUES (
+            'Catalog',
+            'catalog',
+            'CI catalog',
+            '[{"code":"kind","name":"Kind","type":"select","required":true,"filterable":true,"options":["bio","septic"]},{"code":"capacity","name":"Capacity","type":"number","required":false,"filterable":true,"options":[]}]'::jsonb
+          );
+
+          INSERT INTO infosystem_groups (infosystem_id, name, slug, path)
+          VALUES ((SELECT id FROM infosystems WHERE code = 'catalog'), 'Stations', 'stations', '/stations');
+
+          INSERT INTO infosystem_items (
+            infosystem_id, group_id, name, slug, path, status, properties, content
+          )
+          VALUES (
+            (SELECT id FROM infosystems WHERE code = 'catalog'),
+            (SELECT id FROM infosystem_groups WHERE path = '/stations'),
+            'Tank 5', 'tank-5', '/stations/tank-5', 'published',
+            '{"kind":"bio","capacity":5}'::jsonb,
+            '<p>Tank content</p>'
+          );
+
+          INSERT INTO infosystem_items (
+            infosystem_id, group_id, name, slug, path, status, properties
+          )
+          SELECT
+            (SELECT id FROM infosystems WHERE code = 'catalog'),
+            (SELECT id FROM infosystem_groups WHERE path = '/stations'),
+            'Septic ' || n,
+            'septic-' || n,
+            '/stations/septic-' || n,
+            CASE WHEN n % 2 = 0 THEN 'published' ELSE 'draft' END,
+            jsonb_build_object('kind', 'septic', 'capacity', n)
+          FROM generate_series(1, 60) AS n;
+
+          UPDATE nodes
+          SET infosystem_id = (SELECT id FROM infosystems WHERE code = 'catalog')
+          WHERE path = '/';
           SQL
         env:
           PGPASSWORD: cms
+
+      - name: JSONB repository smoke test
+        run: |
+          php -r '
+          require "vendor/autoload.php";
+          $db = Core\Database::connection();
+          $id = (int) $db->query("SELECT id FROM infosystems WHERE code = '\''catalog'\''")->fetchColumn();
+          $items = (new Core\Repository\InfosystemRepository($db))->findPublishedItems($id, 100, 0, ["kind" => "bio"]);
+          if (count($items) !== 1 || ($items[0]["name"] ?? null) !== "Tank 5" || (float) ($items[0]["properties"]["capacity"] ?? 0) !== 5.0) {
+              fwrite(STDERR, "JSONB repository smoke test failed\n");
+              exit(1);
+          }
+          fwrite(STDOUT, "JSONB OK\n");
+          '
+
+      - name: Admin item search smoke test
+        run: |
+          php -r '
+          require "vendor/autoload.php";
+          $db = Core\Database::connection();
+          $id = (int) $db->query("SELECT id FROM infosystems WHERE code = '\''catalog'\''")->fetchColumn();
+          $repo = new Core\Repository\InfosystemItemSearchRepository($db);
+          $page = $repo->search($id, 2, 25);
+          if ($page["total"] !== 61 || $page["pages"] !== 3 || $page["page"] !== 2 || count($page["items"]) !== 25) {
+              fwrite(STDERR, "Pagination smoke test failed\n");
+              exit(1);
+          }
+          $filtered = $repo->search($id, 1, 25, "Tank", null, "published", ["kind" => "bio"]);
+          if ($filtered["total"] !== 1 || ($filtered["items"][0]["name"] ?? null) !== "Tank 5") {
+              fwrite(STDERR, "Search/filter smoke test failed\n");
+              exit(1);
+          }
+          fwrite(STDOUT, "ADMIN SEARCH OK\n");
+          '
 
       - name: HTTP smoke test
         run: |
@@ -87,6 +163,9 @@ jobs:
           sleep 1
           curl --fail --silent http://127.0.0.1:8080/health | grep '"status":"ok"'
           curl --fail --silent http://127.0.0.1:8080/ | grep 'Production Core'
+          curl --fail --silent http://127.0.0.1:8080/ | grep 'Tank 5'
           curl --fail --silent http://127.0.0.1:8080/about | grep 'About'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/structure)" = "302"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/layouts)" = "302"
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/infosystems)" = "302"
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/infosystems/1/items?q=Tank)" = "302"

@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 use Core\Database;
 use Core\MigrationRunner;
+use Core\View\TwigTemplateLinter;
 use Dotenv\Dotenv;
 
 $rootPath = dirname(__DIR__);
@@ -31,6 +32,11 @@ switch ($command) {
     case 'health':
         Database::connection()->query('SELECT 1')->fetchColumn();
         fwrite(STDOUT, "OK\n");
+        exit(0);
+
+    case 'templates:lint':
+        $checked = (new TwigTemplateLinter($rootPath . '/templates'))->lint();
+        fwrite(STDOUT, sprintf("Twig OK: %d template(s).\n", count($checked)));
         exit(0);
 
     case 'user:create':
@@ -84,6 +90,13 @@ switch ($command) {
         }
 
     default:
-        fwrite(STDOUT, "Ultima Vox CMS\n\nCommands:\n  migrate      Apply pending SQL migrations\n  health       Check database connectivity\n  user:create  Create the initial super administrator\n");
+        fwrite(
+            STDOUT,
+            "Ultima Vox CMS\n\nCommands:\n" .
+            "  migrate         Apply pending SQL migrations\n" .
+            "  health          Check database connectivity\n" .
+            "  templates:lint  Parse all packaged Twig templates\n" .
+            "  user:create     Create the initial super administrator\n"
+        );
         exit($command === 'help' ? 0 : 1);
 }
