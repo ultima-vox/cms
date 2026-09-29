@@ -8,7 +8,7 @@ use Core\Repository\InfosystemItemSearchRepository;
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 $db = Database::connection();
-$id = (int) $db->query("SELECT id FROM infosystems WHERE code = 'catalog'")->fetchColumn();
+$id = (int) $db->query("SELECT id FROM infosystems WHERE site_id = 1 AND code = 'catalog'")->fetchColumn();
 $repo = new InfosystemItemSearchRepository($db);
 $page = $repo->search($id, 2, 25);
 

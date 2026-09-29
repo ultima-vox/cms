@@ -101,18 +101,28 @@ final class InfosystemItemsSource extends RenderSource
 
     public function render(RenderContext $context): string
     {
+        $siteId = (int) ($this->infosystem['site_id'] ?? 0);
         $infosystemId = (int) $this->infosystem['id'];
+        if ($siteId < 1) {
+            throw new RuntimeException('Infosystem render source requires a site-scoped record.');
+        }
+
         $items = $this->repository->findPublishedItems(
+            $siteId,
             $infosystemId,
             $this->limit,
             $this->offset,
             $this->filters,
         );
 
+        $context->dependency('site:' . $siteId);
         $context->dependency('infosystem:' . $infosystemId);
+        $context->dependency('site:' . $siteId . ':infosystem:' . $infosystemId);
         foreach ($items as $item) {
             if (isset($item['id'])) {
-                $context->dependency('infosystem_item:' . (int) $item['id']);
+                $itemId = (int) $item['id'];
+                $context->dependency('infosystem_item:' . $itemId);
+                $context->dependency('site:' . $siteId . ':infosystem_item:' . $itemId);
             }
         }
 

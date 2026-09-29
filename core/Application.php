@@ -24,11 +24,13 @@ use Core\Repository\InfosystemRepository;
 use Core\Repository\LayoutRepository;
 use Core\Repository\LoginAttemptRepository;
 use Core\Repository\NodeRepository;
+use Core\Repository\SiteRepository;
 use Core\Repository\StructureRepository;
 use Core\Repository\UserRepository;
 use Core\Security\AuthService;
 use Core\Security\PermissionGate;
 use Core\Security\SecurityHeaders;
+use Core\Site\SiteResolver;
 use Core\View\FrontendRenderer;
 use Core\View\PhpRenderer;
 use Core\View\TwigRenderer;
@@ -59,13 +61,17 @@ final class Application
         $audit = new AuditLogRepository($db);
         $permissionGate = new PermissionGate($auth);
         $html = new HtmlSanitizingHandler(new HtmlSanitizer());
+        $siteResolver = new SiteResolver(
+            new SiteRepository($db),
+            Config::string('APP_URL', 'http://localhost'),
+        );
 
         $builtinRoutes = new BuiltinRoutes(
             new AuthController($auth, $twig),
             new AdminController($auth, $twig, $core->admin()),
             new StructureController(
                 $auth,
-                new StructureRepository($db),
+                new StructureRepository($db, 1),
                 $audit,
                 $twig,
             ),
@@ -80,6 +86,7 @@ final class Application
             new NodeController(
                 new NodeRepository($db),
                 new InfosystemRepository($db),
+                $siteResolver,
                 $frontend,
             ),
             $permissionGate,
