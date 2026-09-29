@@ -3,16 +3,22 @@
 declare(strict_types=1);
 
 use Core\Database;
+use Core\Extension\Api\RuntimeApi;
+use Core\Extension\Core as ExtensionCore;
 use Core\Http\Request;
+use Core\Repository\InfosystemManagementRepository;
 use Core\Repository\InfosystemRepository;
 use Core\Repository\NodeRepository;
 use Core\Repository\SiteRepository;
+use Core\Repository\StructureRepository;
+use Core\Site\AdminSiteSelector;
 use Core\Site\SiteResolver;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 $db = Database::connection();
-$resolver = new SiteResolver(new SiteRepository($db), 'http://127.0.0.1:8080');
+$siteRepository = new SiteRepository($db);
+$resolver = new SiteResolver($siteRepository, 'http://127.0.0.1:8080');
 
 $request = static fn (string $host): Request => new Request(
     method: 'GET',
@@ -92,9 +98,56 @@ try {
         $db->rollBack();
     }
 }
-
 if (!$blocked) {
     throw new RuntimeException('Cross-site node parent relation was not rejected.');
 }
 
-fwrite(STDOUT, "SITE RESOLUTION OK\n");
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+$selector = new AdminSiteSelector($siteRepository);
+$selected = $selector->select($second->id);
+$core = new ExtensionCore(new RuntimeApi($db, dirname(__DIR__), $selected));
+if ($core->sites()->adminId() !== $second->id || $core->sites()->admin()->code !== 'second') {
+    throw new RuntimeException('Typed SitesApi did not expose selected admin site.');
+}
+
+$adminNodes = (new StructureRepository($db, $core->sites()->adminId()))->all();
+if (count($adminNodes) !== 1 || ($adminNodes[0]['title'] ?? null) !== 'Second Site') {
+    throw new RuntimeException('Structure admin repository leaked another site.');
+}
+$adminInfosystems = (new InfosystemManagementRepository($db, $core->sites()->adminId()))->all();
+if (count($adminInfosystems) !== 1 || ($adminInfosystems[0]['name'] ?? null) !== 'Second Catalog') {
+    throw new RuntimeException('Infosystem admin repository leaked another site.');
+}
+
+$missingScopeBlocked = false;
+$db->beginTransaction();
+try {
+    $db->exec("INSERT INTO infosystems (name, code) VALUES ('Unscoped', 'unscoped')");
+} catch (PDOException) {
+    $missingScopeBlocked = true;
+} finally {
+    if ($db->inTransaction()) {
+        $db->rollBack();
+    }
+}
+if (!$missingScopeBlocked) {
+    throw new RuntimeException('Unscoped infosystem insert was accepted after dropping site_id default.');
+}
+
+$sitePermissionCount = (int) $db->query(
+    <<<'SQL'
+    SELECT COUNT(*)
+    FROM role_permissions rp
+    JOIN roles r ON r.id = rp.role_id
+    JOIN permissions p ON p.id = rp.permission_id
+    WHERE p.code = 'sites.manage'
+      AND r.code IN ('superadmin', 'admin')
+    SQL
+)->fetchColumn();
+if ($sitePermissionCount !== 2) {
+    throw new RuntimeException('sites.manage permission was not synchronized for admin roles.');
+}
+
+fwrite(STDOUT, "SITE RESOLUTION + ADMIN SCOPE OK\n");

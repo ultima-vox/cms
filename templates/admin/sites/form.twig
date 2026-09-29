@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ site.id ? 'Настройка сайта' : 'Новый сайт' }} — Ultima Vox CMS</title>
+    <link rel="stylesheet" href="/assets/admin.css">
+</head>
+<body class="admin-shell">
+    <aside class="admin-shell__sidebar">
+        <div class="admin-brand">ULTIMA VOX</div>
+        <nav class="admin-nav" aria-label="Основная навигация">
+            <a class="admin-nav__item" href="/admin">Обзор</a>
+            <a class="admin-nav__item admin-nav__item--active" href="/admin/sites">Сайты</a>
+            <a class="admin-nav__item" href="/admin/structure">Структура</a>
+            <a class="admin-nav__item" href="/admin/infosystems">Инфосистемы</a>
+            <a class="admin-nav__item" href="/admin/layouts">Макеты</a>
+        </nav>
+    </aside>
+
+    <main class="admin-shell__main">
+        <header class="admin-page-header">
+            <div>
+                <p class="admin-eyebrow">Sites</p>
+                <h1 class="admin-header__title">{{ site.id ? site.name : 'Новый сайт' }}</h1>
+                {% if site.id %}<p class="admin-page-header__description">Код <code>{{ site.code }}</code> после создания не изменяется.</p>{% endif %}
+            </div>
+            <a class="admin-button admin-button--secondary" href="/admin/sites">К списку</a>
+        </header>
+
+        {% if error %}<div class="admin-notice">{{ error }}</div>{% endif %}
+        {% if saved %}<div class="admin-notice">Изменения сохранены.</div>{% endif %}
+
+        <section class="admin-panel">
+            <form action="{{ site.id ? '/admin/sites/' ~ site.id : '/admin/sites' }}" method="post">
+                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+                <p>
+                    <label>Название<br><input name="name" value="{{ site.name }}" maxlength="255" required></label>
+                </p>
+
+                {% if site.id %}
+                    <p><strong>Код:</strong> <code>{{ site.code }}</code></p>
+                    <label>
+                        <input type="checkbox" name="is_active" value="1"{% if site.is_active %} checked{% endif %}{% if site.code == 'default' %} disabled{% endif %}>
+                        Сайт активен
+                    </label>
+                    {% if site.code == 'default' %}<input type="hidden" name="is_active" value="1">{% endif %}
+                {% else %}
+                    <p>
+                        <label>Код<br><input name="code" value="{{ site.code }}" maxlength="120" pattern="[a-z][a-z0-9_-]*" required></label>
+                    </p>
+                {% endif %}
+
+                <div class="admin-actions">
+                    <button class="admin-button admin-button--primary" type="submit">Сохранить</button>
+                </div>
+            </form>
+        </section>
+
+        {% if site.id %}
+            <section class="admin-panel">
+                <h2 class="admin-panel__title">Домены</h2>
+                <p class="admin-panel__text">Домен хранится без схемы и порта. Один домен сайта может быть основным.</p>
+
+                {% for domain in domains %}
+                    <div class="admin-actions">
+                        <code>{{ domain.host }}</code>
+                        {% if domain.is_primary %}<strong>основной</strong>{% endif %}
+                        {% if not domain.is_primary %}
+                            <form action="/admin/sites/{{ site.id }}/domains/{{ domain.id }}/primary" method="post">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                <button class="admin-button admin-button--secondary" type="submit">Сделать основным</button>
+                            </form>
+                        {% endif %}
+                        <form action="/admin/sites/{{ site.id }}/domains/{{ domain.id }}/delete" method="post">
+                            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                            <button class="admin-button admin-button--secondary" type="submit">Удалить</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <p class="admin-panel__text">Домены ещё не добавлены. Для default-сайта продолжает работать host из APP_URL.</p>
+                {% endfor %}
+
+                <form action="/admin/sites/{{ site.id }}/domains" method="post">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                    <p><label>Новый домен<br><input name="host" placeholder="example.ru" maxlength="253" required></label></p>
+                    <label><input type="checkbox" name="is_primary" value="1"> Сделать основным</label>
+                    <div class="admin-actions">
+                        <button class="admin-button admin-button--primary" type="submit">Добавить домен</button>
+                    </div>
+                </form>
+            </section>
+        {% endif %}
+    </main>
+</body>
+</html>

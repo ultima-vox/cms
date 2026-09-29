@@ -6,6 +6,7 @@ namespace Core\Controller;
 
 use Core\Extension\Api\AdminApi;
 use Core\Extension\Api\AdminNavigationItem;
+use Core\Extension\Api\SitesApi;
 use Core\Http\Request;
 use Core\Http\Response;
 use Core\Security\AuthService;
@@ -18,6 +19,7 @@ final class AdminController
         private readonly AuthService $auth,
         private readonly TwigRenderer $view,
         private readonly AdminApi $admin,
+        private readonly SitesApi $sites,
     ) {
     }
 
@@ -43,6 +45,8 @@ final class AdminController
             'csrf_token' => Csrf::token(),
             'user' => $user,
             'navigation' => $navigation,
+            'admin_site' => $this->sites->admin(),
+            'admin_sites' => $this->sites->active(),
         ]));
     }
 }

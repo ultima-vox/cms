@@ -30,6 +30,8 @@ use Core\Repository\UserRepository;
 use Core\Security\AuthService;
 use Core\Security\PermissionGate;
 use Core\Security\SecurityHeaders;
+use Core\Site\AdminSiteSelector;
+use Core\Site\SiteContext;
 use Core\Site\SiteResolver;
 use Core\View\FrontendRenderer;
 use Core\View\PhpRenderer;
@@ -46,8 +48,12 @@ final class Application
         $this->startSession();
 
         $db = Database::connection();
+        $siteRepository = new SiteRepository($db);
+        $adminSite = str_starts_with($request->path, '/admin')
+            ? (new AdminSiteSelector($siteRepository))->current()
+            : new SiteContext(1, 'default', 'Default site', '');
         $twig = new TwigRenderer($this->rootPath);
-        $core = new ExtensionCore(new RuntimeApi($db, $this->rootPath));
+        $core = new ExtensionCore(new RuntimeApi($db, $this->rootPath, $adminSite));
         (new BuiltinExtensions())->register($core);
 
         $frontend = new FrontendRenderer(
@@ -62,16 +68,16 @@ final class Application
         $permissionGate = new PermissionGate($auth);
         $html = new HtmlSanitizingHandler(new HtmlSanitizer());
         $siteResolver = new SiteResolver(
-            new SiteRepository($db),
+            $siteRepository,
             Config::string('APP_URL', 'http://localhost'),
         );
 
         $builtinRoutes = new BuiltinRoutes(
             new AuthController($auth, $twig),
-            new AdminController($auth, $twig, $core->admin()),
+            new AdminController($auth, $twig, $core->admin(), $core->sites()),
             new StructureController(
                 $auth,
-                new StructureRepository($db, 1),
+                new StructureRepository($db, $core->sites()->adminId()),
                 $audit,
                 $twig,
             ),

@@ -8,23 +8,25 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 $root = dirname(__DIR__);
 $manifests = (new ModuleLoader($root))->discover();
-
-$infosystem = null;
+$byCode = [];
 foreach ($manifests as $manifest) {
-    if ($manifest->code === 'infosystem') {
-        $infosystem = $manifest;
-        break;
-    }
+    $byCode[$manifest->code] = $manifest;
 }
 
-if ($infosystem === null) {
-    throw new RuntimeException('Infosystem module manifest was not discovered.');
-}
-if ($infosystem->version !== '1.0.0') {
-    throw new RuntimeException('Unexpected infosystem module version.');
+$infosystem = $byCode['infosystem'] ?? null;
+if ($infosystem === null || $infosystem->version !== '1.0.0') {
+    throw new RuntimeException('Infosystem module manifest is missing or invalid.');
 }
 if (($infosystem->requires['core'] ?? null) !== '>=0.1.0') {
-    throw new RuntimeException('Core dependency was not parsed from the module manifest.');
+    throw new RuntimeException('Core dependency was not parsed from infosystem manifest.');
+}
+
+$sites = $byCode['sites'] ?? null;
+if ($sites === null || $sites->version !== '1.0.0') {
+    throw new RuntimeException('Sites module manifest is missing or invalid.');
+}
+if (($sites->requires['core'] ?? null) !== '>=0.1.0') {
+    throw new RuntimeException('Core dependency was not parsed from sites manifest.');
 }
 
 fwrite(STDOUT, "MODULE MANIFEST OK\n");
