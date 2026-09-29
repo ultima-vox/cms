@@ -5,7 +5,9 @@
     "license": "proprietary",
     "require": {
         "php": ">=8.4",
+        "ext-dom": "*",
         "ext-json": "*",
+        "ext-mbstring": "*",
         "ext-pdo": "*",
         "ext-pdo_pgsql": "*",
         "nikic/fast-route": "^1.3",
