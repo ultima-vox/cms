@@ -116,7 +116,7 @@ final class InfosystemModule implements ModuleInterface
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
-        $management = new InfosystemManagementRepository($db);
+        $management = new InfosystemManagementRepository($db, $core->sites()->adminId());
         $controller = new InfosystemController(
             $auth,
             $management,

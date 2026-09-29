@@ -11,7 +11,9 @@ use Core\Extension\Api\ExtensionsApi;
 use Core\Extension\Api\PermissionsApi;
 use Core\Extension\Api\RoutesApi;
 use Core\Extension\Api\RuntimeApi;
+use Core\Extension\Api\SitesApi;
 use Core\Extension\Api\TemplatesApi;
+use Core\Repository\SiteRepository;
 
 final class Core
 {
@@ -22,6 +24,7 @@ final class Core
     private PermissionsApi $permissions;
     private EventsApi $events;
     private ExtensionsApi $extensions;
+    private SitesApi $sites;
     private bool $frozen = false;
 
     public function __construct(private readonly RuntimeApi $runtime)
@@ -33,6 +36,10 @@ final class Core
         $this->permissions = new PermissionsApi();
         $this->events = new EventsApi();
         $this->extensions = new ExtensionsApi();
+        $this->sites = new SitesApi(
+            new SiteRepository($runtime->database()),
+            $runtime->adminSite(),
+        );
     }
 
     public function runtime(): RuntimeApi
@@ -68,6 +75,11 @@ final class Core
     public function events(): EventsApi
     {
         return $this->events;
+    }
+
+    public function sites(): SitesApi
+    {
+        return $this->sites;
     }
 
     /**
