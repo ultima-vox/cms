@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace UltimaVox\Modules\Infosystem;
 
+use Core\Content\HtmlSanitizer;
+use Core\Content\HtmlSanitizingHandler;
 use Core\Controller\InfosystemController;
 use Core\Controller\InfosystemItemListController;
 use Core\Extension\Core;
@@ -16,6 +18,7 @@ use Core\Repository\InfosystemRepository;
 use Core\Repository\LoginAttemptRepository;
 use Core\Repository\UserRepository;
 use Core\Security\AuthService;
+use Core\Security\PermissionGate;
 use Core\View\Render\RenderNodeInterface;
 use Core\View\Render\TemplateFacadeContext;
 use Core\View\TwigRenderer;
@@ -26,7 +29,6 @@ final class InfosystemModule implements ModuleInterface
     public function register(Core $core): void
     {
         $db = $core->runtime()->database();
-        $rootPath = $core->runtime()->rootPath();
         $repository = new InfosystemRepository($db);
         $content = $core->content();
         $events = $core->events();
@@ -128,27 +130,59 @@ final class InfosystemModule implements ModuleInterface
             new InfosystemItemSearchRepository($db),
             $twig,
         );
+        $gate = new PermissionGate($auth);
+        $html = new HtmlSanitizingHandler(new HtmlSanitizer());
         $routes = $core->routes();
 
         $routes->get('/admin/infosystems', 'infosystem.index', [$controller, 'index']);
         $routes->get('/admin/infosystems/create', 'infosystem.create', [$controller, 'createForm']);
-        $routes->post('/admin/infosystems', 'infosystem.store', [$controller, 'store']);
+        $routes->post(
+            '/admin/infosystems',
+            'infosystem.store',
+            $gate->require('infosystems.manage', $html->wrap([$controller, 'store'], ['description' => 'rich'])),
+        );
         $routes->get('/admin/infosystems/{id:\\d+}', 'infosystem.manage', [$listController, 'overview']);
         $routes->get('/admin/infosystems/{id:\\d+}/edit', 'infosystem.edit', [$controller, 'editForm']);
-        $routes->post('/admin/infosystems/{id:\\d+}', 'infosystem.update', [$controller, 'update']);
+        $routes->post(
+            '/admin/infosystems/{id:\\d+}',
+            'infosystem.update',
+            $gate->require('infosystems.manage', $html->wrap([$controller, 'update'], ['description' => 'rich'])),
+        );
         $routes->post('/admin/infosystems/{id:\\d+}/delete', 'infosystem.delete', [$controller, 'delete']);
 
         $routes->get('/admin/infosystems/{id:\\d+}/groups/create', 'infosystem.group.create', [$controller, 'createGroupForm']);
-        $routes->post('/admin/infosystems/{id:\\d+}/groups', 'infosystem.group.store', [$controller, 'storeGroup']);
+        $routes->post(
+            '/admin/infosystems/{id:\\d+}/groups',
+            'infosystem.group.store',
+            $gate->require('infosystems.manage', $html->wrap([$controller, 'storeGroup'], ['description' => 'rich'])),
+        );
         $routes->get('/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}/edit', 'infosystem.group.edit', [$controller, 'editGroupForm']);
-        $routes->post('/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}', 'infosystem.group.update', [$controller, 'updateGroup']);
+        $routes->post(
+            '/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}',
+            'infosystem.group.update',
+            $gate->require('infosystems.manage', $html->wrap([$controller, 'updateGroup'], ['description' => 'rich'])),
+        );
         $routes->post('/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}/delete', 'infosystem.group.delete', [$controller, 'deleteGroup']);
 
         $routes->get('/admin/infosystems/{id:\\d+}/items', 'infosystem.item.index', [$listController, 'index']);
         $routes->get('/admin/infosystems/{id:\\d+}/items/create', 'infosystem.item.create', [$controller, 'createItemForm']);
-        $routes->post('/admin/infosystems/{id:\\d+}/items', 'infosystem.item.store', [$controller, 'storeItem']);
+        $routes->post(
+            '/admin/infosystems/{id:\\d+}/items',
+            'infosystem.item.store',
+            $gate->require(
+                'infosystems.manage',
+                $html->wrap([$controller, 'storeItem'], ['description' => 'rich', 'content' => 'rich']),
+            ),
+        );
         $routes->get('/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}/edit', 'infosystem.item.edit', [$controller, 'editItemForm']);
-        $routes->post('/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}', 'infosystem.item.update', [$controller, 'updateItem']);
+        $routes->post(
+            '/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}',
+            'infosystem.item.update',
+            $gate->require(
+                'infosystems.manage',
+                $html->wrap([$controller, 'updateItem'], ['description' => 'rich', 'content' => 'rich']),
+            ),
+        );
         $routes->post('/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}/delete', 'infosystem.item.delete', [$controller, 'deleteItem']);
     }
 }

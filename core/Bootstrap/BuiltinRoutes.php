@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Core\Bootstrap;
 
+use Core\Content\HtmlSanitizingHandler;
 use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
@@ -23,6 +24,7 @@ final readonly class BuiltinRoutes
         private HealthController $healthController,
         private NodeController $nodeController,
         private PermissionGate $permissionGate,
+        private HtmlSanitizingHandler $html,
     ) {
     }
 
@@ -39,10 +41,24 @@ final readonly class BuiltinRoutes
 
         $routes->get('/admin/structure', 'structure.index', [$this->structureController, 'index']);
         $routes->get('/admin/structure/create', 'structure.create', [$this->structureController, 'createForm']);
-        $routes->post('/admin/structure', 'structure.store', [$this->structureController, 'store']);
+        $routes->post(
+            '/admin/structure',
+            'structure.store',
+            $this->permissionGate->require(
+                'structure.manage',
+                $this->html->wrap([$this->structureController, 'store'], ['content' => 'rich']),
+            ),
+        );
         $routes->post('/admin/structure/reorder', 'structure.reorder', [$this->structureController, 'reorder']);
         $routes->get('/admin/structure/{id:\\d+}/edit', 'structure.edit', [$this->structureController, 'editForm']);
-        $routes->post('/admin/structure/{id:\\d+}', 'structure.update', [$this->structureController, 'update']);
+        $routes->post(
+            '/admin/structure/{id:\\d+}',
+            'structure.update',
+            $this->permissionGate->require(
+                'structure.manage',
+                $this->html->wrap([$this->structureController, 'update'], ['content' => 'rich']),
+            ),
+        );
         $routes->post('/admin/structure/{id:\\d+}/delete', 'structure.delete', [$this->structureController, 'delete']);
 
         $routes->get('/admin/layouts', 'layout.index', [$this->layoutController, 'index']);

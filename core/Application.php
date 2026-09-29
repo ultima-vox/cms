@@ -6,6 +6,8 @@ namespace Core;
 
 use Core\Bootstrap\BuiltinExtensions;
 use Core\Bootstrap\BuiltinRoutes;
+use Core\Content\HtmlSanitizer;
+use Core\Content\HtmlSanitizingHandler;
 use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
@@ -55,6 +57,8 @@ final class Application
             new LoginAttemptRepository($db),
         );
         $audit = new AuditLogRepository($db);
+        $permissionGate = new PermissionGate($auth);
+        $html = new HtmlSanitizingHandler(new HtmlSanitizer());
 
         $builtinRoutes = new BuiltinRoutes(
             new AuthController($auth, $twig),
@@ -78,7 +82,8 @@ final class Application
                 new InfosystemRepository($db),
                 $frontend,
             ),
-            new PermissionGate($auth),
+            $permissionGate,
+            $html,
         );
 
         $builtinRoutes->register($core->routes());
