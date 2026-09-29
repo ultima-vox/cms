@@ -1,3 +1,4 @@
+{% set is_legacy_twig = layout.template_path and layout.template_path ends with '.twig' %}
 <!doctype html>
 <html lang="ru">
 <head>
@@ -44,7 +45,7 @@
                     <label class="admin-field">
                         <span class="admin-field__label">Код макета</span>
                         <input class="admin-input" name="code" maxlength="80" pattern="[a-z0-9][a-z0-9_-]*" required value="{{ layout.code }}" {% if layout.id %}readonly{% endif %}>
-                        <span class="admin-field__hint">Логический путь: <code>layouts/&lt;code&gt;.twig</code>. После создания код не меняется.</span>
+                        <span class="admin-field__hint">Новые макеты: <code>layouts/&lt;code&gt;.html.php</code>. После создания код не меняется.</span>
                     </label>
                     <label class="admin-field admin-field--wide">
                         <span class="admin-field__label">Описание</span>
@@ -56,15 +57,19 @@
             <section class="admin-panel">
                 <div class="layout-editor__header">
                     <div>
-                        <h2 class="admin-panel__title">Twig-шаблон</h2>
-                        <p class="admin-field__hint">Доступны <code>node</code>, <code>content</code> и <code>items</code>. Синтаксис проверяется до записи.</p>
+                        <h2 class="admin-panel__title">{{ is_legacy_twig ? 'Legacy Twig-шаблон' : 'HTML + PHP шаблон' }}</h2>
+                        {% if is_legacy_twig %}
+                            <p class="admin-field__hint">Старый Twig-макет продолжает поддерживаться на период миграции.</p>
+                        {% else %}
+                            <p class="admin-field__hint">Обычный HTML с точечными PHP-вставками. Доступны <code>$page</code>, <code>$items</code> и зарегистрированные facade-переменные модулей. Для текста используйте <code>text()</code>, для разрешённого HTML — <code>html()</code>.</p>
+                        {% endif %}
                     </div>
                     {% if layout.is_system %}
                         <span class="admin-badge">{{ layout.has_override ? 'runtime override' : 'штатная версия' }}</span>
                     {% endif %}
                 </div>
                 <textarea class="admin-textarea layout-editor" name="source" spellcheck="false" required>{{ layout.source }}</textarea>
-                <p class="admin-field__hint">Редакторские изменения сохраняются в <code>storage/templates/layouts</code>; код CMS остаётся read-only.</p>
+                <p class="admin-field__hint">Синтаксис проверяется до записи. Изменения сохраняются в <code>storage/templates/layouts</code>; поставка CMS остаётся read-only.</p>
             </section>
 
             <div class="admin-actions">
@@ -92,11 +97,11 @@
         {% endif %}
 
         {% if layout.id and not layout.is_system %}
-            <form class="admin-danger-zone" method="post" action="/admin/layouts/{{ layout.id }}/delete" onsubmit="return confirm('Удалить макет и его Twig-файл?');">
+            <form class="admin-danger-zone" method="post" action="/admin/layouts/{{ layout.id }}/delete" onsubmit="return confirm('Удалить макет и его файл?');">
                 <input type="hidden" name="_csrf" value="{{ csrf_token }}">
                 <div>
                     <strong>Удаление макета</strong>
-                    <p>{% if layout.node_count > 0 %}Сначала назначьте другой макет всем использующим его узлам.{% else %}Макет и его runtime Twig-файл будут удалены.{% endif %}</p>
+                    <p>{% if layout.node_count > 0 %}Сначала назначьте другой макет всем использующим его узлам.{% else %}Макет и его runtime-файл будут удалены.{% endif %}</p>
                 </div>
                 <button class="admin-button admin-button--danger" type="submit" {% if layout.node_count > 0 %}disabled{% endif %}>Удалить</button>
             </form>

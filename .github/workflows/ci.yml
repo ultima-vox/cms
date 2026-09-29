@@ -51,10 +51,15 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: PHP syntax check
-        run: find core public bin -type f \( -name '*.php' -o -name 'console' \) -print0 | xargs -0 -n1 php -l
+        run: |
+          find core public templates tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l bin/console
 
-      - name: Twig syntax check
+      - name: Legacy/admin Twig syntax check
         run: php bin/console templates:lint
+
+      - name: Extension and render runtime smoke test
+        run: php tests/runtime_smoke.php
 
       - name: Apply migrations
         run: php bin/console migrate
@@ -68,14 +73,14 @@ jobs:
           INSERT INTO nodes (name, slug, path, title, content, layout_id, status)
           VALUES (
             'Home', '', '/', 'Ultima Vox CMS', '<p>Production Core</p>',
-            (SELECT id FROM layouts WHERE template_path = 'layouts/main.twig'),
+            (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
             'published'
           );
           INSERT INTO nodes (parent_id, name, slug, path, title, layout_id, status)
           VALUES (
             (SELECT id FROM nodes WHERE path = '/'),
             'About', 'about', '/about', 'About',
-            (SELECT id FROM layouts WHERE template_path = 'layouts/main.twig'),
+            (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
             'published'
           );
 
@@ -168,4 +173,4 @@ jobs:
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/structure)" = "302"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/layouts)" = "302"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/infosystems)" = "302"
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/infosystems/1/items?q=Tank)" = "302"
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' 'http://127.0.0.1:8080/admin/infosystems/1/items?q=Tank')" = "302"

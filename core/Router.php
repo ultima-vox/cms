@@ -4,14 +4,7 @@ declare(strict_types=1);
 
 namespace Core;
 
-use Core\Controller\AdminController;
-use Core\Controller\AuthController;
-use Core\Controller\HealthController;
-use Core\Controller\InfosystemController;
-use Core\Controller\InfosystemItemListController;
-use Core\Controller\LayoutController;
-use Core\Controller\NodeController;
-use Core\Controller\StructureController;
+use Core\Extension\Api\RoutesApi;
 use Core\Http\Request;
 use Core\Http\Response;
 use FastRoute\Dispatcher;
@@ -23,69 +16,21 @@ use function FastRoute\cachedDispatcher;
 final class Router
 {
     public function __construct(
-        private readonly AuthController $authController,
-        private readonly AdminController $adminController,
-        private readonly StructureController $structureController,
-        private readonly LayoutController $layoutController,
-        private readonly InfosystemController $infosystemController,
-        private readonly InfosystemItemListController $infosystemItemListController,
-        private readonly HealthController $healthController,
-        private readonly NodeController $nodeController,
+        private readonly RoutesApi $routes,
         private readonly string $rootPath,
     ) {
     }
 
     public function dispatch(Request $request): Response
     {
-        $routeCacheVersion = (string) (filemtime(__FILE__) ?: 0);
+        $definitions = $this->routes->definitions();
+        $routeCacheVersion = $this->routes->signature();
 
         $dispatcher = cachedDispatcher(
-            static function (RouteCollector $router): void {
-                $router->addRoute('GET', '/health', 'health.index');
-                $router->addRoute('GET', '/admin/login', 'auth.form');
-                $router->addRoute('POST', '/admin/login', 'auth.login');
-                $router->addRoute('POST', '/admin/logout', 'auth.logout');
-                $router->addRoute('GET', '/admin', 'admin.index');
-
-                $router->addRoute('GET', '/admin/structure', 'structure.index');
-                $router->addRoute('GET', '/admin/structure/create', 'structure.create');
-                $router->addRoute('POST', '/admin/structure', 'structure.store');
-                $router->addRoute('POST', '/admin/structure/reorder', 'structure.reorder');
-                $router->addRoute('GET', '/admin/structure/{id:\\d+}/edit', 'structure.edit');
-                $router->addRoute('POST', '/admin/structure/{id:\\d+}', 'structure.update');
-                $router->addRoute('POST', '/admin/structure/{id:\\d+}/delete', 'structure.delete');
-
-                $router->addRoute('GET', '/admin/layouts', 'layout.index');
-                $router->addRoute('GET', '/admin/layouts/create', 'layout.create');
-                $router->addRoute('POST', '/admin/layouts', 'layout.store');
-                $router->addRoute('GET', '/admin/layouts/{id:\\d+}/edit', 'layout.edit');
-                $router->addRoute('POST', '/admin/layouts/{id:\\d+}', 'layout.update');
-                $router->addRoute('POST', '/admin/layouts/{id:\\d+}/reset', 'layout.reset');
-                $router->addRoute('POST', '/admin/layouts/{id:\\d+}/delete', 'layout.delete');
-
-                $router->addRoute('GET', '/admin/infosystems', 'infosystem.index');
-                $router->addRoute('GET', '/admin/infosystems/create', 'infosystem.create');
-                $router->addRoute('POST', '/admin/infosystems', 'infosystem.store');
-                $router->addRoute('GET', '/admin/infosystems/{id:\\d+}', 'infosystem.manage');
-                $router->addRoute('GET', '/admin/infosystems/{id:\\d+}/edit', 'infosystem.edit');
-                $router->addRoute('POST', '/admin/infosystems/{id:\\d+}', 'infosystem.update');
-                $router->addRoute('POST', '/admin/infosystems/{id:\\d+}/delete', 'infosystem.delete');
-
-                $router->addRoute('GET', '/admin/infosystems/{id:\\d+}/groups/create', 'infosystem.group.create');
-                $router->addRoute('POST', '/admin/infosystems/{id:\\d+}/groups', 'infosystem.group.store');
-                $router->addRoute('GET', '/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}/edit', 'infosystem.group.edit');
-                $router->addRoute('POST', '/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}', 'infosystem.group.update');
-                $router->addRoute('POST', '/admin/infosystems/{id:\\d+}/groups/{groupId:\\d+}/delete', 'infosystem.group.delete');
-
-                $router->addRoute('GET', '/admin/infosystems/{id:\\d+}/items', 'infosystem.item.index');
-                $router->addRoute('GET', '/admin/infosystems/{id:\\d+}/items/create', 'infosystem.item.create');
-                $router->addRoute('POST', '/admin/infosystems/{id:\\d+}/items', 'infosystem.item.store');
-                $router->addRoute('GET', '/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}/edit', 'infosystem.item.edit');
-                $router->addRoute('POST', '/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}', 'infosystem.item.update');
-                $router->addRoute('POST', '/admin/infosystems/{id:\\d+}/items/{itemId:\\d+}/delete', 'infosystem.item.delete');
-
-                $router->addRoute('GET', '/', 'node.resolve');
-                $router->addRoute('GET', '/{path:.+}', 'node.resolve');
+            static function (RouteCollector $router) use ($definitions): void {
+                foreach ($definitions as $definition) {
+                    $router->addRoute($definition->methods, $definition->path, $definition->name);
+                }
             },
             [
                 'cacheFile' => $this->rootPath . '/storage/cache/routes-' . $routeCacheVersion . '.php',
@@ -111,7 +56,7 @@ final class Router
             throw new RuntimeException('Маршрут содержит некорректный идентификатор обработчика.');
         }
 
-        $handler = $this->resolveHandler($routeId);
+        $handler = $this->routes->handler($routeId);
         $response = $handler($request, $variables);
 
         if (!$response instanceof Response) {
@@ -119,50 +64,5 @@ final class Router
         }
 
         return $response;
-    }
-
-    private function resolveHandler(string $routeId): callable
-    {
-        return match ($routeId) {
-            'health.index' => [$this->healthController, 'index'],
-            'auth.form' => [$this->authController, 'form'],
-            'auth.login' => [$this->authController, 'login'],
-            'auth.logout' => [$this->authController, 'logout'],
-            'admin.index' => [$this->adminController, 'index'],
-            'structure.index' => [$this->structureController, 'index'],
-            'structure.create' => [$this->structureController, 'createForm'],
-            'structure.store' => [$this->structureController, 'store'],
-            'structure.edit' => [$this->structureController, 'editForm'],
-            'structure.update' => [$this->structureController, 'update'],
-            'structure.delete' => [$this->structureController, 'delete'],
-            'structure.reorder' => [$this->structureController, 'reorder'],
-            'layout.index' => [$this->layoutController, 'index'],
-            'layout.create' => [$this->layoutController, 'createForm'],
-            'layout.store' => [$this->layoutController, 'store'],
-            'layout.edit' => [$this->layoutController, 'editForm'],
-            'layout.update' => [$this->layoutController, 'update'],
-            'layout.reset' => [$this->layoutController, 'reset'],
-            'layout.delete' => [$this->layoutController, 'delete'],
-            'infosystem.index' => [$this->infosystemController, 'index'],
-            'infosystem.create' => [$this->infosystemController, 'createForm'],
-            'infosystem.store' => [$this->infosystemController, 'store'],
-            'infosystem.manage' => [$this->infosystemItemListController, 'overview'],
-            'infosystem.edit' => [$this->infosystemController, 'editForm'],
-            'infosystem.update' => [$this->infosystemController, 'update'],
-            'infosystem.delete' => [$this->infosystemController, 'delete'],
-            'infosystem.group.create' => [$this->infosystemController, 'createGroupForm'],
-            'infosystem.group.store' => [$this->infosystemController, 'storeGroup'],
-            'infosystem.group.edit' => [$this->infosystemController, 'editGroupForm'],
-            'infosystem.group.update' => [$this->infosystemController, 'updateGroup'],
-            'infosystem.group.delete' => [$this->infosystemController, 'deleteGroup'],
-            'infosystem.item.index' => [$this->infosystemItemListController, 'index'],
-            'infosystem.item.create' => [$this->infosystemController, 'createItemForm'],
-            'infosystem.item.store' => [$this->infosystemController, 'storeItem'],
-            'infosystem.item.edit' => [$this->infosystemController, 'editItemForm'],
-            'infosystem.item.update' => [$this->infosystemController, 'updateItem'],
-            'infosystem.item.delete' => [$this->infosystemController, 'deleteItem'],
-            'node.resolve' => [$this->nodeController, 'resolve'],
-            default => throw new RuntimeException(sprintf('Неизвестный route ID: %s.', $routeId)),
-        };
     }
 }
