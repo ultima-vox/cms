@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Core\Extension;
 
+use Core\Bootstrap\BuiltinExtensions;
 use Core\Bootstrap\RuntimeFactory;
 use PDO;
 use RuntimeException;
@@ -28,6 +29,7 @@ final class ModuleManager
         $modules = $this->state->sync($manifests);
         $runtime = (new RuntimeFactory())->create($this->db, $this->rootPath);
         $core = new Core($runtime);
+        (new BuiltinExtensions())->register($core);
         (new ModuleLoader($this->rootPath))->load($core);
         $core->freeze();
         $permissions = (new PermissionSynchronizer($this->db))->sync($core->permissions());
