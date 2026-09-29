@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Core;
 
+use Core\Bootstrap\BuiltinRoutes;
 use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
@@ -12,6 +13,8 @@ use Core\Controller\InfosystemItemListController;
 use Core\Controller\LayoutController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
+use Core\Extension\Core as ExtensionCore;
+use Core\Extension\ModuleLoader;
 use Core\Http\Request;
 use Core\Infosystem\FieldSchema;
 use Core\Layout\LayoutTemplateService;
@@ -26,6 +29,8 @@ use Core\Repository\StructureRepository;
 use Core\Repository\UserRepository;
 use Core\Security\AuthService;
 use Core\Security\SecurityHeaders;
+use Core\View\FrontendRenderer;
+use Core\View\PhpRenderer;
 use Core\View\TwigRenderer;
 
 final class Application
@@ -39,7 +44,12 @@ final class Application
         $this->startSession();
 
         $db = Database::connection();
-        $view = new TwigRenderer($this->rootPath);
+        $twig = new TwigRenderer($this->rootPath);
+        $core = new ExtensionCore();
+        $frontend = new FrontendRenderer(
+            $twig,
+            new PhpRenderer($this->rootPath, $core),
+        );
         $auth = new AuthService(
             new UserRepository($db),
             new LoginAttemptRepository($db),
@@ -48,44 +58,49 @@ final class Application
         $publicInfosystems = new InfosystemRepository($db);
         $infosystemManagement = new InfosystemManagementRepository($db);
 
-        $router = new Router(
-            new AuthController($auth, $view),
-            new AdminController($auth, $view),
+        $builtinRoutes = new BuiltinRoutes(
+            new AuthController($auth, $twig),
+            new AdminController($auth, $twig),
             new StructureController(
                 $auth,
                 new StructureRepository($db),
                 $audit,
-                $view,
+                $twig,
             ),
             new LayoutController(
                 $auth,
                 new LayoutRepository($db),
                 new LayoutTemplateService($this->rootPath),
                 $audit,
-                $view,
+                $twig,
             ),
             new InfosystemController(
                 $auth,
                 $infosystemManagement,
                 new FieldSchema(),
                 $audit,
-                $view,
+                $twig,
             ),
             new InfosystemItemListController(
                 $auth,
                 $infosystemManagement,
                 new InfosystemItemSearchRepository($db),
-                $view,
+                $twig,
             ),
             new HealthController($db),
             new NodeController(
                 new NodeRepository($db),
                 $publicInfosystems,
-                $view,
+                $frontend,
             ),
-            $this->rootPath,
         );
 
+        $builtinRoutes->register($core->routes());
+        (new ModuleLoader($this->rootPath))->load($core);
+        $builtinRoutes->registerPublicFallback($core->routes());
+        $core->freeze();
+
+        $router = new Router($core->routes(), $this->rootPath);
         $response = SecurityHeaders::apply($router->dispatch($request));
 
         if ($this->isHttps()) {

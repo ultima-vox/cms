@@ -310,7 +310,7 @@ final class LayoutController
 
     private function codeFromTemplatePath(string $templatePath): string
     {
-        return preg_match('#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.twig$#', $templatePath, $matches)
+        return preg_match('#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.(?:html\.php|twig)$#', $templatePath, $matches)
             ? $matches[1]
             : '';
     }
@@ -322,21 +322,22 @@ final class LayoutController
 
     private function defaultTemplateSource(): string
     {
-        return <<<'TWIG'
+        return <<<'PHP_TEMPLATE'
 <!doctype html>
 <html lang="ru">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ node.title ?: node.name }}</title>
+    <title><?= text($page->title) ?></title>
 </head>
 <body>
     <main>
-        {{ content|raw }}
+        <h1><?= text($page->title) ?></h1>
+        <?= html($page->content) ?>
     </main>
 </body>
 </html>
-TWIG;
+PHP_TEMPLATE;
     }
 
     /** @param array<string, mixed> $context */
