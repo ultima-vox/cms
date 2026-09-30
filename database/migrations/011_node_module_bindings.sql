@@ -21,4 +21,31 @@ FROM nodes n
 JOIN infosystems i ON i.id = n.infosystem_id
 WHERE n.infosystem_id IS NOT NULL;
 
+DROP TRIGGER IF EXISTS trg_nodes_site_consistency ON nodes;
+
+CREATE OR REPLACE FUNCTION enforce_node_site_consistency()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.parent_id IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+           FROM nodes parent
+           WHERE parent.id = NEW.parent_id
+             AND parent.site_id = NEW.site_id
+       ) THEN
+        RAISE EXCEPTION 'Node parent must belong to the same site.';
+    END IF;
+
+    RETURN NEW;
+END
+$$;
+
 ALTER TABLE nodes DROP COLUMN infosystem_id;
+
+CREATE TRIGGER trg_nodes_site_consistency
+BEFORE INSERT OR UPDATE OF site_id, parent_id
+ON nodes
+FOR EACH ROW
+EXECUTE FUNCTION enforce_node_site_consistency();
