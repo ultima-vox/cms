@@ -32,6 +32,7 @@ foreach ($constructor->getParameters() as $parameter) {
 $coreSources = [
     'core/Controller/NodeController.php',
     'core/Controller/StructureController.php',
+    'core/Repository/NodeRepository.php',
     'core/Repository/StructureRepository.php',
 ];
 
