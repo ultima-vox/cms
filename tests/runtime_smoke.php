@@ -164,5 +164,6 @@ require __DIR__ . '/delivery_cache_smoke.php';
 require __DIR__ . '/page_static_cache_smoke.php';
 require __DIR__ . '/module_package_installer_smoke.php';
 require __DIR__ . '/module_package_signature_smoke.php';
+require __DIR__ . '/uploaded_file_smoke.php';
 
 fwrite(STDOUT, "RUNTIME OK\n");
