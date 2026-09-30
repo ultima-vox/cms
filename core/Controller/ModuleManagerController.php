@@ -1,0 +1,251 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Core\Controller;
+
+use Core\Extension\ModuleLoader;
+use Core\Extension\ModuleManager;
+use Core\Extension\ModuleMigrationRunner;
+use Core\Extension\ModulePackageLifecycle;
+use Core\Http\Request;
+use Core\Http\Response;
+use Core\Repository\AuditLogRepository;
+use Core\Security\AuthService;
+use Core\Security\Csrf;
+use Core\View\TwigRenderer;
+use PDO;
+use Throwable;
+
+final readonly class ModuleManagerController
+{
+    public function __construct(
+        private AuthService $auth,
+        private TwigRenderer $view,
+        private AuditLogRepository $audit,
+        private PDO $db,
+        private string $rootPath,
+    ) {
+    }
+
+    /** @param array<string, string> $variables */
+    public function index(Request $request, array $variables = []): Response
+    {
+        unset($variables);
+
+        if (($denied = $this->requirePermission()) !== null) {
+            return $denied;
+        }
+
+        $manager = new ModuleManager($this->db, $this->rootPath);
+        $stateRows = [];
+        foreach ($manager->listing() as $row) {
+            $stateRows[$row['code']] = $row;
+        }
+
+        $inventoryRows = [];
+        foreach ((new ModulePackageLifecycle($this->db, $this->rootPath))->inventory() as $row) {
+            $inventoryRows[$row['module_code']] = $row;
+        }
+
+        $modules = [];
+        foreach ((new ModuleLoader($this->rootPath))->discover() as $manifest) {
+            $state = $stateRows[$manifest->code] ?? null;
+            $inventory = $inventoryRows[$manifest->code] ?? null;
+            $modules[] = [
+                'code' => $manifest->code,
+                'name' => $manifest->name,
+                'version' => $manifest->version,
+                'extension_api' => $manifest->extensionApi,
+                'enabled' => is_array($state) ? (bool) $state['enabled'] : $manifest->defaultEnabled,
+                'synchronized' => is_array($state) && (bool) $state['synchronized'],
+                'package_managed' => is_array($inventory) && ($inventory['source'] ?? null) === 'package',
+                'requires' => $manifest->requires,
+            ];
+        }
+
+        return Response::html($this->view->render('admin/modules/index.twig', [
+            'csrf_token' => Csrf::token(),
+            'modules' => $modules,
+            'notice' => $this->notice($request),
+        ]));
+    }
+
+    /** @param array<string, string> $variables */
+    public function sync(Request $request, array $variables = []): Response
+    {
+        unset($variables);
+
+        if (($denied = $this->requireMutation($request)) !== null) {
+            return $denied;
+        }
+
+        try {
+            $result = (new ModuleManager($this->db, $this->rootPath))->sync();
+            $this->audit($request, 'module.sync', null, $result);
+
+            return Response::redirect('/admin/modules?synced=1');
+        } catch (Throwable $exception) {
+            return $this->error($exception);
+        }
+    }
+
+    /** @param array<string, string> $variables */
+    public function enable(Request $request, array $variables = []): Response
+    {
+        return $this->toggle($request, $variables, true);
+    }
+
+    /** @param array<string, string> $variables */
+    public function disable(Request $request, array $variables = []): Response
+    {
+        return $this->toggle($request, $variables, false);
+    }
+
+    /** @param array<string, string> $variables */
+    public function migrate(Request $request, array $variables = []): Response
+    {
+        if (($denied = $this->requireMutation($request)) !== null) {
+            return $denied;
+        }
+
+        $code = $this->moduleCode($variables);
+        if ($code === null) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
+        }
+
+        try {
+            $applied = (new ModuleMigrationRunner($this->db, $this->rootPath))->migrate($code);
+            $this->audit($request, 'module.migrate', $code, ['applied' => $applied]);
+
+            return Response::redirect('/admin/modules?migrated=' . rawurlencode($code));
+        } catch (Throwable $exception) {
+            return $this->error($exception);
+        }
+    }
+
+    /** @param array<string, string> $variables */
+    public function remove(Request $request, array $variables = []): Response
+    {
+        if (($denied = $this->requireMutation($request)) !== null) {
+            return $denied;
+        }
+
+        $code = $this->moduleCode($variables);
+        if ($code === null) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
+        }
+
+        try {
+            (new ModulePackageLifecycle($this->db, $this->rootPath))->remove($code);
+            $this->audit($request, 'module.remove', $code, ['data_preserved' => true]);
+
+            return Response::redirect('/admin/modules?removed=' . rawurlencode($code));
+        } catch (Throwable $exception) {
+            return $this->error($exception);
+        }
+    }
+
+    /** @param array<string, string> $variables */
+    private function toggle(Request $request, array $variables, bool $enabled): Response
+    {
+        if (($denied = $this->requireMutation($request)) !== null) {
+            return $denied;
+        }
+
+        $code = $this->moduleCode($variables);
+        if ($code === null) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
+        }
+
+        try {
+            $manager = new ModuleManager($this->db, $this->rootPath);
+            if ($enabled) {
+                $manager->enable($code);
+            } else {
+                $manager->disable($code);
+            }
+
+            $action = $enabled ? 'module.enable' : 'module.disable';
+            $this->audit($request, $action, $code, []);
+
+            return Response::redirect('/admin/modules?' . ($enabled ? 'enabled=' : 'disabled=') . rawurlencode($code));
+        } catch (Throwable $exception) {
+            return $this->error($exception);
+        }
+    }
+
+    private function requirePermission(): ?Response
+    {
+        if ($this->auth->user() === null) {
+            return Response::redirect('/admin/login');
+        }
+        if (!$this->auth->can('modules.manage')) {
+            return Response::html('<h1>403 Forbidden</h1>', 403);
+        }
+
+        return null;
+    }
+
+    private function requireMutation(Request $request): ?Response
+    {
+        if (($denied = $this->requirePermission()) !== null) {
+            return $denied;
+        }
+        if (!Csrf::validate(is_string($request->post['_csrf'] ?? null) ? $request->post['_csrf'] : null)) {
+            return Response::html('<h1>419 CSRF token mismatch</h1>', 419);
+        }
+
+        return null;
+    }
+
+    /** @param array<string, string> $variables */
+    private function moduleCode(array $variables): ?string
+    {
+        $code = strtolower(trim((string) ($variables['code'] ?? '')));
+
+        return preg_match('/^[a-z][a-z0-9._-]{0,79}$/', $code) ? $code : null;
+    }
+
+    private function notice(Request $request): ?string
+    {
+        if (isset($request->query['synced'])) {
+            return 'Реестр модулей синхронизирован.';
+        }
+        foreach (['enabled' => 'включён', 'disabled' => 'выключен', 'migrated' => 'миграции применены', 'removed' => 'код пакета удалён, данные сохранены'] as $key => $message) {
+            $code = $request->query[$key] ?? null;
+            if (is_string($code) && $code !== '') {
+                return sprintf('Модуль %s: %s.', $code, $message);
+            }
+        }
+
+        return null;
+    }
+
+    private function error(Throwable $exception): Response
+    {
+        return Response::html(
+            '<h1>Операция не выполнена</h1><p>' . htmlspecialchars($exception->getMessage(), ENT_QUOTES, 'UTF-8') . '</p><p><a href="/admin/modules">Вернуться к модулям</a></p>',
+            409,
+        );
+    }
+
+    /** @param array<string, mixed> $context */
+    private function audit(Request $request, string $action, ?string $moduleCode, array $context): void
+    {
+        $user = $this->auth->user();
+        $ip = $request->server['REMOTE_ADDR'] ?? null;
+        if ($moduleCode !== null) {
+            $context['module_code'] = $moduleCode;
+        }
+
+        $this->audit->record(
+            is_array($user) ? (int) $user['id'] : null,
+            $action,
+            'module',
+            null,
+            $context,
+            is_string($ip) ? $ip : null,
+        );
+    }
+}

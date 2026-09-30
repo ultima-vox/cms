@@ -12,6 +12,7 @@ use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
 use Core\Controller\LayoutController;
+use Core\Controller\ModuleManagerController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
 use Core\Delivery\DeliveryInvalidatingHandler;
@@ -90,6 +91,13 @@ final class Application
                 new LayoutTemplateService($this->rootPath),
                 $audit,
                 $twig,
+            ),
+            new ModuleManagerController(
+                $auth,
+                $twig,
+                $audit,
+                $db,
+                $this->rootPath,
             ),
             new HealthController($db),
             new NodeController(

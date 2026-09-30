@@ -15,8 +15,14 @@ final readonly class BuiltinExtensions
             'Edit trusted PHP templates',
             ['superadmin', 'admin'],
         );
+        $core->permissions()->define(
+            'modules.manage',
+            'Manage installed modules and package lifecycle',
+            ['superadmin'],
+        );
 
         $core->admin()->navigation('structure', 'Структура', '/admin/structure', 'structure.manage', 10, 'structure');
         $core->admin()->navigation('layouts', 'Макеты', '/admin/layouts', 'layouts.manage', 20, 'layout');
+        $core->admin()->navigation('modules', 'Модули', '/admin/modules', 'modules.manage', 90, 'module');
     }
 }

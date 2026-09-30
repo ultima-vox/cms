@@ -9,6 +9,7 @@ use Core\Controller\AdminController;
 use Core\Controller\AuthController;
 use Core\Controller\HealthController;
 use Core\Controller\LayoutController;
+use Core\Controller\ModuleManagerController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
 use Core\Delivery\DeliveryInvalidatingHandler;
@@ -23,6 +24,7 @@ final readonly class BuiltinRoutes
         private AdminController $adminController,
         private StructureController $structureController,
         private LayoutController $layoutController,
+        private ModuleManagerController $moduleManagerController,
         private HealthController $healthController,
         private NodeController $nodeController,
         private PermissionGate $permissionGate,
@@ -118,6 +120,38 @@ final readonly class BuiltinRoutes
                 'templates.code.edit',
                 $this->invalidate->wrap([$this->layoutController, 'delete'], $layoutTags),
             ),
+        );
+
+        $moduleCodePattern = '[a-z][a-z0-9._-]{0,79}';
+        $routes->get(
+            '/admin/modules',
+            'module.index',
+            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'index']),
+        );
+        $routes->post(
+            '/admin/modules/sync',
+            'module.sync',
+            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'sync']),
+        );
+        $routes->post(
+            '/admin/modules/{code:' . $moduleCodePattern . '}/enable',
+            'module.enable',
+            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'enable']),
+        );
+        $routes->post(
+            '/admin/modules/{code:' . $moduleCodePattern . '}/disable',
+            'module.disable',
+            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'disable']),
+        );
+        $routes->post(
+            '/admin/modules/{code:' . $moduleCodePattern . '}/migrate',
+            'module.migrate',
+            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'migrate']),
+        );
+        $routes->post(
+            '/admin/modules/{code:' . $moduleCodePattern . '}/remove',
+            'module.remove',
+            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'remove']),
         );
     }
 

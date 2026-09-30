@@ -49,7 +49,7 @@ final class ModuleMigrationRunner
 
         foreach ($files as $file) {
             $name = basename($file);
-            if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,254}\.sql$/', $name)) {
+            if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,254}\\.sql$/', $name)) {
                 throw new RuntimeException('Некорректное имя миграции модуля: ' . $name);
             }
 
@@ -135,17 +135,17 @@ final class ModuleMigrationRunner
     private function assertModuleExists(string $moduleCode): void
     {
         $modulePath = $this->rootPath . '/modules/' . $moduleCode;
-        if (!is_dir($modulePath) || !is_file($modulePath . '/module.php')) {
+        if (!is_dir($modulePath)) {
             throw new RuntimeException('Модуль не найден: ' . $moduleCode);
         }
 
-        $matches = array_filter(
-            (new ModuleLoader($this->rootPath))->discover(),
-            static fn (ModuleManifest $manifest): bool => $manifest->code === $moduleCode,
-        );
-        if ($matches === []) {
-            throw new RuntimeException('Manifest модуля не найден: ' . $moduleCode);
+        foreach ((new ModuleLoader($this->rootPath))->discover() as $manifest) {
+            if ($manifest->code === $moduleCode) {
+                return;
+            }
         }
+
+        throw new RuntimeException('Manifest модуля не найден: ' . $moduleCode);
     }
 
     private function lock(string $moduleCode): void
@@ -163,7 +163,7 @@ final class ModuleMigrationRunner
     private function normalizeModuleCode(string $moduleCode): string
     {
         $moduleCode = strtolower(trim($moduleCode));
-        if (!preg_match('/^[a-z][a-z0-9_-]{0,119}$/', $moduleCode)) {
+        if (!preg_match('/^[a-z][a-z0-9._-]{0,79}$/', $moduleCode)) {
             throw new RuntimeException('Некорректный код модуля.');
         }
 

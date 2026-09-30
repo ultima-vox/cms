@@ -23,7 +23,7 @@
             <div>
                 <p class="admin-eyebrow">Presentation</p>
                 <h1 class="admin-header__title">Макеты</h1>
-                <p class="admin-page-header__description">Обычные Twig-файлы без XML/XSLT и CMS-специфичного языка.</p>
+                <p class="admin-page-header__description">Обычные HTML/PHP-макеты без XML/XSLT и отдельного шаблонного языка публичного сайта.</p>
             </div>
             <a class="admin-button admin-button--primary" href="/admin/layouts/create">Новый макет</a>
         </header>
@@ -34,7 +34,7 @@
             {% if layouts is empty %}
                 <div class="admin-empty">
                     <h2 class="admin-panel__title">Макетов пока нет</h2>
-                    <p>Создайте первый Twig-макет для страниц сайта.</p>
+                    <p>Создайте первый HTML/PHP-макет для страниц сайта.</p>
                 </div>
             {% else %}
                 <div class="layout-list">
