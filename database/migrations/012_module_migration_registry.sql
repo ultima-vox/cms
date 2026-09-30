@@ -5,7 +5,7 @@ CREATE TABLE module_schema_migrations (
     applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (module_code, migration),
     CHECK (module_code ~ '^[a-z][a-z0-9_-]{0,119}$'),
-    CHECK (migration ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,254}\\.sql$'),
+    CHECK (migration ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,254}[.]sql$'),
     CHECK (checksum ~ '^[0-9a-f]{64}$')
 );
 
