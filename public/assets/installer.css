@@ -120,11 +120,55 @@ body {
     color: #b54708;
 }
 
+.installer-form {
+    padding: 28px 32px 0;
+}
+
+.installer-form__grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 18px;
+}
+
+.installer-form label {
+    display: grid;
+    gap: 8px;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.installer-form__wide {
+    grid-column: 1 / -1;
+}
+
+.installer-form input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: #101828;
+    font: inherit;
+}
+
+.installer-form input:focus {
+    outline: 2px solid #84adff;
+    outline-offset: 1px;
+    border-color: #84adff;
+}
+
 .installer-footer {
     display: flex;
     gap: 16px;
     align-items: center;
     justify-content: space-between;
+}
+
+.installer-footer--form {
+    margin: 28px -32px 0;
+    border-top: 1px solid #eaecf0;
 }
 
 .installer-result {
@@ -154,18 +198,32 @@ body {
 @media (max-width: 640px) {
     .installer-header,
     .installer-footer,
-    .installer-check {
+    .installer-check,
+    .installer-form {
         padding-left: 20px;
         padding-right: 20px;
     }
 
-    .installer-check {
+    .installer-check,
+    .installer-form__grid {
         grid-template-columns: 1fr;
+    }
+
+    .installer-check {
         gap: 8px;
+    }
+
+    .installer-form__wide {
+        grid-column: auto;
     }
 
     .installer-footer {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .installer-footer--form {
+        margin-left: -20px;
+        margin-right: -20px;
     }
 }
