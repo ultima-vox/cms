@@ -3,9 +3,10 @@
 declare(strict_types=1);
 
 use Core\Database;
-use Core\Repository\InfosystemRepository;
+use UltimaVox\Modules\Infosystem\Repository\InfosystemRepository;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/modules/infosystem/autoload.php';
 
 $db = Database::connection();
 $id = (int) $db->query("SELECT id FROM infosystems WHERE site_id = 1 AND code = 'catalog'")->fetchColumn();
