@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Core\Database;
 use Core\Repository\NodeModuleBindingRepository;
-use RuntimeException;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
