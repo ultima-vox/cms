@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace UltimaVox\Modules\Infosystem;
 
 use Core\Extension\Api\EventsApi;
-use Core\Repository\InfosystemRepository;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderSource;
 use Core\View\Render\TemplateFacadeContext;
 use RuntimeException;
 use UltimaVox\Modules\Infosystem\Event\InfosystemItemsRendered;
+use UltimaVox\Modules\Infosystem\Repository\InfosystemRepository;
 
 final class InfosystemItemsSource extends RenderSource
 {
