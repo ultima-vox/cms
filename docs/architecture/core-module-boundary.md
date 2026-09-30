@@ -82,6 +82,36 @@ Core -> Forms
 
 Core may expose generic contracts used by modules, but must not import module classes, query module tables or branch on module-specific fields.
 
+## Generic bindings
+
+When a Core entity needs to be associated with optional module-owned data, Core must store only a generic binding and must not add a module-specific foreign key or column.
+
+Canonical node binding shape:
+
+```text
+node_id + module_code + binding_code -> target_key + config
+```
+
+Core owns the transport-level binding record and validates only generic concerns such as node scope, code syntax and uniqueness. The module owns:
+
+- the meaning of `binding_code`;
+- the meaning and validation of `target_key`;
+- lookup of the domain entity represented by `target_key`;
+- the administration UI for creating or changing the binding;
+- domain-specific cache dependencies and lifecycle cleanup.
+
+For example, the Infosystem module may use:
+
+```text
+module_code  = infosystem
+binding_code = primary
+target_key   = catalog
+```
+
+Core must not translate that target into an infosystem ID and must not know that the target represents an infosystem at all.
+
+Stable logical keys are preferred over cross-domain database IDs because a disabled or physically removed module must leave generic Core data readable and harmless.
+
 ## Removal test
 
 A module boundary is considered correct only if the physical module package can be removed and the CMS still:
@@ -102,7 +132,7 @@ Core dispatches requests and creates shared runtime context. Modules register th
 
 At request time, Core must not inspect a domain to decide how that domain works. It only executes registered handlers and render sources.
 
-For rendering, dependency metadata must be contributed by the module that renders the content. For example, the Infosystem module is responsible for adding `site:<id>:infosystem:<id>` cache dependencies when infosystem content is actually rendered. Core must not infer them by reading `infosystem_id`.
+For rendering, dependency metadata must be contributed by the module that renders the content. For example, the Infosystem module is responsible for adding `site:<id>:infosystem:<id>` cache dependencies when infosystem content is actually rendered. Core must not infer them by reading module-specific state.
 
 ## Persistence rule
 
@@ -136,8 +166,9 @@ Before merging a feature, verify:
 6. Does disabling the module leave registered routes/facades/listeners active?
 7. Is cache invalidation owned by the code that owns the affected domain?
 8. Is every cross-module dependency declared and visible?
+9. Was a module-specific foreign key added to a Core table where a generic binding would work?
 
-Any `yes` to questions 1-5 is an architectural defect unless explicitly documented as a temporary migration exception.
+Any `yes` to questions 1-5 or 9 is an architectural defect unless explicitly documented as a temporary migration exception.
 
 ## Short form
 
