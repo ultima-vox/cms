@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Core\Extension;
 
-use Core\Version;
 use RuntimeException;
 
 final class ModuleLoader
@@ -151,9 +150,7 @@ final class ModuleLoader
         }
     }
 
-    /**
-     * @param array<string, ModuleManifest> $all
-     */
+    /** @param array<string, ModuleManifest> $all */
     private function assertDependenciesSatisfied(
         ModuleManifest $manifest,
         array $all,
@@ -162,12 +159,12 @@ final class ModuleLoader
     ): void {
         foreach ($manifest->requires as $dependency => $constraint) {
             if ($dependency === 'core') {
-                if (!VersionConstraint::matches(Version::STRING, $constraint)) {
+                if (!VersionConstraint::matches(\Core\Version::STRING, $constraint)) {
                     throw new RuntimeException(sprintf(
                         'Module "%s" requires core %s, current version is %s.',
                         $manifest->code,
                         $constraint,
-                        Version::STRING,
+                        \Core\Version::STRING,
                     ));
                 }
                 continue;
@@ -201,10 +198,7 @@ final class ModuleLoader
         }
     }
 
-    /**
-     * @param array<string, ModuleManifest> $manifests
-     * @return list<ModuleManifest>
-     */
+    /** @param array<string, ModuleManifest> $manifests @return list<ModuleManifest> */
     private function topologicalSort(array $manifests): array
     {
         $state = [];
