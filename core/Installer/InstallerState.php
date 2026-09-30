@@ -6,8 +6,11 @@ namespace Core\Installer;
 
 final readonly class InstallerState
 {
-    public function __construct(private string $rootPath)
-    {
+    /** @param array<string, string>|null $environment */
+    public function __construct(
+        private string $rootPath,
+        private ?array $environment = null,
+    ) {
     }
 
     public function installationRequired(): bool
@@ -16,13 +19,33 @@ final readonly class InstallerState
             return false;
         }
 
-        // Backward compatibility for existing deployments created before the
-        // explicit installation lock was introduced.
-        return !is_file($this->rootPath . '/.env');
+        // Backward compatibility for deployments created before the explicit
+        // installation lock, including platforms that inject configuration
+        // through process environment instead of a project .env file.
+        if (is_file($this->rootPath . '/.env') || $this->hasExternalConfiguration()) {
+            return false;
+        }
+
+        return true;
     }
 
     public function lockPath(): string
     {
         return $this->rootPath . '/storage/install.lock';
+    }
+
+    private function hasExternalConfiguration(): bool
+    {
+        foreach (['APP_ENV', 'APP_URL', 'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER'] as $name) {
+            $value = $this->environment === null
+                ? getenv($name)
+                : ($this->environment[$name] ?? null);
+
+            if (!is_string($value) || trim($value) === '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
