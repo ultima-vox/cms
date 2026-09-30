@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Core\Extension;
 
 use PDO;
+use RuntimeException;
 
 final readonly class ModulePackageInventoryRepository
 {
@@ -59,7 +60,22 @@ final readonly class ModulePackageInventoryRepository
         ]);
 
         if ($statement->rowCount() !== 1) {
-            throw new \RuntimeException(sprintf(
+            throw new RuntimeException(sprintf(
+                'Module "%s" is not registered as an installer-managed package.',
+                $moduleCode,
+            ));
+        }
+    }
+
+    public function remove(string $moduleCode): void
+    {
+        $statement = $this->db->prepare(
+            "DELETE FROM module_package_inventory WHERE module_code = :module_code AND source = 'package'"
+        );
+        $statement->execute(['module_code' => $moduleCode]);
+
+        if ($statement->rowCount() !== 1) {
+            throw new RuntimeException(sprintf(
                 'Module "%s" is not registered as an installer-managed package.',
                 $moduleCode,
             ));

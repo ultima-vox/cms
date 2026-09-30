@@ -113,6 +113,83 @@ final readonly class ModulePackageLifecycle
         return $installed;
     }
 
+    public function remove(string $moduleCode): void
+    {
+        $inventory = $this->inventory->find($moduleCode);
+        if ($inventory === null || $inventory['source'] !== 'package') {
+            throw new RuntimeException(sprintf(
+                'Module "%s" is not an installer-managed package and cannot be removed with modules:remove.',
+                $moduleCode,
+            ));
+        }
+
+        $stateRepository = new ModuleStateRepository($this->db);
+        $states = $stateRepository->all();
+        $state = $states[$moduleCode] ?? null;
+        if (!is_array($state)) {
+            throw new RuntimeException(sprintf(
+                'Module "%s" is not synchronized. Run extensions:sync before removing it.',
+                $moduleCode,
+            ));
+        }
+        if ($state['is_enabled']) {
+            throw new RuntimeException(sprintf(
+                'Module "%s" must be disabled before package removal.',
+                $moduleCode,
+            ));
+        }
+
+        $manifests = (new ModuleLoader($this->rootPath))->discover();
+        foreach ($manifests as $manifest) {
+            if ($manifest->code === $moduleCode) {
+                continue;
+            }
+            if (array_key_exists($moduleCode, $manifest->requires)) {
+                throw new RuntimeException(sprintf(
+                    'Module "%s" cannot be removed because module "%s" depends on it.',
+                    $moduleCode,
+                    $manifest->code,
+                ));
+            }
+        }
+
+        $target = $this->modulePath($moduleCode);
+        if (!is_dir($target) || is_link($target)) {
+            throw new RuntimeException(sprintf(
+                'Installed module directory is missing or invalid: %s.',
+                $moduleCode,
+            ));
+        }
+
+        $backup = $this->rootPath . '/modules/.remove-backup-' . $moduleCode . '-' . bin2hex(random_bytes(8));
+        if (!rename($target, $backup)) {
+            throw new RuntimeException('Unable to stage module files for removal rollback.');
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $this->inventory->remove($moduleCode);
+            $stateRepository->remove($moduleCode);
+            $this->db->commit();
+        } catch (Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            if (!rename($backup, $target)) {
+                throw new RuntimeException(
+                    'Module removal failed and automatic filesystem rollback also failed.',
+                    0,
+                    $exception,
+                );
+            }
+            throw $exception;
+        }
+
+        // Package code is gone from runtime before metadata is committed. Business data,
+        // module-owned tables and migration history intentionally remain untouched.
+        $this->removeTree($backup);
+    }
+
     /** @return list<array{module_code:string,version:string,package_sha256:string,source:string,installed_at:string,updated_at:string}> */
     public function inventory(): array
     {
