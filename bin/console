@@ -7,6 +7,7 @@ use Core\Database;
 use Core\Extension\ModuleLoader;
 use Core\Extension\ModuleManager;
 use Core\MigrationRunner;
+use Core\View\PhpTemplateLinter;
 use Core\View\TwigTemplateLinter;
 use Dotenv\Dotenv;
 
@@ -101,8 +102,16 @@ switch ($command) {
         exit(0);
 
     case 'templates:lint':
-        $checked = (new TwigTemplateLinter($rootPath . '/templates'))->lint();
-        fwrite(STDOUT, sprintf("Twig OK: %d template(s).\n", count($checked)));
+        $phpChecked = (new PhpTemplateLinter($rootPath . '/templates'))->lint();
+        $twigChecked = (new TwigTemplateLinter($rootPath . '/templates'))->lint();
+        fwrite(
+            STDOUT,
+            sprintf(
+                "Templates OK: %d PHP/HTML frontend template(s), %d Twig admin/legacy template(s).\n",
+                count($phpChecked),
+                count($twigChecked),
+            ),
+        );
         exit(0);
 
     case 'user:create':
@@ -166,7 +175,7 @@ switch ($command) {
             "  extensions:disable <code>  Disable a synchronized module\n" .
             "  modules:list               Validate and list discovered module manifests\n" .
             "  health                     Check database connectivity\n" .
-            "  templates:lint             Parse all packaged Twig templates\n" .
+            "  templates:lint             Parse PHP/HTML frontend and Twig admin/legacy templates\n" .
             "  user:create                Create the initial super administrator\n"
         );
         exit($command === 'help' ? 0 : 1);
