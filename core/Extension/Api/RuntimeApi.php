@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Core\Extension\Api;
 
+use Core\Delivery\Cache\CacheBackendInterface;
 use Core\Site\SiteContext;
 use PDO;
 
@@ -13,6 +14,7 @@ final readonly class RuntimeApi
         private PDO $database,
         private string $rootPath,
         private ?SiteContext $adminSite = null,
+        private ?CacheBackendInterface $cacheBackend = null,
     ) {
     }
 
@@ -29,5 +31,10 @@ final readonly class RuntimeApi
     public function adminSite(): ?SiteContext
     {
         return $this->adminSite;
+    }
+
+    public function cacheBackend(): ?CacheBackendInterface
+    {
+        return $this->cacheBackend;
     }
 }

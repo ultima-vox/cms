@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Core\Extension;
 
+use Core\Delivery\Cache\FilesystemCacheStore;
+use Core\Delivery\Cache\FilesystemTagIndex;
+use Core\Delivery\Cache\TaggedCache;
 use Core\Extension\Api\AdminApi;
+use Core\Extension\Api\CacheApi;
 use Core\Extension\Api\ContentApi;
 use Core\Extension\Api\EventsApi;
 use Core\Extension\Api\ExtensionsApi;
@@ -25,6 +29,7 @@ final class Core
     private EventsApi $events;
     private ExtensionsApi $extensions;
     private SitesApi $sites;
+    private CacheApi $cache;
     private bool $frozen = false;
 
     public function __construct(private readonly RuntimeApi $runtime)
@@ -40,6 +45,12 @@ final class Core
             new SiteRepository($runtime->database()),
             $runtime->adminSite(),
         );
+
+        $backend = $runtime->cacheBackend() ?? new TaggedCache(
+            new FilesystemCacheStore($runtime->rootPath() . '/storage/cache/data'),
+            new FilesystemTagIndex($runtime->rootPath() . '/storage/cache/index'),
+        );
+        $this->cache = new CacheApi($backend);
     }
 
     public function runtime(): RuntimeApi
@@ -80,6 +91,11 @@ final class Core
     public function sites(): SitesApi
     {
         return $this->sites;
+    }
+
+    public function cache(): CacheApi
+    {
+        return $this->cache;
     }
 
     /**

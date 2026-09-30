@@ -87,13 +87,17 @@ file_put_contents(
 );
 
 $renderer = new PhpRenderer($root, $core);
-$output = $renderer->render('smoke/template.html.php', [
+$result = $renderer->renderResult('smoke/template.html.php', [
     'title' => '🔥 <span>Title</span>',
     'body' => SafeHtml::fromTrustedStorage('<span>HTML</span>'),
 ]);
+$output = $result->html;
 
 if ($output !== '🔥 &lt;span&gt;Title&lt;/span&gt;|<span>HTML</span>|alias') {
     throw new RuntimeException('PHP template escaping/facade smoke test failed: ' . $output);
+}
+if (!$result->context instanceof RenderContext) {
+    throw new RuntimeException('PHP renderer did not return render metadata context.');
 }
 
 $engine = new RenderEngine();
@@ -150,5 +154,7 @@ try {
 @rmdir($templateDir);
 @rmdir($root . '/templates');
 @rmdir($root);
+
+require __DIR__ . '/delivery_cache_smoke.php';
 
 fwrite(STDOUT, "RUNTIME OK\n");

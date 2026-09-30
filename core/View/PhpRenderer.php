@@ -7,6 +7,7 @@ namespace Core\View;
 use Core\Extension\Core as ExtensionCore;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderEngine;
+use Core\View\Render\RenderResult;
 use Core\View\Render\TemplateFacadeContext;
 use Core\View\Render\ViewTemplateRenderer;
 use RuntimeException;
@@ -26,8 +27,17 @@ final class PhpRenderer
     /** @param array<string, mixed> $context */
     public function render(string $template, array $context = []): string
     {
+        return $this->renderResult($template, $context)->html;
+    }
+
+    /** @param array<string, mixed> $context */
+    public function renderResult(
+        string $template,
+        array $context = [],
+        ?RenderContext $renderContext = null,
+    ): RenderResult {
         $file = $this->resolveTemplate($template);
-        $renderContext = new RenderContext();
+        $renderContext ??= new RenderContext();
         $renderEngine = new RenderEngine($renderContext);
         $facadeContext = new TemplateFacadeContext(
             $renderEngine,
@@ -56,7 +66,7 @@ final class PhpRenderer
             }
         };
 
-        return $renderer($file, $variables);
+        return new RenderResult($renderer($file, $variables), $renderContext);
     }
 
     private function resolveTemplate(string $template): string
