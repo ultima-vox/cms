@@ -7,7 +7,7 @@ use Core\Database;
 use Core\Extension\ModuleLoader;
 use Core\Extension\ModuleManager;
 use Core\Extension\ModuleMigrationRunner;
-use Core\Extension\ModulePackageInstaller;
+use Core\Extension\ModulePackageLifecycle;
 use Core\MigrationRunner;
 use Core\View\PhpTemplateLinter;
 use Core\View\TwigTemplateLinter;
@@ -41,7 +41,7 @@ switch ($command) {
             exit(1);
         }
 
-        $manifest = (new ModulePackageInstaller($rootPath))->install($archive);
+        $manifest = (new ModulePackageLifecycle(Database::connection(), $rootPath))->install($archive);
         fwrite(
             STDOUT,
             sprintf(
@@ -52,6 +52,26 @@ switch ($command) {
                 $manifest->code,
             ),
         );
+        exit(0);
+
+    case 'modules:inventory':
+        $rows = (new ModulePackageLifecycle(Database::connection(), $rootPath))->inventory();
+        if ($rows === []) {
+            fwrite(STDOUT, "No installer-managed module packages.\n");
+            exit(0);
+        }
+        foreach ($rows as $row) {
+            fwrite(
+                STDOUT,
+                sprintf(
+                    "%s\t%s\t%s\t%s\n",
+                    $row['module_code'],
+                    $row['version'],
+                    $row['package_sha256'],
+                    $row['source'],
+                ),
+            );
+        }
         exit(0);
 
     case 'modules:migrate':
@@ -215,7 +235,8 @@ switch ($command) {
             STDOUT,
             "Ultima Vox CMS\n\nCommands:\n" .
             "  migrate                    Apply pending Core SQL migrations\n" .
-            "  modules:install <zip>      Verify and install a disabled module package\n" .
+            "  modules:install <zip>      Verify, install and inventory a disabled module package\n" .
+            "  modules:inventory          List installer-managed module packages\n" .
             "  modules:migrate <code>     Apply pending migrations owned by one module\n" .
             "  extensions:sync            Sync module metadata and enabled extension permissions\n" .
             "  extensions:list            List module lifecycle state\n" .
