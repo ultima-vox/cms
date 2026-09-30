@@ -12,7 +12,8 @@ final class TwigRenderer
 {
     private Environment $twig;
 
-    public function __construct(string $rootPath)
+    /** @param list<string> $additionalPaths */
+    public function __construct(string $rootPath, array $additionalPaths = [])
     {
         $runtimeTemplates = $rootPath . '/storage/templates';
         $packagedTemplates = $rootPath . '/templates';
@@ -21,9 +22,21 @@ final class TwigRenderer
             @mkdir($runtimeTemplates, 0775, true);
         }
 
-        $paths = is_dir($runtimeTemplates)
-            ? [$runtimeTemplates, $packagedTemplates]
-            : [$packagedTemplates];
+        $paths = [];
+        if (is_dir($runtimeTemplates)) {
+            $paths[] = $runtimeTemplates;
+        }
+
+        foreach ($additionalPaths as $path) {
+            $path = rtrim($path, '/\\');
+            if ($path !== '' && is_dir($path) && !in_array($path, $paths, true)) {
+                $paths[] = $path;
+            }
+        }
+
+        if (!in_array($packagedTemplates, $paths, true)) {
+            $paths[] = $packagedTemplates;
+        }
 
         $loader = new FilesystemLoader($paths);
 

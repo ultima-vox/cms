@@ -84,4 +84,6 @@ if (!in_array('infosystems.manage', $permissionCodes, true)) {
     throw new RuntimeException('Infosystem permission metadata is missing.');
 }
 
+require __DIR__ . '/module_template_scope_smoke.php';
+
 fwrite(STDOUT, "INFOSYSTEM MODULE OK\n");

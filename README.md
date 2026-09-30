@@ -1,6 +1,6 @@
 # Ultima Vox CMS
 
-Lightweight CMS built around a simple HostCMS-inspired content model: nodes, layouts and infosystems, without XML/XSLT or EAV queries.
+Lightweight CMS built around a simple HostCMS-inspired content model: nodes, layouts and independently installable content modules, without XML/XSLT or EAV queries.
 
 The public frontend uses ordinary HTML + PHP layouts. Twig is currently retained only for the internal administration UI and legacy compatibility; site developers do not need a separate template language.
 
@@ -48,17 +48,29 @@ The PHP-FPM user must be able to write to:
 
 The rest of the application tree can remain read-only.
 
+## Architecture principle
+
+> **Core routes. Modules terminate business domains.**
+
+Core provides platform infrastructure: HTTP routing, security primitives, site context, module lifecycle, extension APIs, rendering/cache infrastructure, events, migrations, audit and diagnostics. Concrete business domains such as infosystems, catalog, commerce, forms or reviews belong entirely to independently installable modules.
+
+If removing a module requires changing Core, the module boundary is wrong.
+
+The canonical rules and review checklist are documented in `docs/architecture/core-module-boundary.md`.
+
 ## Core model
+
+Core-owned platform data and resources include:
 
 - `nodes` — hierarchical site structure and pages;
 - `layouts` — page layout metadata;
 - packaged public layout files — `templates/layouts/*.html.php`;
 - editor-created layout overrides — `storage/templates/layouts/*.html.php`;
-- `infosystems` — reusable content stores and their custom-field schemas;
-- `infosystem_groups` — hierarchical groups inside an infosystem;
-- `infosystem_items` — content items with indexed `JSONB` custom properties;
 - `users`, `roles`, `permissions` — administration access control;
-- `audit_log` — security and change audit storage.
+- `audit_log` — security and change audit storage;
+- module registry/lifecycle state and shared delivery infrastructure.
+
+Domain data is module-owned. For example, the Infosystem module currently owns the `infosystems`, `infosystem_groups` and `infosystem_items` domain even while historical migrations are being moved toward module-owned lifecycle management.
 
 ## Frontend layout model
 
@@ -116,6 +128,8 @@ Migration filenames are immutable after merge because `schema_migrations` record
 
 CMS capabilities are extended through independently installable modules. The core exposes typed extension APIs for routes, permissions, admin navigation, content sources, frontend facades, cache invalidation and site context.
 
+Each business module owns its complete vertical slice: domain code, repositories, routes, permissions, admin UI, public views, cache dependencies and eventually its migrations/install lifecycle. Core must not import module classes or query module-owned tables during generic requests.
+
 Commercial packaging must not force functionality into editions: modules can be licensed, purchased, installed, enabled and updated independently. Editions may exist only as convenient bundles of modules.
 
 Project-specific modules can use the same extension API without becoming part of the CMS core.
@@ -141,8 +155,8 @@ php bin/console user:create <email> <display-name>
 - `/admin` — protected administration dashboard;
 - `/admin/structure` — site structure management;
 - `/admin/layouts` — PHP/HTML public layout management;
-- `/admin/infosystems` — infosystem, group and item management;
-- all remaining URLs are resolved through the `nodes` table.
+- `/admin/infosystems` — provided only when the Infosystem module is installed and enabled;
+- all remaining URLs are resolved through registered routes and the site structure fallback.
 
 ## Backup
 

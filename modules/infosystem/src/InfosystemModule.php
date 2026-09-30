@@ -114,7 +114,10 @@ final class InfosystemModule implements ModuleInterface
     {
         $db = $core->runtime()->database();
         $siteId = $core->sites()->adminId();
-        $twig = new TwigRenderer($core->runtime()->rootPath());
+        $twig = new TwigRenderer(
+            $core->runtime()->rootPath(),
+            [dirname(__DIR__) . '/templates'],
+        );
         $auth = new AuthService(
             new UserRepository($db),
             new LoginAttemptRepository($db),
