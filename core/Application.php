@@ -77,7 +77,7 @@ final class Application
 
         $builtinRoutes = new BuiltinRoutes(
             new AuthController($auth, $twig),
-            new AdminController($auth, $twig, $core->admin(), $core->sites()),
+            new AdminController($auth, $twig, $core->admin(), $core->sites(), $audit),
             new StructureController(
                 $auth,
                 new StructureRepository($db, $core->sites()->adminId()),

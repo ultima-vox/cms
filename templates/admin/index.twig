@@ -3,66 +3,245 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ultima Vox CMS</title>
+    <title>Обзор — Ultima Vox CMS</title>
     <link rel="stylesheet" href="/assets/admin.css">
 </head>
 <body class="admin-shell">
     <aside class="admin-shell__sidebar">
-        <div class="admin-brand">ULTIMA VOX</div>
+        <a class="admin-brand" href="/admin" aria-label="Ultima Vox CMS">
+            <span class="admin-brand__mark">UV</span>
+            <span class="admin-brand__name">Ultima Vox CMS</span>
+        </a>
+
         <nav class="admin-nav" aria-label="Основная навигация">
-            <a class="admin-nav__item admin-nav__item--active" href="/admin">Обзор</a>
+            <a class="admin-nav__item admin-nav__item--active" href="/admin" aria-current="page">
+                <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-home"></use></svg>
+                <span class="admin-nav__label">Обзор</span>
+            </a>
             {% for item in navigation %}
-                <a class="admin-nav__item" href="{{ item.path }}">{{ item.label }}</a>
+                <a class="admin-nav__item" href="{{ item.path }}">
+                    <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-{{ item.icon }}"></use></svg>
+                    <span class="admin-nav__label">{{ item.label }}</span>
+                </a>
             {% endfor %}
         </nav>
+
+        <div class="admin-sidebar__footer">
+            <button class="admin-sidebar__button" type="button" data-admin-collapse aria-pressed="false">
+                <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-collapse"></use></svg>
+                <span class="admin-sidebar__label">Свернуть</span>
+            </button>
+        </div>
     </aside>
 
-    <main class="admin-shell__main">
-        <header class="admin-header">
-            <div>
-                <h1 class="admin-header__title">Панель управления</h1>
-                <div class="admin-header__user">{{ user.display_name }} · {{ user.email }}</div>
-            </div>
+    <main class="admin-shell__main admin-shell__main--dashboard">
+        <header class="admin-topbar">
+            <strong class="admin-topbar__title">Обзор</strong>
 
-            <div class="admin-actions">
-                {% if admin_sites|length > 1 %}
-                    <form action="/admin/sites/select" method="post">
-                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-                        <label>
-                            <span class="admin-header__user">Сайт</span>
-                            <select name="site_id">
-                                {% for site in admin_sites %}
-                                    <option value="{{ site.id }}"{% if site.id == admin_site.id %} selected{% endif %}>
-                                        {{ site.name }}{% if site.host %} · {{ site.host }}{% endif %}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <button class="admin-button admin-button--secondary" type="submit">Переключить</button>
-                    </form>
-                {% else %}
-                    <span class="admin-header__user">Сайт: {{ admin_site.name }}</span>
-                {% endif %}
+            {% if admin_sites|length > 1 %}
+                <form class="admin-site-switcher" action="/admin/sites/select" method="post">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                    <select class="admin-site-switcher__select" name="site_id" data-site-select aria-label="Текущий сайт">
+                        {% for site in admin_sites %}
+                            <option value="{{ site.id }}"{% if site.id == admin_site.id %} selected{% endif %}>
+                                {{ site.name }}{% if site.host %} · {{ site.host }}{% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            {% else %}
+                <div class="admin-site-switcher">
+                    <div class="admin-site-switcher__select">{{ admin_site.name }}{% if admin_site.host %} · {{ admin_site.host }}{% endif %}</div>
+                </div>
+            {% endif %}
 
+            <button class="admin-search-trigger" type="button" data-command-open aria-haspopup="dialog">
+                <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-search"></use></svg>
+                <span class="admin-search-trigger__label">Поиск и команды…</span>
+                <span class="admin-kbd">Ctrl K</span>
+            </button>
+
+            <div class="admin-user-menu">
+                <span class="admin-user-chip" title="{{ user.display_name }} · {{ user.email }}">
+                    {{ user.display_name|slice(0, 2)|upper }}
+                </span>
                 <form action="/admin/logout" method="post">
                     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-                    <button class="admin-button admin-button--secondary" type="submit">Выйти</button>
+                    <button class="admin-button admin-button--secondary" type="submit" title="Выйти">
+                        <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-logout"></use></svg>
+                        <span>Выйти</span>
+                    </button>
                 </form>
             </div>
         </header>
 
-        <section class="admin-panel">
-            <h2 class="admin-panel__title">{{ admin_site.name }}</h2>
-            <p class="admin-panel__text">
-                Текущий административный контекст: <code>{{ admin_site.code }}</code>{% if admin_site.host %} · {{ admin_site.host }}{% endif %}.
-                Структура, инфосистемы и новые site-aware модули работают только с выбранным сайтом.
-            </p>
-            <div class="admin-actions">
-                {% for item in navigation %}
-                    <a class="admin-button admin-button--secondary" href="{{ item.path }}">{{ item.label }}</a>
-                {% endfor %}
+        <div class="admin-dashboard">
+            <header class="admin-page-header">
+                <div class="admin-page-header__copy">
+                    <p class="admin-eyebrow">Workspace</p>
+                    <h1 class="admin-page-title">{{ admin_site.name }}</h1>
+                    <p class="admin-page-description">Контент, настройки и модули выбранного сайта в одном рабочем пространстве.</p>
+                </div>
+            </header>
+
+            <section class="admin-metrics" aria-label="Сводка">
+                <article class="admin-metric">
+                    <div class="admin-metric__label">
+                        <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-globe"></use></svg>
+                        Текущий сайт
+                    </div>
+                    <div class="admin-metric__value">{{ admin_site.code }}</div>
+                    <div class="admin-metric__meta">{{ admin_site.host ?: 'домен не назначен' }}</div>
+                </article>
+
+                <article class="admin-metric">
+                    <div class="admin-metric__label">
+                        <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-module"></use></svg>
+                        Разделы
+                    </div>
+                    <div class="admin-metric__value">{{ navigation|length }}</div>
+                    <div class="admin-metric__meta">доступно текущему пользователю</div>
+                </article>
+
+                <article class="admin-metric">
+                    <div class="admin-metric__label">
+                        <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-activity"></use></svg>
+                        Активность
+                    </div>
+                    <div class="admin-metric__value">{{ activity|length }}</div>
+                    <div class="admin-metric__meta">последних записей журнала</div>
+                </article>
+
+                <article class="admin-metric">
+                    <div class="admin-metric__label">
+                        <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-code"></use></svg>
+                        Ultima Vox
+                    </div>
+                    <div class="admin-metric__value">{{ cms_version }}</div>
+                    <div class="admin-metric__meta">PHP {{ php_version }}</div>
+                </article>
+            </section>
+
+            <div class="admin-dashboard-grid">
+                <section class="admin-panel admin-panel--flush">
+                    <div class="admin-panel__header" style="padding: 18px 18px 0">
+                        <div>
+                            <h2 class="admin-panel__title">Последние изменения</h2>
+                            <p class="admin-panel__text">Журнал административных действий.</p>
+                        </div>
+                    </div>
+
+                    {% if activity is empty %}
+                        <div class="admin-empty">
+                            <h3 class="admin-panel__title">Изменений пока нет</h3>
+                            <p>Здесь появятся последние действия редакторов и администраторов.</p>
+                        </div>
+                    {% else %}
+                        <div class="admin-table-wrap">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Действие</th>
+                                        <th>Сущность</th>
+                                        <th>Пользователь</th>
+                                        <th>Время</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for activity_item in activity %}
+                                        <tr>
+                                            <td><span class="admin-table__primary">{{ activity_item.action }}</span></td>
+                                            <td>
+                                                {% if activity_item.entity_type %}
+                                                    <span class="admin-badge admin-badge--info">{{ activity_item.entity_type }}</span>
+                                                    {% if activity_item.entity_id %}<span class="admin-table__secondary">#{{ activity_item.entity_id }}</span>{% endif %}
+                                                {% else %}
+                                                    <span class="admin-table__secondary">system</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ activity_item.display_name ?: 'System' }}</td>
+                                            <td>{{ activity_item.created_at|date('d.m.Y H:i') }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </section>
+
+                <aside class="admin-stack">
+                    <section class="admin-panel">
+                        <div class="admin-panel__header">
+                            <h2 class="admin-panel__title">Система</h2>
+                        </div>
+                        <div class="admin-status-list">
+                            <div class="admin-status-row">
+                                <span class="admin-status-row__label">Сайт</span>
+                                <span class="admin-status-row__value">{{ admin_site.name }}</span>
+                            </div>
+                            <div class="admin-status-row">
+                                <span class="admin-status-row__label">Контекст</span>
+                                <span class="admin-status-row__value">#{{ admin_site.id }}</span>
+                            </div>
+                            <div class="admin-status-row">
+                                <span class="admin-status-row__label">CMS</span>
+                                <span class="admin-status-row__value">{{ cms_version }}</span>
+                            </div>
+                            <div class="admin-status-row">
+                                <span class="admin-status-row__label">PHP</span>
+                                <span class="admin-status-row__value">{{ php_version }}</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="admin-panel">
+                        <div class="admin-panel__header">
+                            <h2 class="admin-panel__title">Быстрый доступ</h2>
+                        </div>
+                        <div class="admin-quick-actions">
+                            {% for item in navigation %}
+                                <a class="admin-quick-action" href="{{ item.path }}">
+                                    <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-{{ item.icon }}"></use></svg>
+                                    <span>{{ item.label }}</span>
+                                    <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-chevron"></use></svg>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </section>
+                </aside>
             </div>
-        </section>
+        </div>
     </main>
+
+    <dialog class="admin-command" id="admin-command-palette" aria-label="Поиск и команды">
+        <div class="admin-command__search">
+            <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-search"></use></svg>
+            <input class="admin-command__input" type="search" placeholder="Найти раздел или команду…" autocomplete="off" data-command-input>
+            <span class="admin-kbd">Esc</span>
+        </div>
+        <div class="admin-command__body">
+            <div class="admin-command__label">Навигация</div>
+            <a class="admin-command__item admin-command__item--selected" href="/admin" data-command-item data-command-keywords="dashboard overview home обзор главная">
+                <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-home"></use></svg>
+                <span>Обзор</span>
+                <span class="admin-command__item-meta">Dashboard</span>
+            </a>
+            {% for item in navigation %}
+                <a class="admin-command__item" href="{{ item.path }}" data-command-item data-command-keywords="{{ item.code }} {{ item.label }}">
+                    <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-{{ item.icon }}"></use></svg>
+                    <span>{{ item.label }}</span>
+                    <span class="admin-command__item-meta">{{ item.code }}</span>
+                </a>
+            {% endfor %}
+            <div class="admin-command__empty" data-command-empty>Ничего не найдено.</div>
+        </div>
+        <div class="admin-command__footer">
+            <span class="admin-command__hint"><span class="admin-kbd">↑↓</span> выбрать</span>
+            <span class="admin-command__hint"><span class="admin-kbd">Enter</span> открыть</span>
+            <span class="admin-command__hint"><span class="admin-kbd">Esc</span> закрыть</span>
+        </div>
+    </dialog>
+
+    <script src="/assets/admin.js" defer></script>
 </body>
 </html>
