@@ -29,14 +29,32 @@ foreach ($constructor->getParameters() as $parameter) {
     }
 }
 
-$source = file_get_contents($root . '/core/Controller/NodeController.php');
-if ($source === false) {
-    throw new RuntimeException('Unable to read NodeController source.');
+$coreSources = [
+    'core/Controller/NodeController.php',
+    'core/Controller/StructureController.php',
+    'core/Repository/StructureRepository.php',
+];
+
+foreach ($coreSources as $path) {
+    $source = file_get_contents($root . '/' . $path);
+    if ($source === false) {
+        throw new RuntimeException('Unable to read Core source: ' . $path);
+    }
+
+    foreach (['InfosystemRepository', 'infosystem_id', 'infosystem_name', 'function infosystems'] as $forbidden) {
+        if (str_contains($source, $forbidden)) {
+            throw new RuntimeException($path . ' contains module-specific coupling: ' . $forbidden);
+        }
+    }
 }
 
-foreach (['InfosystemRepository', "'infosystem_id'", '"infosystem_id"'] as $forbidden) {
-    if (str_contains($source, $forbidden)) {
-        throw new RuntimeException('NodeController contains module-specific coupling: ' . $forbidden);
+$structureTemplate = file_get_contents($root . '/templates/admin/structure/form.twig');
+if ($structureTemplate === false) {
+    throw new RuntimeException('Unable to read structure form template.');
+}
+foreach (['infosystem_id', 'infosystems'] as $forbidden) {
+    if (str_contains($structureTemplate, $forbidden)) {
+        throw new RuntimeException('Core structure UI contains infosystem coupling: ' . $forbidden);
     }
 }
 
@@ -58,6 +76,7 @@ foreach ($forbiddenCoreFiles as $path) {
 $requiredModuleFiles = [
     'modules/infosystem/src/Admin/InfosystemController.php',
     'modules/infosystem/src/Admin/InfosystemItemListController.php',
+    'modules/infosystem/src/Admin/InfosystemBindingController.php',
     'modules/infosystem/src/Repository/InfosystemRepository.php',
     'modules/infosystem/src/Repository/InfosystemManagementRepository.php',
     'modules/infosystem/src/Repository/InfosystemItemSearchRepository.php',
