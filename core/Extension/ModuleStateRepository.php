@@ -80,6 +80,19 @@ final readonly class ModuleStateRepository
         }
     }
 
+    public function remove(string $code): void
+    {
+        $statement = $this->db->prepare('DELETE FROM installed_modules WHERE code = :code');
+        $statement->execute(['code' => $code]);
+
+        if ($statement->rowCount() !== 1) {
+            throw new RuntimeException(sprintf(
+                'Module "%s" is not synchronized.',
+                $code,
+            ));
+        }
+    }
+
     /** @return array<string, array{code:string,name:string,version:string,extension_api:string,is_enabled:bool}> */
     public function all(): array
     {
