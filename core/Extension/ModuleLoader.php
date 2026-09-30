@@ -42,6 +42,8 @@ final class ModuleLoader
                         'code' => basename($directory),
                         'name' => basename($directory),
                         'version' => '0.0.0',
+                        'extension_api' => '^1.0',
+                        'default_enabled' => true,
                         'requires' => ['core' => '>=' . Version::STRING],
                         'provider' => $definition::class,
                     ];
@@ -58,15 +60,19 @@ final class ModuleLoader
             }
         }
 
-        return $this->sortAndValidate($manifests);
+        ksort($manifests, SORT_STRING);
+        return array_values($manifests);
     }
 
     /** @return list<string> Loaded module codes. */
     public function load(Core $core): array
     {
+        $manifests = $this->discover();
+        $state = new ModuleStateRepository($core->runtime()->database());
+        $ordered = $this->enabledInLoadOrder($manifests, $state);
         $loaded = [];
 
-        foreach ($this->discover() as $manifest) {
+        foreach ($ordered as $manifest) {
             if (!class_exists($manifest->provider)) {
                 throw new RuntimeException(sprintf(
                     'Module %s provider class %s was not found.',
@@ -90,75 +96,164 @@ final class ModuleLoader
         return $loaded;
     }
 
-    /** @param array<string, ModuleManifest> $manifests @return list<ModuleManifest> */
-    private function sortAndValidate(array $manifests): array
+    /**
+     * @param list<ModuleManifest> $manifests
+     * @return list<ModuleManifest>
+     */
+    public function enabledInLoadOrder(array $manifests, ModuleStateRepository $state): array
     {
-        $sorted = [];
-        $state = [];
-
-        $visit = function (string $code) use (&$visit, &$sorted, &$state, $manifests): void {
-            if (($state[$code] ?? 0) === 2) {
-                return;
+        $all = $this->index($manifests);
+        $enabled = [];
+        foreach ($all as $code => $manifest) {
+            if ($state->isEnabled($manifest)) {
+                $enabled[$code] = $manifest;
             }
-            if (($state[$code] ?? 0) === 1) {
-                throw new RuntimeException(sprintf('Circular module dependency detected at %s.', $code));
+        }
+
+        foreach ($enabled as $manifest) {
+            $this->assertExtensionApiCompatible($manifest);
+            $this->assertDependenciesSatisfied($manifest, $all, $state, true);
+        }
+
+        return $this->topologicalSort($enabled);
+    }
+
+    /** @param list<ModuleManifest> $manifests */
+    public function assertCanEnable(string $code, array $manifests, ModuleStateRepository $state): void
+    {
+        $all = $this->index($manifests);
+        $manifest = $all[$code] ?? throw new RuntimeException(sprintf('Unknown module: %s.', $code));
+        $this->assertExtensionApiCompatible($manifest);
+        $this->assertDependenciesSatisfied($manifest, $all, $state, true);
+    }
+
+    /** @param list<ModuleManifest> $manifests */
+    public function assertCanDisable(string $code, array $manifests, ModuleStateRepository $state): void
+    {
+        $all = $this->index($manifests);
+        if (!isset($all[$code])) {
+            throw new RuntimeException(sprintf('Unknown module: %s.', $code));
+        }
+
+        foreach ($all as $candidate) {
+            if ($candidate->code === $code || !$state->isEnabled($candidate)) {
+                continue;
             }
+            if (array_key_exists($code, $candidate->requires)) {
+                throw new RuntimeException(sprintf(
+                    'Cannot disable "%s": enabled module "%s" depends on it.',
+                    $code,
+                    $candidate->code,
+                ));
+            }
+        }
+    }
 
-            $manifest = $manifests[$code] ?? throw new RuntimeException(sprintf('Unknown module %s.', $code));
-            $state[$code] = 1;
+    private function assertExtensionApiCompatible(ModuleManifest $manifest): void
+    {
+        if (!VersionConstraint::matches(ExtensionApiVersion::VERSION, $manifest->extensionApi)) {
+            throw new RuntimeException(sprintf(
+                'Module "%s" requires Extension API %s, current version is %s.',
+                $manifest->code,
+                $manifest->extensionApi,
+                ExtensionApiVersion::VERSION,
+            ));
+        }
+    }
 
-            foreach ($manifest->requires as $dependency => $constraint) {
-                if ($dependency === 'core') {
-                    $this->assertVersion($manifest->code, 'core', Version::STRING, $constraint);
-                    continue;
+    /**
+     * @param array<string, ModuleManifest> $all
+     */
+    private function assertDependenciesSatisfied(
+        ModuleManifest $manifest,
+        array $all,
+        ModuleStateRepository $state,
+        bool $requireEnabled,
+    ): void {
+        foreach ($manifest->requires as $dependency => $constraint) {
+            if ($dependency === 'core') {
+                if (!VersionConstraint::matches(Version::STRING, $constraint)) {
+                    throw new RuntimeException(sprintf(
+                        'Module "%s" requires core %s, current version is %s.',
+                        $manifest->code,
+                        $constraint,
+                        Version::STRING,
+                    ));
                 }
+                continue;
+            }
 
-                $dependencyManifest = $manifests[$dependency] ?? throw new RuntimeException(sprintf(
-                    'Module %s requires missing module %s (%s).',
+            $required = $all[$dependency] ?? null;
+            if (!$required instanceof ModuleManifest) {
+                throw new RuntimeException(sprintf(
+                    'Module "%s" requires missing module "%s".',
+                    $manifest->code,
+                    $dependency,
+                ));
+            }
+            if (!VersionConstraint::matches($required->version, $constraint)) {
+                throw new RuntimeException(sprintf(
+                    'Module "%s" requires %s %s, installed version is %s.',
+                    $manifest->code,
+                    $dependency,
+                    $constraint,
+                    $required->version,
+                ));
+            }
+            if ($requireEnabled && !$state->isEnabled($required)) {
+                throw new RuntimeException(sprintf(
+                    'Module "%s" requires enabled module "%s" (%s).',
                     $manifest->code,
                     $dependency,
                     $constraint,
                 ));
-                $this->assertVersion($manifest->code, $dependency, $dependencyManifest->version, $constraint);
-                $visit($dependency);
+            }
+        }
+    }
+
+    /**
+     * @param array<string, ModuleManifest> $manifests
+     * @return list<ModuleManifest>
+     */
+    private function topologicalSort(array $manifests): array
+    {
+        $state = [];
+        $result = [];
+
+        $visit = function (string $code) use (&$visit, &$state, &$result, $manifests): void {
+            $mark = $state[$code] ?? 0;
+            if ($mark === 2) {
+                return;
+            }
+            if ($mark === 1) {
+                throw new RuntimeException(sprintf('Circular module dependency detected at %s.', $code));
             }
 
+            $state[$code] = 1;
+            $manifest = $manifests[$code];
+            foreach (array_keys($manifest->requires) as $dependency) {
+                if ($dependency !== 'core' && isset($manifests[$dependency])) {
+                    $visit($dependency);
+                }
+            }
             $state[$code] = 2;
-            $sorted[] = $manifest;
+            $result[] = $manifest;
         };
 
         foreach (array_keys($manifests) as $code) {
             $visit($code);
         }
 
-        return $sorted;
+        return $result;
     }
 
-    private function assertVersion(string $module, string $dependency, string $version, string $constraint): void
+    /** @param list<ModuleManifest> $manifests @return array<string, ModuleManifest> */
+    private function index(array $manifests): array
     {
-        $constraint = trim($constraint);
-        if ($constraint === '*') {
-            return;
+        $result = [];
+        foreach ($manifests as $manifest) {
+            $result[$manifest->code] = $manifest;
         }
-
-        if (preg_match('/^(>=|<=|>|<|=)?\s*(\d+\.\d+\.\d+)$/', $constraint, $matches) !== 1) {
-            throw new RuntimeException(sprintf(
-                'Module %s uses unsupported version constraint "%s" for %s.',
-                $module,
-                $constraint,
-                $dependency,
-            ));
-        }
-
-        $operator = $matches[1] !== '' ? $matches[1] : '=';
-        if (!version_compare($version, $matches[2], $operator)) {
-            throw new RuntimeException(sprintf(
-                'Module %s requires %s %s, installed version is %s.',
-                $module,
-                $dependency,
-                $constraint,
-                $version,
-            ));
-        }
+        return $result;
     }
 }
