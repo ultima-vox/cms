@@ -55,8 +55,7 @@
                 <h2 class="admin-panel__title">Представление</h2>
                 <div class="admin-form__grid">
                     <label class="admin-field"><span class="admin-field__label">Макет</span><select class="admin-select" name="layout_id"><option value="">Без макета</option>{% for layout in layouts %}<option value="{{ layout.id }}" {% if node.layout_id == layout.id %}selected{% endif %}>{{ layout.name }}</option>{% endfor %}</select></label>
-                    <label class="admin-field"><span class="admin-field__label">Инфосистема</span><select class="admin-select" name="infosystem_id"><option value="">Не привязана</option>{% for infosystem in infosystems %}<option value="{{ infosystem.id }}" {% if node.infosystem_id == infosystem.id %}selected{% endif %}>{{ infosystem.name }}</option>{% endfor %}</select></label>
-                    <label class="admin-field admin-field--wide"><span class="admin-field__label">Контент</span><textarea class="admin-textarea" name="content">{{ node.content }}</textarea><span class="admin-field__hint">HTML хранится как редакционный контент и выводится макетом.</span></label>
+                    <label class="admin-field admin-field--wide"><span class="admin-field__label">Контент</span><textarea class="admin-textarea" name="content">{{ node.content }}</textarea><span class="admin-field__hint">HTML хранится как редакционный контент и выводится макетом. Привязки к прикладным модулям настраиваются в самих модулях.</span></label>
                 </div>
             </section>
 
