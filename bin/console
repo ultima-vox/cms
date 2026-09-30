@@ -73,6 +73,23 @@ switch ($command) {
         );
         exit(0);
 
+    case 'modules:remove':
+        $code = trim((string) ($argv[2] ?? ''));
+        if ($code === '') {
+            fwrite(STDERR, "Usage: php bin/console modules:remove <module-code>\n");
+            exit(1);
+        }
+
+        (new ModulePackageLifecycle(Database::connection(), $rootPath))->remove($code);
+        fwrite(
+            STDOUT,
+            sprintf(
+                "Removed module package code: %s. Module data and migration history were preserved.\n",
+                $code,
+            ),
+        );
+        exit(0);
+
     case 'modules:inventory':
         $rows = (new ModulePackageLifecycle(Database::connection(), $rootPath))->inventory();
         if ($rows === []) {
@@ -256,6 +273,7 @@ switch ($command) {
             "  migrate                    Apply pending Core SQL migrations\n" .
             "  modules:install <zip>      Verify, install and inventory a disabled module package\n" .
             "  modules:update <zip>       Replace a disabled installer-managed module with a newer package\n" .
+            "  modules:remove <code>      Remove disabled installer-managed package code; preserve its data\n" .
             "  modules:inventory          List installer-managed module packages\n" .
             "  modules:migrate <code>     Apply pending migrations owned by one module\n" .
             "  extensions:sync            Sync module metadata and enabled extension permissions\n" .
