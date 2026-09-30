@@ -252,6 +252,8 @@ final class ModulePackageInstaller
     /** @param list<array{index:int,name:string,is_dir:bool,size:int}> $entries */
     private function extractVerified(ZipArchive $zip, array $entries, string $staging): void
     {
+        $actualTotalSize = 0;
+
         foreach ($entries as $entry) {
             $relative = rtrim($entry['name'], '/');
             if ($relative === '') {
@@ -285,6 +287,11 @@ final class ModulePackageInstaller
                 $copied = stream_copy_to_stream($source, $target, self::MAX_FILE_SIZE + 1);
                 if ($copied === false || $copied !== $entry['size']) {
                     throw new RuntimeException('Package entry size changed while extracting: ' . $relative);
+                }
+
+                $actualTotalSize += $copied;
+                if ($actualTotalSize > self::MAX_TOTAL_SIZE) {
+                    throw new RuntimeException('Module package exceeds the maximum actual extracted size.');
                 }
             } finally {
                 fclose($source);
