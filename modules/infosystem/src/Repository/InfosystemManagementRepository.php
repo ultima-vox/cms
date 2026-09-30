@@ -31,7 +31,11 @@ final class InfosystemManagementRepository
             FROM infosystems i
             LEFT JOIN infosystem_groups g ON g.infosystem_id = i.id
             LEFT JOIN infosystem_items item ON item.infosystem_id = i.id
-            LEFT JOIN nodes n ON n.infosystem_id = i.id AND n.site_id = i.site_id
+            LEFT JOIN node_module_bindings b
+                ON b.module_code = 'infosystem'
+               AND b.binding_code = 'primary'
+               AND b.target_key = i.code
+            LEFT JOIN nodes n ON n.id = b.node_id AND n.site_id = i.site_id
             WHERE i.site_id = :site_id
             GROUP BY i.id
             ORDER BY i.name, i.id
@@ -50,7 +54,15 @@ final class InfosystemManagementRepository
             SELECT i.*,
                    (SELECT COUNT(*) FROM infosystem_groups g WHERE g.infosystem_id = i.id) AS group_count,
                    (SELECT COUNT(*) FROM infosystem_items item WHERE item.infosystem_id = i.id) AS item_count,
-                   (SELECT COUNT(*) FROM nodes n WHERE n.infosystem_id = i.id AND n.site_id = i.site_id) AS node_count
+                   (
+                       SELECT COUNT(*)
+                       FROM node_module_bindings b
+                       JOIN nodes n ON n.id = b.node_id
+                       WHERE b.module_code = 'infosystem'
+                         AND b.binding_code = 'primary'
+                         AND b.target_key = i.code
+                         AND n.site_id = i.site_id
+                   ) AS node_count
             FROM infosystems i
             WHERE i.id = :id
               AND i.site_id = :site_id
