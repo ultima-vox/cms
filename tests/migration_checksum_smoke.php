@@ -43,4 +43,5 @@ try {
 }
 
 $runner->migrate();
+require __DIR__ . '/module_migration_smoke.php';
 fwrite(STDOUT, "MIGRATION CHECKSUM OK\n");
