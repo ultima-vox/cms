@@ -41,7 +41,7 @@ Bundled first-party modules use `default_enabled => true` as an upgrade/install 
 
 `extensions:sync` updates name/version/API metadata but never overwrites an existing `is_enabled` value. Updating a package therefore cannot silently re-enable a module that was deliberately disabled.
 
-HTTP requests only read module state. They never install, enable, disable, or synchronize modules.
+HTTP requests only read module state. They never install, enable, disable, synchronize, or migrate modules.
 
 ## CLI
 
@@ -50,9 +50,37 @@ php bin/console extensions:sync
 php bin/console extensions:list
 php bin/console extensions:enable reviews
 php bin/console extensions:disable reviews
+php bin/console modules:migrate reviews
 ```
 
 `modules:list` remains a manifest-only diagnostic command and can run before lifecycle state has been synchronized.
+
+`modules:migrate <code>` is explicit. Merely copying a module package into `modules/` never changes the database schema.
+
+## Module-owned migrations
+
+New module schema changes live in:
+
+```text
+modules/<code>/migrations/*.sql
+```
+
+Applied migrations are recorded in `module_schema_migrations` using the tuple `(module_code, migration)` plus a SHA-256 checksum.
+
+Rules:
+
+- migration filenames are immutable after application;
+- changing the contents of an applied migration is rejected;
+- each migration is applied in its own transaction;
+- a PostgreSQL advisory lock serializes migration runs for the same module;
+- module migrations are never executed during HTTP boot;
+- module migrations are never executed merely because a module directory exists;
+- install/update tooling must invoke the migration runner explicitly;
+- disabling a module never rolls back or deletes schema/data.
+
+Historical Core migrations that created early Infosystem tables remain immutable for upgrade compatibility. They are a migration-history exception, not the ownership model for new work. Starting with the module migration runtime, all new Infosystem schema changes belong under `modules/infosystem/migrations`.
+
+A later clean-install baseline may compact historical migrations, but existing released migration files and checksums must not be rewritten in place.
 
 ## Dependency rules
 
@@ -104,4 +132,6 @@ Installing a module must not require copying domain files into Core directories.
 
 ## Future lifecycle
 
-Install/uninstall and module-owned migrations will build on the same persisted state model. Package code installation and database/data removal remain separate explicit operations; disabling a module must never delete its data.
+The next package-lifecycle layer will connect package install/update to the existing explicit operations in a transactional orchestration flow: package verification, compatibility check, backup/maintenance boundary, module migrations, metadata/permission sync, health check, and activation.
+
+Package code installation and database/data removal remain separate explicit operations; disabling a module must never delete its data.
