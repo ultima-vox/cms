@@ -9,9 +9,7 @@ final class Response
     /** @var array<string, string> */
     private array $headers;
 
-    /**
-     * @param array<string, string> $headers
-     */
+    /** @param array<string, string> $headers */
     public function __construct(
         private string $body = '',
         private int $status = 200,
@@ -38,6 +36,11 @@ final class Response
     public static function redirect(string $location, int $status = 302): self
     {
         return new self('', $status, ['Location' => $location]);
+    }
+
+    public function statusCode(): int
+    {
+        return $this->status;
     }
 
     public function withHeader(string $name, string $value): self

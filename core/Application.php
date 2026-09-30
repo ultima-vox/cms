@@ -14,6 +14,8 @@ use Core\Controller\HealthController;
 use Core\Controller\LayoutController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
+use Core\Delivery\DeliveryInvalidatingHandler;
+use Core\Delivery\Page\PageCache;
 use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
 use Core\Extension\ModuleLoader;
@@ -39,17 +41,19 @@ use Core\View\TwigRenderer;
 
 final class Application
 {
+    private const SESSION_COOKIE = 'uvcms_session';
+
     public function __construct(private readonly string $rootPath)
     {
     }
 
     public function run(Request $request): void
     {
-        $this->startSession();
+        $this->startSessionForRequest($request);
 
         $db = Database::connection();
         $siteRepository = new SiteRepository($db);
-        $adminSite = str_starts_with($request->path, '/admin')
+        $adminSite = $this->isAdminPath($request->path)
             ? (new AdminSiteSelector($siteRepository))->current()
             : new SiteContext(1, 'default', 'Default site', '');
         $twig = new TwigRenderer($this->rootPath);
@@ -94,9 +98,14 @@ final class Application
                 new InfosystemRepository($db),
                 $siteResolver,
                 $frontend,
+                new PageCache($core->cache()),
+                $core->delivery(),
+                $auth,
             ),
             $permissionGate,
             $html,
+            new DeliveryInvalidatingHandler($core->delivery()),
+            $core->sites()->adminId(),
         );
 
         $builtinRoutes->register($core->routes());
@@ -117,6 +126,16 @@ final class Application
         $response->send();
     }
 
+    private function startSessionForRequest(Request $request): void
+    {
+        if (!$this->isAdminPath($request->path)
+            && !array_key_exists(self::SESSION_COOKIE, $request->cookies)) {
+            return;
+        }
+
+        $this->startSession();
+    }
+
     private function startSession(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -127,7 +146,7 @@ final class Application
         ini_set('session.use_only_cookies', '1');
         ini_set('session.cookie_httponly', '1');
 
-        session_name('uvcms_session');
+        session_name(self::SESSION_COOKIE);
         session_set_cookie_params([
             'httponly' => true,
             'secure' => $this->isHttps(),
@@ -135,6 +154,11 @@ final class Application
             'path' => '/',
         ]);
         session_start();
+    }
+
+    private function isAdminPath(string $path): bool
+    {
+        return $path === '/admin' || str_starts_with($path, '/admin/');
     }
 
     private function isHttps(): bool

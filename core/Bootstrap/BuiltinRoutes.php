@@ -11,7 +11,9 @@ use Core\Controller\HealthController;
 use Core\Controller\LayoutController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
+use Core\Delivery\DeliveryInvalidatingHandler;
 use Core\Extension\Api\RoutesApi;
+use Core\Http\Request;
 use Core\Security\PermissionGate;
 
 final readonly class BuiltinRoutes
@@ -25,6 +27,8 @@ final readonly class BuiltinRoutes
         private NodeController $nodeController,
         private PermissionGate $permissionGate,
         private HtmlSanitizingHandler $html,
+        private DeliveryInvalidatingHandler $invalidate,
+        private int $adminSiteId,
     ) {
     }
 
@@ -39,6 +43,12 @@ final readonly class BuiltinRoutes
         $routes->post('/admin/logout', 'auth.logout', [$this->authController, 'logout']);
         $routes->get('/admin', 'admin.index', [$this->adminController, 'index']);
 
+        $siteTags = fn (Request $request, array $variables): array => ['site:' . $this->adminSiteId];
+        $layoutTags = static function (Request $request, array $variables): array {
+            $id = $variables['id'] ?? '';
+            return ctype_digit($id) ? ['layout:' . (int) $id] : [];
+        };
+
         $routes->get('/admin/structure', 'structure.index', [$this->structureController, 'index']);
         $routes->get('/admin/structure/create', 'structure.create', [$this->structureController, 'createForm']);
         $routes->post(
@@ -46,28 +56,69 @@ final readonly class BuiltinRoutes
             'structure.store',
             $this->permissionGate->require(
                 'structure.manage',
-                $this->html->wrap([$this->structureController, 'store'], ['content' => 'rich']),
+                $this->invalidate->wrap(
+                    $this->html->wrap([$this->structureController, 'store'], ['content' => 'rich']),
+                    $siteTags,
+                ),
             ),
         );
-        $routes->post('/admin/structure/reorder', 'structure.reorder', [$this->structureController, 'reorder']);
+        $routes->post(
+            '/admin/structure/reorder',
+            'structure.reorder',
+            $this->permissionGate->require(
+                'structure.manage',
+                $this->invalidate->wrap([$this->structureController, 'reorder'], $siteTags),
+            ),
+        );
         $routes->get('/admin/structure/{id:\\d+}/edit', 'structure.edit', [$this->structureController, 'editForm']);
         $routes->post(
             '/admin/structure/{id:\\d+}',
             'structure.update',
             $this->permissionGate->require(
                 'structure.manage',
-                $this->html->wrap([$this->structureController, 'update'], ['content' => 'rich']),
+                $this->invalidate->wrap(
+                    $this->html->wrap([$this->structureController, 'update'], ['content' => 'rich']),
+                    $siteTags,
+                ),
             ),
         );
-        $routes->post('/admin/structure/{id:\\d+}/delete', 'structure.delete', [$this->structureController, 'delete']);
+        $routes->post(
+            '/admin/structure/{id:\\d+}/delete',
+            'structure.delete',
+            $this->permissionGate->require(
+                'structure.manage',
+                $this->invalidate->wrap([$this->structureController, 'delete'], $siteTags),
+            ),
+        );
 
         $routes->get('/admin/layouts', 'layout.index', [$this->layoutController, 'index']);
         $routes->get('/admin/layouts/create', 'layout.create', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'createForm']));
         $routes->post('/admin/layouts', 'layout.store', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'store']));
         $routes->get('/admin/layouts/{id:\\d+}/edit', 'layout.edit', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'editForm']));
-        $routes->post('/admin/layouts/{id:\\d+}', 'layout.update', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'update']));
-        $routes->post('/admin/layouts/{id:\\d+}/reset', 'layout.reset', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'reset']));
-        $routes->post('/admin/layouts/{id:\\d+}/delete', 'layout.delete', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'delete']));
+        $routes->post(
+            '/admin/layouts/{id:\\d+}',
+            'layout.update',
+            $this->permissionGate->require(
+                'templates.code.edit',
+                $this->invalidate->wrap([$this->layoutController, 'update'], $layoutTags),
+            ),
+        );
+        $routes->post(
+            '/admin/layouts/{id:\\d+}/reset',
+            'layout.reset',
+            $this->permissionGate->require(
+                'templates.code.edit',
+                $this->invalidate->wrap([$this->layoutController, 'reset'], $layoutTags),
+            ),
+        );
+        $routes->post(
+            '/admin/layouts/{id:\\d+}/delete',
+            'layout.delete',
+            $this->permissionGate->require(
+                'templates.code.edit',
+                $this->invalidate->wrap([$this->layoutController, 'delete'], $layoutTags),
+            ),
+        );
     }
 
     public function registerPublicFallback(RoutesApi $routes): void

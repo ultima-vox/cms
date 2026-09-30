@@ -49,13 +49,32 @@ final class AuthService
 
     public function logout(): void
     {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return;
+        }
+
         unset($_SESSION[self::SESSION_USER_ID]);
         session_regenerate_id(true);
+    }
+
+    public function hasAuthenticatedSession(): bool
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return false;
+        }
+
+        $userId = $_SESSION[self::SESSION_USER_ID] ?? null;
+
+        return is_int($userId) || (is_string($userId) && ctype_digit($userId));
     }
 
     /** @return array<string, mixed>|null */
     public function user(): ?array
     {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return null;
+        }
+
         $userId = $_SESSION[self::SESSION_USER_ID] ?? null;
 
         if (!is_int($userId) && !(is_string($userId) && ctype_digit($userId))) {
