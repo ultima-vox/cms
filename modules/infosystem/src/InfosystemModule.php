@@ -12,6 +12,8 @@ use Core\Extension\ModuleInterface;
 use Core\Http\Request;
 use Core\Repository\AuditLogRepository;
 use Core\Repository\LoginAttemptRepository;
+use Core\Repository\NodeModuleBindingRepository;
+use Core\Repository\StructureRepository;
 use Core\Repository\UserRepository;
 use Core\Security\AuthService;
 use Core\Security\PermissionGate;
@@ -31,6 +33,7 @@ final class InfosystemModule implements ModuleInterface
     {
         $db = $core->runtime()->database();
         $repository = new InfosystemRepository($db);
+        $bindings = new NodeModuleBindingRepository($db);
         $content = $core->content();
         $events = $core->events();
 
@@ -47,7 +50,7 @@ final class InfosystemModule implements ModuleInterface
             30,
         );
 
-        $this->registerAdminRoutes($core);
+        $this->registerAdminRoutes($core, $bindings);
 
         $content->source(
             'infosystem.items',
@@ -76,6 +79,7 @@ final class InfosystemModule implements ModuleInterface
             'infosystems',
             static fn (TemplateFacadeContext $context): InfosystemsFacade => new InfosystemsFacade(
                 $repository,
+                $bindings,
                 $content,
                 $context,
             ),
@@ -109,7 +113,7 @@ final class InfosystemModule implements ModuleInterface
         );
     }
 
-    private function registerAdminRoutes(Core $core): void
+    private function registerAdminRoutes(Core $core, NodeModuleBindingRepository $bindings): void
     {
         $db = $core->runtime()->database();
         $siteId = $core->sites()->adminId();
@@ -127,6 +131,9 @@ final class InfosystemModule implements ModuleInterface
             $management,
             new FieldSchema(),
             new AuditLogRepository($db),
+            new StructureRepository($db, $siteId),
+            $bindings,
+            $siteId,
             $twig,
         );
         $listController = new InfosystemItemListController(
