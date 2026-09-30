@@ -46,4 +46,5 @@ $runner->migrate();
 require __DIR__ . '/module_migration_smoke.php';
 require __DIR__ . '/module_package_inventory_smoke.php';
 require __DIR__ . '/module_package_purge_smoke.php';
+require __DIR__ . '/installer_state_smoke.php';
 fwrite(STDOUT, "MIGRATION CHECKSUM OK\n");
