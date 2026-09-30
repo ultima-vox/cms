@@ -167,7 +167,6 @@ final class StructureController
             'id' => null,
             'parent_id' => null,
             'layout_id' => null,
-            'infosystem_id' => null,
             'name' => '',
             'slug' => '',
             'path' => null,
@@ -184,7 +183,6 @@ final class StructureController
             'node' => $form,
             'nodes' => $this->flattenTree($this->structure->all()),
             'layouts' => $this->structure->layouts(),
-            'infosystems' => $this->structure->infosystems(),
             'csrf_token' => Csrf::token(),
             'error' => $error,
         ]), $status);
@@ -222,7 +220,6 @@ final class StructureController
         return [
             'parent_id' => $isRoot ? null : $parentId,
             'layout_id' => $this->nullablePositiveInt($input['layout_id'] ?? null),
-            'infosystem_id' => $this->nullablePositiveInt($input['infosystem_id'] ?? null),
             'name' => $name,
             'slug' => $slug,
             'title' => trim((string) ($input['title'] ?? '')) ?: $name,
