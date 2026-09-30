@@ -24,7 +24,7 @@
             <div>
                 <p class="admin-eyebrow">System</p>
                 <h1 class="admin-header__title">Модули</h1>
-                <p class="admin-page-header__description">Состояние модулей, зависимости и lifecycle-операции. Установка ZIP-пакетов будет добавлена отдельным безопасным upload-потоком.</p>
+                <p class="admin-page-header__description">Установка пакетов, состояние модулей, зависимости и lifecycle-операции.</p>
             </div>
             <form method="post" action="/admin/modules/sync">
                 <input type="hidden" name="_csrf" value="{{ csrf_token }}">
@@ -34,11 +34,31 @@
 
         {% if notice %}<div class="admin-notice">{{ notice }}</div>{% endif %}
 
+        <section class="admin-panel module-upload-panel">
+            <div>
+                <p class="admin-eyebrow">Package install</p>
+                <h2 class="admin-panel__title">Установить ZIP-пакет</h2>
+                <p class="module-upload-panel__description">Пакет устанавливается выключенным. После установки выполните синхронизацию, миграции и включение. Для подписанного пакета приложите detached <code>.sig</code>.</p>
+            </div>
+            <form class="module-upload-form" method="post" action="/admin/modules/install" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                <label>
+                    <span>Пакет (.zip)</span>
+                    <input type="file" name="package" accept=".zip,application/zip" required>
+                </label>
+                <label>
+                    <span>Подпись (.sig), опционально</span>
+                    <input type="file" name="signature" accept=".sig,application/json,text/plain">
+                </label>
+                <button class="admin-button admin-button--primary" type="submit">Проверить и установить</button>
+            </form>
+        </section>
+
         <section class="admin-panel admin-panel--flush">
             {% if modules is empty %}
                 <div class="admin-empty">
                     <h2 class="admin-panel__title">Модули не обнаружены</h2>
-                    <p>Проверьте каталог <code>modules/</code> и manifests.</p>
+                    <p>Загрузите пакет выше или проверьте каталог <code>modules/</code>.</p>
                 </div>
             {% else %}
                 <div class="module-list">
