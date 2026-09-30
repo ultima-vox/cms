@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Core\View\Render;
 
+use Core\Delivery\ResourceHint;
+
 final class RenderContext
 {
     /** @var array<string, true> */
@@ -17,6 +19,9 @@ final class RenderContext
 
     /** @var array<string, mixed> */
     private array $schema = [];
+
+    /** @var array<string, ResourceHint> */
+    private array $resourceHints = [];
 
     public function dependency(string $tag): void
     {
@@ -47,6 +52,31 @@ final class RenderContext
         $this->schema[$key] = $value;
     }
 
+    public function resourceHint(ResourceHint $hint): void
+    {
+        $this->resourceHints[$hint->key()] = $hint;
+    }
+
+    /** @param array<string, string> $attributes */
+    public function preload(string $href, array $attributes = []): void
+    {
+        $this->resourceHint(new ResourceHint('preload', $href, $attributes));
+    }
+
+    public function preconnect(string $href, bool $crossorigin = false): void
+    {
+        $this->resourceHint(new ResourceHint(
+            'preconnect',
+            $href,
+            $crossorigin ? ['crossorigin' => 'anonymous'] : [],
+        ));
+    }
+
+    public function modulePreload(string $href): void
+    {
+        $this->resourceHint(new ResourceHint('modulepreload', $href));
+    }
+
     /** @return list<string> */
     public function dependencies(): array
     {
@@ -69,5 +99,11 @@ final class RenderContext
     public function schemas(): array
     {
         return $this->schema;
+    }
+
+    /** @return list<ResourceHint> */
+    public function resourceHints(): array
+    {
+        return array_values($this->resourceHints);
     }
 }

@@ -12,6 +12,7 @@ use Core\Routing\SystemPathPolicy;
 use Core\Site\SiteResolver;
 use Core\View\FrontendRenderer;
 use Core\View\PageViewModel;
+use Core\View\Render\RenderContext;
 use Core\View\SafeHtml;
 
 final class NodeController
@@ -39,7 +40,6 @@ final class NodeController
         }
 
         $node = $this->nodes->findPublishedByPath($site->id, $request->path);
-
         if ($node === null) {
             return $this->notFound($request->path);
         }
@@ -73,13 +73,24 @@ final class NodeController
                 : null,
         );
 
-        return Response::html($this->view->render($template, [
+        $renderContext = new RenderContext();
+        $renderContext->dependency('site:' . $site->id);
+        $renderContext->dependency('node:' . (int) $node['id']);
+        $renderContext->dependency('site:' . $site->id . ':node:' . (int) $node['id']);
+        $renderContext->dependency('template:' . $template);
+        if (isset($node['layout_id']) && is_numeric($node['layout_id'])) {
+            $renderContext->dependency('layout:' . (int) $node['layout_id']);
+        }
+
+        $result = $this->view->renderResult($template, [
             'site' => $site,
             'page' => $page,
             'node' => $node,
             'content' => (string) ($node['content'] ?? ''),
             'items' => $items,
-        ]));
+        ], $renderContext);
+
+        return Response::html($result->html);
     }
 
     private function notFound(string $path): Response
