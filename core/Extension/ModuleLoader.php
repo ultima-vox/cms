@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Core\Extension;
 
-use Core\Version;
 use RuntimeException;
 
 final class ModuleLoader
@@ -12,9 +11,12 @@ final class ModuleLoader
     /** @var list<string> */
     private array $moduleRoots;
 
+    private readonly ModuleManifestReader $manifestReader;
+
     public function __construct(string $rootPath)
     {
         $this->moduleRoots = [$rootPath . '/modules'];
+        $this->manifestReader = new ModuleManifestReader();
     }
 
     /** @return list<ModuleManifest> */
@@ -31,28 +33,10 @@ final class ModuleLoader
             sort($directories, SORT_STRING);
 
             foreach ($directories as $directory) {
-                $manifestPath = $directory . '/module.php';
-                if (!is_file($manifestPath)) {
+                $manifest = $this->manifestReader->read($directory);
+                if (!$manifest instanceof ModuleManifest) {
                     continue;
                 }
-
-                $definition = require $manifestPath;
-                if ($definition instanceof ModuleInterface) {
-                    $definition = [
-                        'code' => basename($directory),
-                        'name' => basename($directory),
-                        'version' => '0.0.0',
-                        'extension_api' => '^1.0',
-                        'default_enabled' => true,
-                        'requires' => ['core' => '>=' . Version::STRING],
-                        'provider' => $definition::class,
-                    ];
-                }
-                if (!is_array($definition)) {
-                    throw new RuntimeException(sprintf('Module manifest %s must return an array.', $manifestPath));
-                }
-
-                $manifest = ModuleManifest::fromArray($definition, $directory);
                 if (isset($manifests[$manifest->code])) {
                     throw new RuntimeException(sprintf('Duplicate module code: %s.', $manifest->code));
                 }
@@ -73,6 +57,11 @@ final class ModuleLoader
         $loaded = [];
 
         foreach ($ordered as $manifest) {
+            $autoload = $manifest->directory . '/autoload.php';
+            if (is_file($autoload)) {
+                require_once $autoload;
+            }
+
             if (!class_exists($manifest->provider)) {
                 throw new RuntimeException(sprintf(
                     'Module %s provider class %s was not found.',
@@ -161,9 +150,7 @@ final class ModuleLoader
         }
     }
 
-    /**
-     * @param array<string, ModuleManifest> $all
-     */
+    /** @param array<string, ModuleManifest> $all */
     private function assertDependenciesSatisfied(
         ModuleManifest $manifest,
         array $all,
@@ -172,12 +159,12 @@ final class ModuleLoader
     ): void {
         foreach ($manifest->requires as $dependency => $constraint) {
             if ($dependency === 'core') {
-                if (!VersionConstraint::matches(Version::STRING, $constraint)) {
+                if (!VersionConstraint::matches(\Core\Version::STRING, $constraint)) {
                     throw new RuntimeException(sprintf(
                         'Module "%s" requires core %s, current version is %s.',
                         $manifest->code,
                         $constraint,
-                        Version::STRING,
+                        \Core\Version::STRING,
                     ));
                 }
                 continue;
@@ -211,10 +198,7 @@ final class ModuleLoader
         }
     }
 
-    /**
-     * @param array<string, ModuleManifest> $manifests
-     * @return list<ModuleManifest>
-     */
+    /** @param array<string, ModuleManifest> $manifests @return list<ModuleManifest> */
     private function topologicalSort(array $manifests): array
     {
         $state = [];
