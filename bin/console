@@ -54,6 +54,25 @@ switch ($command) {
         );
         exit(0);
 
+    case 'modules:update':
+        $archive = trim((string) ($argv[2] ?? ''));
+        if ($archive === '') {
+            fwrite(STDERR, "Usage: php bin/console modules:update <package.zip>\n");
+            exit(1);
+        }
+
+        $manifest = (new ModulePackageLifecycle(Database::connection(), $rootPath))->update($archive);
+        fwrite(
+            STDOUT,
+            sprintf(
+                "Updated module package: %s %s. Run extensions:sync, then modules:migrate %s before enabling it.\n",
+                $manifest->code,
+                $manifest->version,
+                $manifest->code,
+            ),
+        );
+        exit(0);
+
     case 'modules:inventory':
         $rows = (new ModulePackageLifecycle(Database::connection(), $rootPath))->inventory();
         if ($rows === []) {
@@ -236,6 +255,7 @@ switch ($command) {
             "Ultima Vox CMS\n\nCommands:\n" .
             "  migrate                    Apply pending Core SQL migrations\n" .
             "  modules:install <zip>      Verify, install and inventory a disabled module package\n" .
+            "  modules:update <zip>       Replace a disabled installer-managed module with a newer package\n" .
             "  modules:inventory          List installer-managed module packages\n" .
             "  modules:migrate <code>     Apply pending migrations owned by one module\n" .
             "  extensions:sync            Sync module metadata and enabled extension permissions\n" .
