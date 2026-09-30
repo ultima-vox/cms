@@ -39,7 +39,7 @@ declare(strict_types=1);
         <footer class="installer-footer">
             <?php if ($requiredPassed): ?>
                 <div class="installer-result is-ok">Обязательные проверки пройдены. Сервер готов к следующему шагу установки.</div>
-                <button type="button" disabled>Настройка базы данных — следующий этап</button>
+                <a href="/install/database">Настроить базу данных</a>
             <?php else: ?>
                 <div class="installer-result is-error">Исправьте обязательные ошибки сервера и обновите страницу.</div>
                 <a href="/install">Проверить снова</a>
