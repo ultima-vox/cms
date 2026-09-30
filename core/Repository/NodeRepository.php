@@ -30,7 +30,6 @@ final class NodeRepository
                 n.path,
                 n.title,
                 n.layout_id,
-                n.infosystem_id,
                 n.content,
                 n.meta_description,
                 l.template_path
