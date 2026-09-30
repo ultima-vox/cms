@@ -163,7 +163,7 @@ final class ModuleMigrationRunner
     private function normalizeModuleCode(string $moduleCode): string
     {
         $moduleCode = strtolower(trim($moduleCode));
-        if (!preg_match('/^[a-z][a-z0-9_-]{0,119}$/', $moduleCode)) {
+        if (!preg_match('/^[a-z][a-z0-9._-]{0,79}$/', $moduleCode)) {
             throw new RuntimeException('Некорректный код модуля.');
         }
 
