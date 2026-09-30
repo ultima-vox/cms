@@ -1,3 +1,41 @@
+.module-upload-panel {
+    display: grid;
+    grid-template-columns: minmax(240px, .8fr) minmax(360px, 1.2fr);
+    gap: 28px;
+    align-items: end;
+    margin-bottom: 24px;
+}
+
+.module-upload-panel__description {
+    margin: 8px 0 0;
+    color: var(--admin-muted, #667085);
+    line-height: 1.55;
+}
+
+.module-upload-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.module-upload-form label {
+    display: grid;
+    gap: 7px;
+    color: var(--admin-muted, #667085);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.module-upload-form input[type="file"] {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px;
+    border: 1px solid var(--admin-border, #d0d5dd);
+    border-radius: 8px;
+    background: #fff;
+}
+
 .module-list {
     display: grid;
 }
@@ -70,6 +108,11 @@
 }
 
 @media (max-width: 1180px) {
+    .module-upload-panel,
+    .module-upload-form {
+        grid-template-columns: 1fr;
+    }
+
     .module-list__head {
         display: none;
     }

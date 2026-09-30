@@ -8,6 +8,7 @@ use Core\Extension\ModuleLoader;
 use Core\Extension\ModuleManager;
 use Core\Extension\ModuleMigrationRunner;
 use Core\Extension\ModulePackageLifecycle;
+use Core\Extension\ModulePackageUploadService;
 use Core\Http\Request;
 use Core\Http\Response;
 use Core\Repository\AuditLogRepository;
@@ -69,6 +70,37 @@ final readonly class ModuleManagerController
             'modules' => $modules,
             'notice' => $this->notice($request),
         ]));
+    }
+
+    /** @param array<string, string> $variables */
+    public function install(Request $request, array $variables = []): Response
+    {
+        unset($variables);
+
+        if (($denied = $this->requireMutation($request)) !== null) {
+            return $denied;
+        }
+
+        $package = $request->file('package');
+        if ($package === null) {
+            return Response::html('<h1>ZIP-пакет не выбран.</h1><p><a href="/admin/modules">Вернуться к модулям</a></p>', 422);
+        }
+
+        try {
+            $lifecycle = new ModulePackageLifecycle($this->db, $this->rootPath);
+            $manifest = (new ModulePackageUploadService($lifecycle, $this->rootPath))->install(
+                $package,
+                $request->file('signature'),
+            );
+            $this->audit($request, 'module.install', $manifest->code, [
+                'version' => $manifest->version,
+                'signed_upload' => $request->file('signature') !== null,
+            ]);
+
+            return Response::redirect('/admin/modules?installed=' . rawurlencode($manifest->code));
+        } catch (Throwable $exception) {
+            return $this->error($exception, 422);
+        }
     }
 
     /** @param array<string, string> $variables */
@@ -212,7 +244,13 @@ final readonly class ModuleManagerController
         if (isset($request->query['synced'])) {
             return 'Реестр модулей синхронизирован.';
         }
-        foreach (['enabled' => 'включён', 'disabled' => 'выключен', 'migrated' => 'миграции применены', 'removed' => 'код пакета удалён, данные сохранены'] as $key => $message) {
+        foreach ([
+            'installed' => 'пакет загружен и установлен в выключенном состоянии',
+            'enabled' => 'включён',
+            'disabled' => 'выключен',
+            'migrated' => 'миграции применены',
+            'removed' => 'код пакета удалён, данные сохранены',
+        ] as $key => $message) {
             $code = $request->query[$key] ?? null;
             if (is_string($code) && $code !== '') {
                 return sprintf('Модуль %s: %s.', $code, $message);
@@ -222,11 +260,11 @@ final readonly class ModuleManagerController
         return null;
     }
 
-    private function error(Throwable $exception): Response
+    private function error(Throwable $exception, int $status = 409): Response
     {
         return Response::html(
             '<h1>Операция не выполнена</h1><p>' . htmlspecialchars($exception->getMessage(), ENT_QUOTES, 'UTF-8') . '</p><p><a href="/admin/modules">Вернуться к модулям</a></p>',
-            409,
+            $status,
         );
     }
 
