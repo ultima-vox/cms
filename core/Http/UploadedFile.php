@@ -29,11 +29,16 @@ final readonly class UploadedFile
             return null;
         }
 
+        $error = (int) $error;
+        if ($error === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
         return new self(
             clientName: $name,
             temporaryPath: $temporaryPath,
             size: (int) $size,
-            error: (int) $error,
+            error: $error,
         );
     }
 
