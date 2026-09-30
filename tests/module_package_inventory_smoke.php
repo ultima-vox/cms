@@ -116,8 +116,39 @@ try {
         $state->setEnabled('inventory-smoke', false);
     }
 
-    if (trim((string) file_get_contents($root . '/modules/inventory-smoke/VERSION.txt')) !== 'new') {
-        throw new RuntimeException('Rejected package update changed active module files.');
+    $brokenArchive = $root . '/inventory-1.4.1-broken.zip';
+    $zip = new ZipArchive();
+    if ($zip->open($brokenArchive, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        throw new RuntimeException('Unable to create broken update package.');
+    }
+    $brokenManifest = [
+        'code' => 'inventory-smoke',
+        'name' => 'Inventory Smoke',
+        'version' => '1.4.1',
+        'extension_api' => '^1.0',
+        'default_enabled' => false,
+        'requires' => ['core' => '>=0.1.0'],
+        'provider' => 'Vendor\\InventorySmoke\\Module',
+    ];
+    $zip->addFromString('module.json', json_encode($brokenManifest, JSON_THROW_ON_ERROR));
+    $zip->addFromString('../escape.php', '<?php');
+    $zip->close();
+
+    try {
+        $lifecycle->update($brokenArchive);
+        throw new RuntimeException('Broken package update was accepted.');
+    } catch (RuntimeException $exception) {
+        if ($exception->getMessage() === 'Broken package update was accepted.') {
+            throw $exception;
+        }
+    }
+
+    $afterRollback = $inventory->find('inventory-smoke');
+    if ($afterRollback === null
+        || $afterRollback['version'] !== '1.3.0'
+        || $afterRollback['package_sha256'] !== $updateChecksum
+        || trim((string) file_get_contents($root . '/modules/inventory-smoke/VERSION.txt')) !== 'new') {
+        throw new RuntimeException('Failed package update did not restore previous code/inventory state.');
     }
 } finally {
     $db->exec("DELETE FROM installed_modules WHERE code = 'inventory-smoke'");
