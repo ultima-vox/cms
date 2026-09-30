@@ -12,11 +12,8 @@ use Core\Delivery\DeliveryInvalidatingHandler;
 use Core\Extension\Core;
 use Core\Extension\ModuleInterface;
 use Core\Http\Request;
-use Core\Infosystem\FieldSchema;
 use Core\Repository\AuditLogRepository;
-use Core\Repository\InfosystemItemSearchRepository;
 use Core\Repository\InfosystemManagementRepository;
-use Core\Repository\InfosystemRepository;
 use Core\Repository\LoginAttemptRepository;
 use Core\Repository\UserRepository;
 use Core\Security\AuthService;
@@ -25,6 +22,8 @@ use Core\View\Render\RenderNodeInterface;
 use Core\View\Render\TemplateFacadeContext;
 use Core\View\TwigRenderer;
 use RuntimeException;
+use UltimaVox\Modules\Infosystem\Repository\InfosystemItemSearchRepository;
+use UltimaVox\Modules\Infosystem\Repository\InfosystemRepository;
 
 final class InfosystemModule implements ModuleInterface
 {
