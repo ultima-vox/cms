@@ -155,6 +155,8 @@ try {
 @rmdir($root . '/templates');
 @rmdir($root);
 
+require __DIR__ . '/template_linter_smoke.php';
+require __DIR__ . '/core_module_boundary_smoke.php';
 require __DIR__ . '/delivery_cache_smoke.php';
 require __DIR__ . '/page_static_cache_smoke.php';
 

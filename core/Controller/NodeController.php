@@ -11,7 +11,6 @@ use Core\Delivery\ResourceHintHeader;
 use Core\Extension\Api\DeliveryApi;
 use Core\Http\Request;
 use Core\Http\Response;
-use Core\Repository\InfosystemRepository;
 use Core\Repository\NodeRepository;
 use Core\Routing\SystemPathPolicy;
 use Core\Security\AuthService;
@@ -26,7 +25,6 @@ final class NodeController
 {
     public function __construct(
         private readonly NodeRepository $nodes,
-        private readonly InfosystemRepository $infosystems,
         private readonly SiteResolver $sites,
         private readonly FrontendRenderer $view,
         private readonly PageCache $pageCache,
@@ -72,15 +70,6 @@ final class NodeController
             ? $node['template_path']
             : 'layouts/main.html.php';
 
-        // Legacy Twig layouts expect an eager `items` array. PHP layouts resolve content lazily through module facades.
-        $items = [];
-        $infosystemId = $node['infosystem_id'] ?? null;
-
-        if (str_ends_with($template, '.twig')
-            && (is_int($infosystemId) || (is_string($infosystemId) && ctype_digit($infosystemId)))) {
-            $items = $this->infosystems->findPublishedItems($site->id, (int) $infosystemId);
-        }
-
         $title = trim((string) ($node['title'] ?? ''));
         if ($title === '') {
             $title = (string) ($node['name'] ?? '');
@@ -105,16 +94,12 @@ final class NodeController
         if (isset($node['layout_id']) && is_numeric($node['layout_id'])) {
             $renderContext->dependency('layout:' . (int) $node['layout_id']);
         }
-        if (is_int($infosystemId) || (is_string($infosystemId) && ctype_digit($infosystemId))) {
-            $renderContext->dependency('site:' . $site->id . ':infosystem:' . (int) $infosystemId);
-        }
 
         $result = $this->view->renderResult($template, [
             'site' => $site,
             'page' => $page,
             'node' => $node,
             'content' => (string) ($node['content'] ?? ''),
-            'items' => $items,
         ], $renderContext);
 
         if ($cacheEligible) {

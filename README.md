@@ -1,6 +1,8 @@
 # Ultima Vox CMS
 
-Lightweight CMS built around a simple HostCMS-inspired content model: nodes, layouts and infosystems, without XML/XSLT and EAV queries.
+Lightweight CMS built around a simple HostCMS-inspired content model: nodes, layouts and infosystems, without XML/XSLT or EAV queries.
+
+The public frontend uses ordinary HTML + PHP layouts. Twig is currently retained only for the internal administration UI and legacy compatibility; site developers do not need a separate template language.
 
 ## Requirements
 
@@ -8,7 +10,7 @@ Lightweight CMS built around a simple HostCMS-inspired content model: nodes, lay
 - PostgreSQL 16+
 - Nginx
 - Composer 2
-- PHP extensions: `pdo`, `pdo_pgsql`, `json`
+- PHP extensions: `pdo`, `pdo_pgsql`, `json`, `dom`, `mbstring`
 
 ## Install
 
@@ -49,20 +51,50 @@ The rest of the application tree can remain read-only.
 ## Core model
 
 - `nodes` — hierarchical site structure and pages;
-- `layouts` — Twig page layout metadata;
-- packaged layout files — `templates/layouts`;
-- editor-created layout overrides — `storage/templates/layouts`;
+- `layouts` — page layout metadata;
+- packaged public layout files — `templates/layouts/*.html.php`;
+- editor-created layout overrides — `storage/templates/layouts/*.html.php`;
 - `infosystems` — reusable content stores and their custom-field schemas;
 - `infosystem_groups` — hierarchical groups inside an infosystem;
 - `infosystem_items` — content items with indexed `JSONB` custom properties;
 - `users`, `roles`, `permissions` — administration access control;
 - `audit_log` — security and change audit storage.
 
-## Layout model
+## Frontend layout model
 
-Layouts remain ordinary Twig files. Nodes receive `node`, `content` and `items` variables. There are no `cms_*()` template functions, XML transforms or mandatory component wrappers.
+A public layout is a normal PHP/HTML file. The default system layout is `templates/layouts/main.html.php`.
 
-The default `layouts/main.twig` is registered as a system layout during migration. Editing it in the admin panel creates a runtime override under `storage/templates/layouts`; the packaged template remains untouched and can be restored at any time.
+Example:
+
+```php
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?= text($page->title) ?></title>
+</head>
+<body>
+    <main>
+        <?= html($page->content) ?>
+    </main>
+</body>
+</html>
+```
+
+There is no XML/XSLT transform and no CMS-specific frontend template language. Dynamic modules expose typed PHP facades and PHP views. For example, an enabled Infosystems module may be inserted directly from the layout:
+
+```php
+<?php if (isset($infosystems) && ($catalog = $infosystems->linked()) !== null): ?>
+    <?= $catalog->items()->show() ?>
+<?php endif; ?>
+```
+
+Layout resolution checks `storage/templates` first and falls back to packaged `templates`, so editing a packaged layout in the administration panel creates a runtime override without changing the original file.
+
+The frontend helpers are deliberately small and explicit: `text()` for escaped text, `html()` for trusted `SafeHtml`, `asset()` for assets and `url()` for internal URLs.
+
+Twig remains an implementation detail of the current administration UI and a temporary compatibility path for early development layouts. New public layouts must use `*.html.php`.
 
 ## Infosystem model
 
@@ -80,14 +112,27 @@ The `idx_items_properties_gin` GIN index supports these containment filters with
 
 Migration filenames are immutable after merge because `schema_migrations` records the complete filename. Historical numbering is therefore preserved rather than renamed in place.
 
+## Modules
+
+CMS capabilities are extended through independently installable modules. The core exposes typed extension APIs for routes, permissions, admin navigation, content sources, frontend facades, cache invalidation and site context.
+
+Commercial packaging must not force functionality into editions: modules can be licensed, purchased, installed, enabled and updated independently. Editions may exist only as convenient bundles of modules.
+
+Project-specific modules can use the same extension API without becoming part of the CMS core.
+
 ## Commands
 
 ```bash
 php bin/console migrate
 php bin/console health
 php bin/console templates:lint
+php bin/console modules:list
+php bin/console extensions:sync
+php bin/console extensions:list
 php bin/console user:create <email> <display-name>
 ```
+
+`templates:lint` validates both public PHP/HTML templates and internal/legacy Twig templates.
 
 ## Runtime
 
@@ -95,7 +140,7 @@ php bin/console user:create <email> <display-name>
 - `/admin/login` — administration login;
 - `/admin` — protected administration dashboard;
 - `/admin/structure` — site structure management;
-- `/admin/layouts` — Twig layout management;
+- `/admin/layouts` — PHP/HTML public layout management;
 - `/admin/infosystems` — infosystem, group and item management;
 - all remaining URLs are resolved through the `nodes` table.
 
@@ -105,4 +150,4 @@ Back up PostgreSQL and the `storage/` directory. Runtime layout overrides are ap
 
 ## Security baseline
 
-The core enables Twig auto-escaping, CSRF tokens for state-changing admin requests, strict cookie sessions, login throttling, RBAC checks and standard browser security headers. Production deployments should terminate TLS and keep `APP_DEBUG=false`.
+The core enables CSRF tokens for state-changing admin requests, strict cookie sessions, login throttling, RBAC checks, HTML sanitization at write boundaries and standard browser security headers. Editing executable PHP layouts requires a separate trusted permission (`templates.code.edit`). Production deployments should terminate TLS and keep `APP_DEBUG=false`.
