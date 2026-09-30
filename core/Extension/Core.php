@@ -7,9 +7,11 @@ namespace Core\Extension;
 use Core\Delivery\Cache\FilesystemCacheStore;
 use Core\Delivery\Cache\FilesystemTagIndex;
 use Core\Delivery\Cache\TaggedCache;
+use Core\Delivery\StaticPage\StaticPagePublisher;
 use Core\Extension\Api\AdminApi;
 use Core\Extension\Api\CacheApi;
 use Core\Extension\Api\ContentApi;
+use Core\Extension\Api\DeliveryApi;
 use Core\Extension\Api\EventsApi;
 use Core\Extension\Api\ExtensionsApi;
 use Core\Extension\Api\PermissionsApi;
@@ -30,6 +32,7 @@ final class Core
     private ExtensionsApi $extensions;
     private SitesApi $sites;
     private CacheApi $cache;
+    private DeliveryApi $delivery;
     private bool $frozen = false;
 
     public function __construct(private readonly RuntimeApi $runtime)
@@ -51,6 +54,13 @@ final class Core
             new FilesystemTagIndex($runtime->rootPath() . '/storage/cache/index'),
         );
         $this->cache = new CacheApi($backend);
+        $this->delivery = new DeliveryApi(
+            $this->cache,
+            new StaticPagePublisher(
+                $runtime->rootPath() . '/storage/static',
+                $runtime->rootPath() . '/storage/cache/static-index',
+            ),
+        );
     }
 
     public function runtime(): RuntimeApi
@@ -98,10 +108,11 @@ final class Core
         return $this->cache;
     }
 
-    /**
-     * Escape hatch for extension points that do not yet have a typed API.
-     * Stable features should graduate to a dedicated typed facade.
-     */
+    public function delivery(): DeliveryApi
+    {
+        return $this->delivery;
+    }
+
     public function extensions(): ExtensionsApi
     {
         return $this->extensions;
@@ -120,6 +131,7 @@ final class Core
         $this->permissions->freeze();
         $this->events->freeze();
         $this->extensions->freeze();
+        $this->delivery->freeze();
         $this->frozen = true;
     }
 

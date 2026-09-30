@@ -156,5 +156,6 @@ try {
 @rmdir($root);
 
 require __DIR__ . '/delivery_cache_smoke.php';
+require __DIR__ . '/page_static_cache_smoke.php';
 
 fwrite(STDOUT, "RUNTIME OK\n");
