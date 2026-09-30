@@ -8,7 +8,10 @@ use RuntimeException;
 
 final readonly class ModuleManifest
 {
-    /** @param array<string, string> $requires */
+    /**
+     * @param array<string, string> $requires
+     * @param list<string> $purgeScripts
+     */
     public function __construct(
         public string $code,
         public string $name,
@@ -18,6 +21,7 @@ final readonly class ModuleManifest
         public array $requires,
         public string $provider,
         public string $directory,
+        public array $purgeScripts = [],
     ) {
     }
 
@@ -31,6 +35,7 @@ final readonly class ModuleManifest
         $defaultEnabled = (bool) ($data['default_enabled'] ?? false);
         $provider = trim((string) ($data['provider'] ?? ''));
         $requires = $data['requires'] ?? [];
+        $purge = $data['purge'] ?? [];
 
         if (!preg_match('/^[a-z][a-z0-9._-]{0,79}$/', $code)) {
             throw new RuntimeException(sprintf('Invalid module code in %s.', $directory));
@@ -74,6 +79,35 @@ final readonly class ModuleManifest
         }
         ksort($normalizedRequires, SORT_STRING);
 
+        if (!is_array($purge) || !array_is_list($purge)) {
+            throw new RuntimeException(sprintf('Module %s purge must be a list of SQL paths.', $code));
+        }
+
+        $purgeScripts = [];
+        foreach ($purge as $script) {
+            $script = trim((string) $script);
+            if ($script === ''
+                || str_contains($script, "\0")
+                || str_contains($script, '\\')
+                || str_starts_with($script, '/')
+                || preg_match('/^[A-Za-z]:/', $script) === 1
+                || !str_ends_with(strtolower($script), '.sql')) {
+                throw new RuntimeException(sprintf('Invalid purge SQL path in module %s.', $code));
+            }
+
+            $parts = explode('/', $script);
+            foreach ($parts as $part) {
+                if ($part === '' || $part === '.' || $part === '..') {
+                    throw new RuntimeException(sprintf('Unsafe purge SQL path in module %s.', $code));
+                }
+            }
+
+            if (isset($purgeScripts[$script])) {
+                throw new RuntimeException(sprintf('Duplicate purge SQL path in module %s.', $code));
+            }
+            $purgeScripts[$script] = $script;
+        }
+
         return new self(
             $code,
             $name,
@@ -83,6 +117,7 @@ final readonly class ModuleManifest
             $normalizedRequires,
             $provider,
             $directory,
+            array_values($purgeScripts),
         );
     }
 }
