@@ -3,12 +3,9 @@
 
 declare(strict_types=1);
 
-use Core\Bootstrap\BuiltinExtensions;
 use Core\Database;
-use Core\Extension\Api\RuntimeApi;
-use Core\Extension\Core as ExtensionCore;
 use Core\Extension\ModuleLoader;
-use Core\Extension\PermissionSynchronizer;
+use Core\Extension\ModuleManager;
 use Core\MigrationRunner;
 use Core\View\TwigTemplateLinter;
 use Dotenv\Dotenv;
@@ -35,21 +32,56 @@ switch ($command) {
         exit(0);
 
     case 'extensions:sync':
-        $db = Database::connection();
-        $core = new ExtensionCore(new RuntimeApi($db, $rootPath));
-        (new BuiltinExtensions())->register($core);
-        $loaded = (new ModuleLoader($rootPath))->load($core);
-        $core->freeze();
-        $synced = (new PermissionSynchronizer($db))->sync($core->permissions());
-
+        $result = (new ModuleManager(Database::connection(), $rootPath))->sync();
         fwrite(
             STDOUT,
             sprintf(
-                "Extensions synced: %d module(s), %d permission definition(s).\n",
-                count($loaded),
-                $synced,
+                "Extensions synced: %d discovered, %d enabled, %d permission definition(s).\n",
+                $result['modules'],
+                $result['loaded'],
+                $result['permissions'],
             ),
         );
+        exit(0);
+
+    case 'extensions:list':
+        $rows = (new ModuleManager(Database::connection(), $rootPath))->listing();
+        if ($rows === []) {
+            fwrite(STDOUT, "No modules discovered.\n");
+            exit(0);
+        }
+        foreach ($rows as $row) {
+            fwrite(
+                STDOUT,
+                sprintf(
+                    "%s\t%s\t%s\t%s\t%s%s\n",
+                    $row['code'],
+                    $row['version'],
+                    $row['enabled'] ? 'enabled' : 'disabled',
+                    $row['extension_api'],
+                    $row['name'],
+                    $row['synchronized'] ? '' : ' [not synced]',
+                ),
+            );
+        }
+        exit(0);
+
+    case 'extensions:enable':
+    case 'extensions:disable':
+        $code = trim((string) ($argv[2] ?? ''));
+        if ($code === '') {
+            fwrite(STDERR, sprintf("Usage: php bin/console %s <module-code>\n", $command));
+            exit(1);
+        }
+
+        $manager = new ModuleManager(Database::connection(), $rootPath);
+        if ($command === 'extensions:enable') {
+            $manager->enable($code);
+            fwrite(STDOUT, sprintf("Enabled module: %s\n", $code));
+        } else {
+            $manager->disable($code);
+            fwrite(STDOUT, sprintf("Disabled module: %s\n", $code));
+        }
         exit(0);
 
     case 'modules:list':
@@ -127,12 +159,15 @@ switch ($command) {
         fwrite(
             STDOUT,
             "Ultima Vox CMS\n\nCommands:\n" .
-            "  migrate          Apply pending SQL migrations\n" .
-            "  extensions:sync Sync core/module permission declarations\n" .
-            "  modules:list     Validate and list discovered module manifests\n" .
-            "  health           Check database connectivity\n" .
-            "  templates:lint   Parse all packaged Twig templates\n" .
-            "  user:create      Create the initial super administrator\n"
+            "  migrate                    Apply pending SQL migrations\n" .
+            "  extensions:sync            Sync module metadata and enabled extension permissions\n" .
+            "  extensions:list            List module lifecycle state\n" .
+            "  extensions:enable <code>   Enable a synchronized module\n" .
+            "  extensions:disable <code>  Disable a synchronized module\n" .
+            "  modules:list               Validate and list discovered module manifests\n" .
+            "  health                     Check database connectivity\n" .
+            "  templates:lint             Parse all packaged Twig templates\n" .
+            "  user:create                Create the initial super administrator\n"
         );
         exit($command === 'help' ? 0 : 1);
 }

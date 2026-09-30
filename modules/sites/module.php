@@ -8,6 +8,8 @@ return [
     'code' => 'sites',
     'name' => 'Sites',
     'version' => '1.0.0',
+    'extension_api' => '^1.0',
+    'default_enabled' => true,
     'requires' => [
         'core' => '>=0.1.0',
     ],

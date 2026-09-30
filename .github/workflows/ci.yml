@@ -81,6 +81,12 @@ jobs:
       - name: Sync extension metadata
         run: php bin/console extensions:sync
 
+      - name: Module lifecycle smoke test
+        run: |
+          php bin/console extensions:list | grep $'^infosystem\t1.0.0\tenabled\t\^1.0\tInfosystems$'
+          php tests/module_lifecycle_smoke.php
+          php bin/console extensions:list | grep $'^infosystem\t1.0.0\tenabled\t\^1.0\tInfosystems$'
+
       - name: Extension permission sync smoke test
         run: |
           infosystems_count="$(psql -h 127.0.0.1 -U cms -d cms_db -Atc "

@@ -13,6 +13,8 @@ final readonly class ModuleManifest
         public string $code,
         public string $name,
         public string $version,
+        public string $extensionApi,
+        public bool $defaultEnabled,
         public array $requires,
         public string $provider,
         public string $directory,
@@ -25,6 +27,8 @@ final readonly class ModuleManifest
         $code = trim((string) ($data['code'] ?? ''));
         $name = trim((string) ($data['name'] ?? ''));
         $version = trim((string) ($data['version'] ?? ''));
+        $extensionApi = trim((string) ($data['extension_api'] ?? ''));
+        $defaultEnabled = (bool) ($data['default_enabled'] ?? false);
         $provider = trim((string) ($data['provider'] ?? ''));
         $requires = $data['requires'] ?? [];
 
@@ -34,8 +38,11 @@ final readonly class ModuleManifest
         if ($name === '' || preg_match_all('/./u', $name) > 120) {
             throw new RuntimeException(sprintf('Invalid module name for %s.', $code));
         }
-        if (!preg_match('/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/', $version)) {
-            throw new RuntimeException(sprintf('Invalid semantic version for module %s.', $code));
+        VersionConstraint::assertVersion($version);
+        try {
+            VersionConstraint::assertConstraint($extensionApi);
+        } catch (RuntimeException $exception) {
+            throw new RuntimeException(sprintf('Invalid extension_api for module %s.', $code), 0, $exception);
         }
         if ($provider === '') {
             throw new RuntimeException(sprintf('Module %s must declare a provider class.', $code));
@@ -51,9 +58,31 @@ final readonly class ModuleManifest
             if (!preg_match('/^(?:core|[a-z][a-z0-9._-]{0,79})$/', $dependency) || $constraint === '') {
                 throw new RuntimeException(sprintf('Invalid dependency declaration in module %s.', $code));
             }
+            if ($dependency === $code) {
+                throw new RuntimeException(sprintf('Module %s cannot depend on itself.', $code));
+            }
+            try {
+                VersionConstraint::assertConstraint($constraint);
+            } catch (RuntimeException $exception) {
+                throw new RuntimeException(sprintf(
+                    'Invalid dependency constraint for %s in module %s.',
+                    $dependency,
+                    $code,
+                ), 0, $exception);
+            }
             $normalizedRequires[$dependency] = $constraint;
         }
+        ksort($normalizedRequires, SORT_STRING);
 
-        return new self($code, $name, $version, $normalizedRequires, $provider, $directory);
+        return new self(
+            $code,
+            $name,
+            $version,
+            $extensionApi,
+            $defaultEnabled,
+            $normalizedRequires,
+            $provider,
+            $directory,
+        );
     }
 }
