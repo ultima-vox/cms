@@ -19,6 +19,12 @@ final readonly class InstallerState
             return false;
         }
 
+        // An interrupted browser installation must always return to the
+        // installer, even if .env was already staged before the interruption.
+        if (is_file($this->installingLockPath())) {
+            return true;
+        }
+
         // Backward compatibility for deployments created before the explicit
         // installation lock, including platforms that inject configuration
         // through process environment instead of a project .env file.
@@ -32,6 +38,11 @@ final readonly class InstallerState
     public function lockPath(): string
     {
         return $this->rootPath . '/storage/install.lock';
+    }
+
+    public function installingLockPath(): string
+    {
+        return $this->rootPath . '/storage/installing.lock';
     }
 
     private function hasExternalConfiguration(): bool
