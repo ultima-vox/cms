@@ -179,8 +179,9 @@ jobs:
             jsonb_build_object('kind', 'septic', 'capacity', n)
           FROM generate_series(1, 60) AS n;
 
-          UPDATE nodes
-          SET infosystem_id = (SELECT id FROM infosystems WHERE site_id = 1 AND code = 'catalog')
+          INSERT INTO node_module_bindings (node_id, module_code, binding_code, target_key)
+          SELECT id, 'infosystem', 'primary', 'catalog'
+          FROM nodes
           WHERE site_id = 1 AND path = '/';
 
           INSERT INTO sites (code, name)
@@ -209,18 +210,26 @@ jobs:
           );
 
           INSERT INTO nodes (
-            site_id, infosystem_id, name, slug, path, title, content, layout_id, status
+            site_id, name, slug, path, title, content, layout_id, status
           )
           VALUES (
             (SELECT id FROM sites WHERE code = 'second'),
-            (SELECT i.id FROM infosystems i JOIN sites s ON s.id = i.site_id WHERE s.code = 'second' AND i.code = 'catalog'),
             'Home', '', '/', 'Second Site', '<p>Second Site Content</p>',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
             'published'
           );
+
+          INSERT INTO node_module_bindings (node_id, module_code, binding_code, target_key)
+          SELECT n.id, 'infosystem', 'primary', 'catalog'
+          FROM nodes n
+          JOIN sites s ON s.id = n.site_id
+          WHERE s.code = 'second' AND n.path = '/';
           SQL
         env:
           PGPASSWORD: cms
+
+      - name: Generic node-module binding smoke test
+        run: php tests/node_module_binding_smoke.php
 
       - name: Site resolution and isolation smoke test
         run: php tests/site_resolution_smoke.php

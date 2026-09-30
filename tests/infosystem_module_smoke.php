@@ -33,12 +33,13 @@ $core->events()->listen(
 $core->freeze();
 
 $infosystemId = (int) $db->query("SELECT id FROM infosystems WHERE site_id = 1 AND code = 'catalog'")->fetchColumn();
+$nodeId = (int) $db->query("SELECT id FROM nodes WHERE site_id = 1 AND path = '/'")->fetchColumn();
 $engine = new RenderEngine();
 $context = new TemplateFacadeContext(
     $engine,
     [
         'site' => new SiteContext(1, 'default', 'Default site', '127.0.0.1'),
-        'node' => ['site_id' => 1, 'infosystem_id' => $infosystemId],
+        'node' => ['id' => $nodeId, 'site_id' => 1],
     ],
     new ViewTemplateRenderer($rootPath, $core->templates()),
 );

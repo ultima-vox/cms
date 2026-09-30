@@ -26,7 +26,10 @@
                 {% if infosystem.id %}<p class="admin-page-header__description"><code>{{ infosystem.code }}</code></p>{% endif %}
             </div>
             <div class="admin-actions">
-                {% if infosystem.id %}<a class="admin-button" href="/admin/infosystems/{{ infosystem.id }}">К контенту</a>{% endif %}
+                {% if infosystem.id %}
+                    <a class="admin-button" href="/admin/infosystems/{{ infosystem.id }}/bindings">Разделы сайта</a>
+                    <a class="admin-button" href="/admin/infosystems/{{ infosystem.id }}">К контенту</a>
+                {% endif %}
                 <a class="admin-button" href="/admin/infosystems">К списку</a>
             </div>
         </header>
@@ -102,7 +105,7 @@
             <section class="admin-danger-zone">
                 <div>
                     <strong>Удаление инфосистемы</strong>
-                    <p>{% if infosystem.node_count > 0 %}Сначала отвяжите её от всех узлов структуры.{% else %}Будут удалены все группы и элементы этой инфосистемы.{% endif %}</p>
+                    <p>{% if infosystem.node_count > 0 %}Сначала отвяжите её от всех разделов сайта.{% else %}Будут удалены все группы и элементы этой инфосистемы.{% endif %}</p>
                 </div>
                 <form method="post" action="/admin/infosystems/{{ infosystem.id }}/delete" onsubmit="return confirm('Удалить инфосистему вместе со всем контентом?');">
                     <input type="hidden" name="_csrf" value="{{ csrf_token }}">

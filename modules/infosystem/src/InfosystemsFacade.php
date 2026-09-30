@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace UltimaVox\Modules\Infosystem;
 
 use Core\Extension\Api\ContentApi;
+use Core\Repository\NodeModuleBindingRepository;
 use Core\Site\SiteContext;
 use Core\View\Render\TemplateFacadeContext;
 use RuntimeException;
@@ -20,6 +21,7 @@ final class InfosystemsFacade
 
     public function __construct(
         private readonly InfosystemRepository $repository,
+        private readonly NodeModuleBindingRepository $bindings,
         private readonly ContentApi $content,
         private readonly TemplateFacadeContext $context,
     ) {
@@ -51,19 +53,21 @@ final class InfosystemsFacade
             return null;
         }
 
-        $rawId = $node['infosystem_id'] ?? null;
-        $id = is_int($rawId)
-            ? $rawId
-            : (is_string($rawId) && ctype_digit($rawId) ? (int) $rawId : 0);
-
-        if ($id < 1) {
+        $nodeId = isset($node['id']) && is_numeric($node['id']) ? (int) $node['id'] : 0;
+        if ($nodeId < 1) {
             return null;
         }
-        if (isset($this->byId[$id])) {
-            return $this->byId[$id];
+
+        $code = $this->bindings->findTargetKey($nodeId, 'infosystem', 'primary');
+        if ($code === null) {
+            return null;
         }
 
-        $record = $this->repository->findActiveById($this->siteId(), $id);
+        if (isset($this->byCode[$code])) {
+            return $this->byCode[$code];
+        }
+
+        $record = $this->repository->findActiveByCode($this->siteId(), $code);
 
         return $record !== null ? $this->remember($record) : null;
     }

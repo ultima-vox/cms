@@ -33,16 +33,13 @@ final class StructureRepository
                 n.path,
                 n.title,
                 n.layout_id,
-                n.infosystem_id,
                 n.status,
                 n.is_active,
                 n.sorting,
                 n.publish_at,
-                l.name AS layout_name,
-                i.name AS infosystem_name
+                l.name AS layout_name
             FROM nodes n
             LEFT JOIN layouts l ON l.id = n.layout_id
-            LEFT JOIN infosystems i ON i.id = n.infosystem_id
             WHERE n.site_id = :site_id
             ORDER BY n.parent_id NULLS FIRST, n.sorting, n.name, n.id
             SQL
@@ -76,18 +73,6 @@ final class StructureRepository
         return is_array($rows) ? $rows : [];
     }
 
-    /** @return list<array{id:int,name:string,code:string}> */
-    public function infosystems(): array
-    {
-        $statement = $this->db->prepare(
-            'SELECT id, name, code FROM infosystems WHERE site_id = :site_id ORDER BY name, id'
-        );
-        $statement->execute(['site_id' => $this->siteId]);
-        $rows = $statement->fetchAll();
-
-        return is_array($rows) ? $rows : [];
-    }
-
     /** @param array<string, mixed> $data */
     public function create(array $data): int
     {
@@ -97,10 +82,10 @@ final class StructureRepository
         $statement = $this->db->prepare(
             <<<'SQL'
             INSERT INTO nodes (
-                site_id, parent_id, layout_id, infosystem_id, name, slug, path, title,
+                site_id, parent_id, layout_id, name, slug, path, title,
                 content, meta_description, status, is_active, sorting, publish_at
             ) VALUES (
-                :site_id, :parent_id, :layout_id, :infosystem_id, :name, :slug, :path, :title,
+                :site_id, :parent_id, :layout_id, :name, :slug, :path, :title,
                 :content, :meta_description, :status, :is_active, :sorting, :publish_at
             )
             RETURNING id
@@ -110,7 +95,6 @@ final class StructureRepository
             'site_id' => $this->siteId,
             'parent_id' => $parentId,
             'layout_id' => $data['layout_id'],
-            'infosystem_id' => $data['infosystem_id'],
             'name' => $data['name'],
             'slug' => $data['slug'],
             'path' => $path,
@@ -149,7 +133,6 @@ final class StructureRepository
                 UPDATE nodes SET
                     parent_id = :parent_id,
                     layout_id = :layout_id,
-                    infosystem_id = :infosystem_id,
                     name = :name,
                     slug = :slug,
                     path = :path,
@@ -170,7 +153,6 @@ final class StructureRepository
                 'site_id' => $this->siteId,
                 'parent_id' => $parentId,
                 'layout_id' => $data['layout_id'],
-                'infosystem_id' => $data['infosystem_id'],
                 'name' => $data['name'],
                 'slug' => $data['slug'],
                 'path' => $newPath,
