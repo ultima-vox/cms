@@ -2,6 +2,16 @@
 
 Ultima Vox modules are trusted PHP packages discovered from `modules/*/module.php`.
 
+## Architecture boundary
+
+> **Core routes. Modules terminate business domains.**
+
+A module owns its complete business-domain vertical slice. Core may expose generic infrastructure and stable extension APIs, but it must not import domain-module classes, query module-owned tables during generic requests, or branch on module-specific entities/fields.
+
+The practical acceptance test is simple: removing a module directory must not require editing Core and must not break unrelated CMS pages or other modules.
+
+The complete invariant and review checklist are defined in `docs/architecture/core-module-boundary.md`.
+
 ## Manifest
 
 A module returns a PHP array:
@@ -61,6 +71,8 @@ A disabled module with an incompatible Extension API or missing runtime dependen
 
 A module cannot be disabled while another enabled module directly depends on it.
 
+Cross-module dependencies must be explicit in the manifest or through a stable typed API. Hidden dependencies through Core internals are prohibited.
+
 ## Runtime behavior
 
 Disabled modules do not call their provider `register()` method and therefore contribute no:
@@ -73,6 +85,22 @@ Disabled modules do not call their provider `register()` method and therefore co
 - permission declarations.
 
 Persisted permissions from an earlier enabled state are not destructively deleted when a module is disabled. They are harmless without registered routes and preserve custom RBAC assignments for re-enable. Uninstall/data cleanup is a separate lifecycle operation.
+
+## Package ownership
+
+An independently installable module should own, where applicable:
+
+- domain classes;
+- controllers/handlers;
+- repositories/queries;
+- admin templates and assets;
+- public PHP views;
+- module-specific routes and permissions;
+- cache dependency metadata;
+- domain events;
+- migrations and install/update/uninstall lifecycle.
+
+Installing a module must not require copying domain files into Core directories.
 
 ## Future lifecycle
 
