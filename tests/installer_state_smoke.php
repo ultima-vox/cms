@@ -12,7 +12,7 @@ if (!mkdir($root . '/storage', 0775, true) && !is_dir($root . '/storage')) {
 }
 
 try {
-    $state = new InstallerState($root);
+    $state = new InstallerState($root, []);
     if (!$state->installationRequired()) {
         throw new RuntimeException('Fresh installation was not detected.');
     }
@@ -22,6 +22,18 @@ try {
         throw new RuntimeException('Legacy existing .env deployment was incorrectly forced into installer.');
     }
     unlink($root . '/.env');
+
+    $external = new InstallerState($root, [
+        'APP_ENV' => 'production',
+        'APP_URL' => 'https://example.test',
+        'DB_HOST' => '127.0.0.1',
+        'DB_PORT' => '5432',
+        'DB_NAME' => 'cms',
+        'DB_USER' => 'cms',
+    ]);
+    if ($external->installationRequired()) {
+        throw new RuntimeException('Environment-configured deployment was incorrectly forced into installer.');
+    }
 
     file_put_contents($root . '/storage/install.lock', "installed\n");
     if ($state->installationRequired()) {
