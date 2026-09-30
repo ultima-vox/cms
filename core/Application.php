@@ -22,7 +22,6 @@ use Core\Extension\ModuleLoader;
 use Core\Http\Request;
 use Core\Layout\LayoutTemplateService;
 use Core\Repository\AuditLogRepository;
-use Core\Repository\InfosystemRepository;
 use Core\Repository\LayoutRepository;
 use Core\Repository\LoginAttemptRepository;
 use Core\Repository\NodeRepository;
@@ -95,7 +94,6 @@ final class Application
             new HealthController($db),
             new NodeController(
                 new NodeRepository($db),
-                new InfosystemRepository($db),
                 $siteResolver,
                 $frontend,
                 new PageCache($core->cache()),
