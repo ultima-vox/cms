@@ -145,6 +145,9 @@
                                         <input type="hidden" name="_csrf" value="{{ csrf_token }}">
                                         <button class="admin-button admin-button--small admin-button--danger" type="submit">Удалить пакет</button>
                                     </form>
+                                    {% if module.purge_available %}
+                                        <a class="admin-button admin-button--small admin-button--danger" href="/admin/modules/{{ module.code }}/purge">Удалить с данными</a>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </article>

@@ -94,9 +94,21 @@ final readonly class BuiltinRoutes
         );
 
         $routes->get('/admin/layouts', 'layout.index', [$this->layoutController, 'index']);
-        $routes->get('/admin/layouts/create', 'layout.create', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'createForm']));
-        $routes->post('/admin/layouts', 'layout.store', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'store']));
-        $routes->get('/admin/layouts/{id:\\d+}/edit', 'layout.edit', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'editForm']));
+        $routes->get(
+            '/admin/layouts/create',
+            'layout.create',
+            $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'createForm']),
+        );
+        $routes->post(
+            '/admin/layouts',
+            'layout.store',
+            $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'store']),
+        );
+        $routes->get(
+            '/admin/layouts/{id:\\d+}/edit',
+            'layout.edit',
+            $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'editForm']),
+        );
         $routes->post(
             '/admin/layouts/{id:\\d+}',
             'layout.update',
@@ -162,6 +174,16 @@ final readonly class BuiltinRoutes
             '/admin/modules/{code:' . $moduleCodePattern . '}/remove',
             'module.remove',
             $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'remove']),
+        );
+        $routes->get(
+            '/admin/modules/{code:' . $moduleCodePattern . '}/purge',
+            'module.purge-form',
+            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'purgeForm']),
+        );
+        $routes->post(
+            '/admin/modules/{code:' . $moduleCodePattern . '}/purge',
+            'module.purge',
+            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'purge']),
         );
     }
 
