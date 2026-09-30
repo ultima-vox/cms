@@ -24,6 +24,8 @@ final class ModulePackageInstaller
 
     public function install(string $archivePath): ModuleManifest
     {
+        (new ModulePackageSignatureVerifier($this->rootPath))->verify($archivePath);
+
         if (!class_exists(ZipArchive::class)) {
             throw new RuntimeException('ZIP module installation requires the PHP zip extension.');
         }
