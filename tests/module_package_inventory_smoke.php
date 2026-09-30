@@ -112,6 +112,15 @@ try {
         if ($exception->getMessage() === 'Enabled module package update was accepted.') {
             throw $exception;
         }
+    }
+
+    try {
+        $lifecycle->remove('inventory-smoke');
+        throw new RuntimeException('Enabled module package removal was accepted.');
+    } catch (RuntimeException $exception) {
+        if ($exception->getMessage() === 'Enabled module package removal was accepted.') {
+            throw $exception;
+        }
     } finally {
         $state->setEnabled('inventory-smoke', false);
     }
@@ -150,9 +159,57 @@ try {
         || trim((string) file_get_contents($root . '/modules/inventory-smoke/VERSION.txt')) !== 'new') {
         throw new RuntimeException('Failed package update did not restore previous code/inventory state.');
     }
+
+    $dependentDir = $root . '/modules/dependent-smoke';
+    if (!mkdir($dependentDir, 0775, true) && !is_dir($dependentDir)) {
+        throw new RuntimeException('Unable to create dependent smoke module.');
+    }
+    file_put_contents($dependentDir . '/module.json', json_encode([
+        'code' => 'dependent-smoke',
+        'name' => 'Dependent Smoke',
+        'version' => '1.0.0',
+        'extension_api' => '^1.0',
+        'default_enabled' => false,
+        'requires' => [
+            'core' => '>=0.1.0',
+            'inventory-smoke' => '^1.3',
+        ],
+        'provider' => 'Vendor\\DependentSmoke\\Module',
+    ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+    try {
+        $lifecycle->remove('inventory-smoke');
+        throw new RuntimeException('Package with dependent module was removed.');
+    } catch (RuntimeException $exception) {
+        if ($exception->getMessage() === 'Package with dependent module was removed.') {
+            throw $exception;
+        }
+    }
+
+    @unlink($dependentDir . '/module.json');
+    @rmdir($dependentDir);
+
+    $db->exec('CREATE TABLE IF NOT EXISTS inventory_smoke_preserved_data (id INTEGER PRIMARY KEY, value TEXT NOT NULL)');
+    $db->exec("INSERT INTO inventory_smoke_preserved_data (id, value) VALUES (1, 'keep') ON CONFLICT (id) DO NOTHING");
+
+    $lifecycle->remove('inventory-smoke');
+
+    if (is_dir($root . '/modules/inventory-smoke')) {
+        throw new RuntimeException('Removed package directory still exists.');
+    }
+    if ($inventory->find('inventory-smoke') !== null) {
+        throw new RuntimeException('Removed package inventory row still exists.');
+    }
+    if (isset($state->all()['inventory-smoke'])) {
+        throw new RuntimeException('Removed package synchronized state still exists.');
+    }
+    if ((string) $db->query('SELECT value FROM inventory_smoke_preserved_data WHERE id = 1')->fetchColumn() !== 'keep') {
+        throw new RuntimeException('Package removal deleted preserved module data.');
+    }
 } finally {
     $db->exec("DELETE FROM installed_modules WHERE code = 'inventory-smoke'");
     $db->exec("DELETE FROM module_package_inventory WHERE module_code = 'inventory-smoke'");
+    $db->exec('DROP TABLE IF EXISTS inventory_smoke_preserved_data');
 
     $remove = static function (string $path) use (&$remove): void {
         if (!file_exists($path)) {
