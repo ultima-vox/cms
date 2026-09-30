@@ -8,6 +8,7 @@ use Core\Extension\ModuleLoader;
 use Core\Extension\ModuleManager;
 use Core\Extension\ModuleMigrationRunner;
 use Core\Extension\ModulePackageLifecycle;
+use Core\Extension\ModulePackagePurger;
 use Core\Extension\ModulePackageUploadService;
 use Core\Http\Request;
 use Core\Http\Response;
@@ -33,7 +34,6 @@ final readonly class ModuleManagerController
     public function index(Request $request, array $variables = []): Response
     {
         unset($variables);
-
         if (($denied = $this->requirePermission()) !== null) {
             return $denied;
         }
@@ -61,6 +61,7 @@ final readonly class ModuleManagerController
                 'enabled' => is_array($state) ? (bool) $state['enabled'] : $manifest->defaultEnabled,
                 'synchronized' => is_array($state) && (bool) $state['synchronized'],
                 'package_managed' => is_array($inventory) && ($inventory['source'] ?? null) === 'package',
+                'purge_available' => $manifest->purgeScripts !== [],
                 'requires' => $manifest->requires,
             ];
         }
@@ -76,11 +77,9 @@ final readonly class ModuleManagerController
     public function install(Request $request, array $variables = []): Response
     {
         unset($variables);
-
         if (($denied = $this->requireMutation($request)) !== null) {
             return $denied;
         }
-
         $package = $request->file('package');
         if ($package === null) {
             return Response::html('<h1>ZIP-пакет не выбран.</h1><p><a href="/admin/modules">Вернуться к модулям</a></p>', 422);
@@ -88,15 +87,11 @@ final readonly class ModuleManagerController
 
         try {
             $lifecycle = new ModulePackageLifecycle($this->db, $this->rootPath);
-            $manifest = (new ModulePackageUploadService($lifecycle, $this->rootPath))->install(
-                $package,
-                $request->file('signature'),
-            );
+            $manifest = (new ModulePackageUploadService($lifecycle, $this->rootPath))->install($package, $request->file('signature'));
             $this->audit($request, 'module.install', $manifest->code, [
                 'version' => $manifest->version,
                 'signed_upload' => $request->file('signature') !== null,
             ]);
-
             return Response::redirect('/admin/modules?installed=' . rawurlencode($manifest->code));
         } catch (Throwable $exception) {
             return $this->error($exception, 422);
@@ -107,11 +102,9 @@ final readonly class ModuleManagerController
     public function updatePackage(Request $request, array $variables = []): Response
     {
         unset($variables);
-
         if (($denied = $this->requireMutation($request)) !== null) {
             return $denied;
         }
-
         $package = $request->file('package');
         if ($package === null) {
             return Response::html('<h1>ZIP-пакет обновления не выбран.</h1><p><a href="/admin/modules">Вернуться к модулям</a></p>', 422);
@@ -119,16 +112,67 @@ final readonly class ModuleManagerController
 
         try {
             $lifecycle = new ModulePackageLifecycle($this->db, $this->rootPath);
-            $manifest = (new ModulePackageUploadService($lifecycle, $this->rootPath))->update(
-                $package,
-                $request->file('signature'),
-            );
+            $manifest = (new ModulePackageUploadService($lifecycle, $this->rootPath))->update($package, $request->file('signature'));
             $this->audit($request, 'module.update', $manifest->code, [
                 'version' => $manifest->version,
                 'signed_upload' => $request->file('signature') !== null,
             ]);
-
             return Response::redirect('/admin/modules?updated=' . rawurlencode($manifest->code));
+        } catch (Throwable $exception) {
+            return $this->error($exception, 422);
+        }
+    }
+
+    /** @param array<string, string> $variables */
+    public function purgeForm(Request $request, array $variables = []): Response
+    {
+        unset($request);
+        if (($denied = $this->requirePermission()) !== null) {
+            return $denied;
+        }
+        $code = $this->moduleCode($variables);
+        if ($code === null) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
+        }
+
+        try {
+            $manifest = (new ModuleManager($this->db, $this->rootPath))->requireManifest($code);
+            if ($manifest->purgeScripts === []) {
+                return Response::html('<h1>Purge не поддерживается этим модулем.</h1><p><a href="/admin/modules">Вернуться к модулям</a></p>', 409);
+            }
+
+            return Response::html($this->view->render('admin/modules/purge.twig', [
+                'csrf_token' => Csrf::token(),
+                'module' => [
+                    'code' => $manifest->code,
+                    'name' => $manifest->name,
+                    'version' => $manifest->version,
+                    'purge_scripts' => $manifest->purgeScripts,
+                ],
+            ]));
+        } catch (Throwable $exception) {
+            return $this->error($exception);
+        }
+    }
+
+    /** @param array<string, string> $variables */
+    public function purge(Request $request, array $variables = []): Response
+    {
+        if (($denied = $this->requireMutation($request)) !== null) {
+            return $denied;
+        }
+        $code = $this->moduleCode($variables);
+        if ($code === null) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
+        }
+        $confirmation = is_string($request->post['confirmation'] ?? null)
+            ? trim($request->post['confirmation'])
+            : '';
+
+        try {
+            (new ModulePackagePurger($this->db, $this->rootPath))->purge($code, $confirmation);
+            $this->audit($request, 'module.purge', $code, ['data_destroyed' => true]);
+            return Response::redirect('/admin/modules?purged=' . rawurlencode($code));
         } catch (Throwable $exception) {
             return $this->error($exception, 422);
         }
@@ -138,15 +182,12 @@ final readonly class ModuleManagerController
     public function sync(Request $request, array $variables = []): Response
     {
         unset($variables);
-
         if (($denied = $this->requireMutation($request)) !== null) {
             return $denied;
         }
-
         try {
             $result = (new ModuleManager($this->db, $this->rootPath))->sync();
             $this->audit($request, 'module.sync', null, $result);
-
             return Response::redirect('/admin/modules?synced=1');
         } catch (Throwable $exception) {
             return $this->error($exception);
@@ -171,16 +212,13 @@ final readonly class ModuleManagerController
         if (($denied = $this->requireMutation($request)) !== null) {
             return $denied;
         }
-
         $code = $this->moduleCode($variables);
         if ($code === null) {
             return Response::html('<h1>404 Not Found</h1>', 404);
         }
-
         try {
             $applied = (new ModuleMigrationRunner($this->db, $this->rootPath))->migrate($code);
             $this->audit($request, 'module.migrate', $code, ['applied' => $applied]);
-
             return Response::redirect('/admin/modules?migrated=' . rawurlencode($code));
         } catch (Throwable $exception) {
             return $this->error($exception);
@@ -193,16 +231,13 @@ final readonly class ModuleManagerController
         if (($denied = $this->requireMutation($request)) !== null) {
             return $denied;
         }
-
         $code = $this->moduleCode($variables);
         if ($code === null) {
             return Response::html('<h1>404 Not Found</h1>', 404);
         }
-
         try {
             (new ModulePackageLifecycle($this->db, $this->rootPath))->remove($code);
             $this->audit($request, 'module.remove', $code, ['data_preserved' => true]);
-
             return Response::redirect('/admin/modules?removed=' . rawurlencode($code));
         } catch (Throwable $exception) {
             return $this->error($exception);
@@ -215,23 +250,14 @@ final readonly class ModuleManagerController
         if (($denied = $this->requireMutation($request)) !== null) {
             return $denied;
         }
-
         $code = $this->moduleCode($variables);
         if ($code === null) {
             return Response::html('<h1>404 Not Found</h1>', 404);
         }
-
         try {
             $manager = new ModuleManager($this->db, $this->rootPath);
-            if ($enabled) {
-                $manager->enable($code);
-            } else {
-                $manager->disable($code);
-            }
-
-            $action = $enabled ? 'module.enable' : 'module.disable';
-            $this->audit($request, $action, $code, []);
-
+            $enabled ? $manager->enable($code) : $manager->disable($code);
+            $this->audit($request, $enabled ? 'module.enable' : 'module.disable', $code, []);
             return Response::redirect('/admin/modules?' . ($enabled ? 'enabled=' : 'disabled=') . rawurlencode($code));
         } catch (Throwable $exception) {
             return $this->error($exception);
@@ -246,7 +272,6 @@ final readonly class ModuleManagerController
         if (!$this->auth->can('modules.manage')) {
             return Response::html('<h1>403 Forbidden</h1>', 403);
         }
-
         return null;
     }
 
@@ -258,7 +283,6 @@ final readonly class ModuleManagerController
         if (!Csrf::validate(is_string($request->post['_csrf'] ?? null) ? $request->post['_csrf'] : null)) {
             return Response::html('<h1>419 CSRF token mismatch</h1>', 419);
         }
-
         return null;
     }
 
@@ -266,7 +290,6 @@ final readonly class ModuleManagerController
     private function moduleCode(array $variables): ?string
     {
         $code = strtolower(trim((string) ($variables['code'] ?? '')));
-
         return preg_match('/^[a-z][a-z0-9._-]{0,79}$/', $code) ? $code : null;
     }
 
@@ -282,13 +305,13 @@ final readonly class ModuleManagerController
             'disabled' => 'выключен',
             'migrated' => 'миграции применены',
             'removed' => 'код пакета удалён, данные сохранены',
+            'purged' => 'пакет и объявленные модулем данные необратимо удалены',
         ] as $key => $message) {
             $code = $request->query[$key] ?? null;
             if (is_string($code) && $code !== '') {
                 return sprintf('Модуль %s: %s.', $code, $message);
             }
         }
-
         return null;
     }
 
@@ -308,7 +331,6 @@ final readonly class ModuleManagerController
         if ($moduleCode !== null) {
             $context['module_code'] = $moduleCode;
         }
-
         $this->audit->record(
             is_array($user) ? (int) $user['id'] : null,
             $action,
