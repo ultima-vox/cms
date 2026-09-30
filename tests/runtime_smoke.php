@@ -2,109 +2,129 @@
 
 declare(strict_types=1);
 
-use Core\Delivery\Cache\FilesystemCacheStore;
-use Core\Delivery\Cache\TaggedCache;
+use Core\Database;
+use Core\Extension\Api\RuntimeApi;
+use Core\Extension\Core as ExtensionCore;
+use Core\View\PhpRenderer;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderEngine;
-use Core\View\Render\RenderResult;
+use Core\View\Render\RenderNodeInterface;
 use Core\View\Render\RenderSource;
 use Core\View\Render\TemplateFacadeContext;
 use Core\View\Render\ViewTemplateRenderer;
+use Core\View\SafeHtml;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-$root = sys_get_temp_dir() . '/cms-runtime-' . bin2hex(random_bytes(4));
-$templateDir = $root . '/templates';
+final class SmokeEvent
+{
+    public bool $handled = false;
+}
+
+$projectRoot = dirname(__DIR__);
+$core = new ExtensionCore(new RuntimeApi(Database::connection(), $projectRoot));
+$core->routes()->get('/smoke', 'smoke.route', static fn (): null => null);
+$core->extensions()->register('smoke.point', 'smoke.extension', new stdClass());
+$core->admin()->navigation('smoke', 'Smoke', '/admin/smoke', null, 500);
+$core->permissions()->define('smoke.manage', 'Manage smoke', ['admin']);
+$core->events()->listen(SmokeEvent::class, static function (SmokeEvent $event): void {
+    $event->handled = true;
+});
+$core->content()->source(
+    'smoke.source',
+    static fn (TemplateFacadeContext $context, array $options): RenderNodeInterface => new class($context->renderEngine()) extends RenderSource {
+        public function render(RenderContext $context): string
+        {
+            $context->dependency('smoke.source:1');
+
+            return 'content-source';
+        }
+    },
+);
+$core->templates()->facade('smokeFacade', static fn (TemplateFacadeContext $context): object => new stdClass());
+$core->templates()->facadeProvider(
+    static fn (TemplateFacadeContext $context, array $facades): array => ['smokeAlias' => $facades['smokeFacade']],
+);
+$core->freeze();
+
+try {
+    $core->routes()->get('/late', 'late.route', static fn (): null => null);
+    throw new RuntimeException('Frozen route registry accepted a late registration.');
+} catch (LogicException) {
+    // Expected.
+}
+
+try {
+    $core->content()->source('late.source', static fn (): null => null);
+    throw new RuntimeException('Frozen content registry accepted a late registration.');
+} catch (LogicException) {
+    // Expected.
+}
+
+$event = new SmokeEvent();
+$core->events()->dispatch($event);
+if (!$event->handled) {
+    throw new RuntimeException('Event listener was not dispatched after registry freeze.');
+}
+
+if (($core->admin()->items()[0]->code ?? null) !== 'smoke') {
+    throw new RuntimeException('Admin registry did not expose the registered navigation item.');
+}
+
+if (($core->permissions()->definitions()[0]->code ?? null) !== 'smoke.manage') {
+    throw new RuntimeException('Permission registry did not expose the registered permission.');
+}
+
+$root = sys_get_temp_dir() . '/uvcms-runtime-' . bin2hex(random_bytes(6));
+$templateDir = $root . '/templates/smoke';
 if (!mkdir($templateDir, 0775, true) && !is_dir($templateDir)) {
-    throw new RuntimeException('Unable to create runtime smoke directory.');
+    throw new RuntimeException('Unable to create smoke-test template directory.');
 }
 
 file_put_contents(
     $templateDir . '/template.html.php',
-    <<<'PHP'
-<?php
-/** @var \Core\View\Render\RenderResult $result */
-?>
-<section><?= htmlspecialchars((string) $result->data['message'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></section>
-PHP,
+    '<?= text($title) ?>|<?= html($body) ?>|<?= isset($smokeAlias) ? "alias" : "missing" ?>',
 );
 
-$cacheRoot = $root . '/cache';
-$store = new FilesystemCacheStore($cacheRoot);
-$cache = new TaggedCache($store);
-$context = new RenderContext(1, '/', $cache);
-$engine = new RenderEngine($context);
-$renderer = new ViewTemplateRenderer($templateDir);
+$renderer = new PhpRenderer($root, $core);
+$result = $renderer->renderResult('smoke/template.html.php', [
+    'title' => '🔥 <span>Title</span>',
+    'body' => SafeHtml::fromTrustedStorage('<span>HTML</span>'),
+]);
+$output = $result->html;
 
-$source = new RenderSource(
-    $engine,
-    static function (array $params, RenderContext $context): RenderResult {
-        $context->dependOn('smoke.source:1');
-        return new RenderResult([
-            'message' => (string) ($params['message'] ?? 'ok'),
-        ]);
-    },
-    ['message' => 'runtime'],
-    $renderer,
-);
-
-$html = $source->template('template.html.php')->show();
-if (!str_contains($html, '<section>runtime</section>')) {
-    throw new RuntimeException('RenderSource template rendering failed.');
+if ($output !== '🔥 &lt;span&gt;Title&lt;/span&gt;|<span>HTML</span>|alias') {
+    throw new RuntimeException('PHP template escaping/facade smoke test failed: ' . $output);
+}
+if (!$result->context instanceof RenderContext) {
+    throw new RuntimeException('PHP renderer did not return render metadata context.');
 }
 
-$facades = new TemplateFacadeContext([
-    'shop' => static function (array $params, RenderContext $context): RenderSource {
-        return new RenderSource(
-            new RenderEngine($context),
-            static function (array $inner, RenderContext $innerContext): RenderResult {
-                $innerContext->dependOn('shop.product:1');
-                return new RenderResult(['value' => 'shop']);
-            },
-            $params,
-        );
-    },
-    'reviews' => static function (array $params, RenderContext $context): RenderSource {
-        return new RenderSource(
-            new RenderEngine($context),
-            static function (array $inner, RenderContext $innerContext): RenderResult {
-                $innerContext->dependOn('reviews:product:1');
-                return new RenderResult(['value' => 'reviews']);
-            },
-            $params,
-        );
-    },
-], $context);
+$engine = new RenderEngine();
+$facadeContext = new TemplateFacadeContext(
+    $engine,
+    [],
+    new ViewTemplateRenderer($root, $core->templates()),
+);
+$contentSource = $core->content()->make('smoke.source', $facadeContext);
+if ($contentSource->render($engine->context()) !== 'content-source') {
+    throw new RuntimeException('Typed content source registry failed.');
+}
 
-$shop = $facades->call('shop', ['id' => 1]);
-$reviews = $facades->call('reviews', ['product' => 1]);
-
-$renderValue = static function (RenderResult $result): string {
-    return (string) ($result->data['value'] ?? '');
+$shop = new class($engine) extends RenderSource {
+    public function render(RenderContext $context): string
+    {
+        $context->dependency('shop.product:1');
+        return 'shop';
+    }
 };
-$shop = $shop->map(static fn (RenderResult $result): string => $renderValue($result));
-$reviews = $reviews->map(static fn (RenderResult $result): string => $renderValue($result));
-
-$shop = $shop->map(static fn (string $value): string => $value);
-$reviews = $reviews->map(static fn (string $value): string => $value);
-
-$shop = new RenderSource(
-    $engine,
-    static function (array $params, RenderContext $ctx): RenderResult {
-        $ctx->dependOn('shop.product:1');
-        return new RenderResult(['value' => 'shop']);
-    },
-);
-$reviews = new RenderSource(
-    $engine,
-    static function (array $params, RenderContext $ctx): RenderResult {
-        $ctx->dependOn('reviews:product:1');
-        return new RenderResult(['value' => 'reviews']);
-    },
-);
-
-$shop = $shop->map(static fn (RenderResult $result): string => (string) $result->data['value']);
-$reviews = $reviews->map(static fn (RenderResult $result): string => (string) $result->data['value']);
+$reviews = new class($engine) extends RenderSource {
+    public function render(RenderContext $context): string
+    {
+        $context->dependency('reviews:product:1');
+        return '+reviews';
+    }
+};
 
 if ($shop->show() !== 'shop') {
     throw new RuntimeException('RenderSource::show() rendered unexpected content.');
