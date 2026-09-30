@@ -102,12 +102,18 @@ switch ($command) {
         exit(0);
 
     case 'templates:lint':
-        $phpChecked = (new PhpTemplateLinter($rootPath . '/templates'))->lint();
-        $twigChecked = (new TwigTemplateLinter($rootPath . '/templates'))->lint();
+        $phpChecked = array_merge(
+            (new PhpTemplateLinter($rootPath . '/templates'))->lint(),
+            (new PhpTemplateLinter($rootPath . '/modules'))->lint(),
+        );
+        $twigChecked = array_merge(
+            (new TwigTemplateLinter($rootPath . '/templates'))->lint(),
+            (new TwigTemplateLinter($rootPath . '/modules'))->lint(),
+        );
         fwrite(
             STDOUT,
             sprintf(
-                "Templates OK: %d PHP/HTML frontend template(s), %d Twig admin/legacy template(s).\n",
+                "Templates OK: %d PHP/HTML template(s), %d Twig admin/legacy template(s), including module-owned templates.\n",
                 count($phpChecked),
                 count($twigChecked),
             ),
@@ -175,7 +181,7 @@ switch ($command) {
             "  extensions:disable <code>  Disable a synchronized module\n" .
             "  modules:list               Validate and list discovered module manifests\n" .
             "  health                     Check database connectivity\n" .
-            "  templates:lint             Parse PHP/HTML frontend and Twig admin/legacy templates\n" .
+            "  templates:lint             Parse core and module-owned PHP/Twig templates\n" .
             "  user:create                Create the initial super administrator\n"
         );
         exit($command === 'help' ? 0 : 1);
