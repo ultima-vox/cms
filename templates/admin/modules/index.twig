@@ -24,7 +24,7 @@
             <div>
                 <p class="admin-eyebrow">System</p>
                 <h1 class="admin-header__title">Модули</h1>
-                <p class="admin-page-header__description">Установка пакетов, состояние модулей, зависимости и lifecycle-операции.</p>
+                <p class="admin-page-header__description">Установка и обновление пакетов, состояние модулей, зависимости и lifecycle-операции.</p>
             </div>
             <form method="post" action="/admin/modules/sync">
                 <input type="hidden" name="_csrf" value="{{ csrf_token }}">
@@ -38,7 +38,7 @@
             <div>
                 <p class="admin-eyebrow">Package install</p>
                 <h2 class="admin-panel__title">Установить ZIP-пакет</h2>
-                <p class="module-upload-panel__description">Пакет устанавливается выключенным. После установки выполните синхронизацию, миграции и включение. Для подписанного пакета приложите detached <code>.sig</code>.</p>
+                <p class="module-upload-panel__description">Новый пакет устанавливается выключенным. После установки выполните синхронизацию, миграции и включение. Для подписанного пакета приложите detached <code>.sig</code>.</p>
             </div>
             <form class="module-upload-form" method="post" action="/admin/modules/install" enctype="multipart/form-data">
                 <input type="hidden" name="_csrf" value="{{ csrf_token }}">
@@ -51,6 +51,26 @@
                     <input type="file" name="signature" accept=".sig,application/json,text/plain">
                 </label>
                 <button class="admin-button admin-button--primary" type="submit">Проверить и установить</button>
+            </form>
+        </section>
+
+        <section class="admin-panel module-upload-panel">
+            <div>
+                <p class="admin-eyebrow">Package update</p>
+                <h2 class="admin-panel__title">Обновить установленный пакет</h2>
+                <p class="module-upload-panel__description">Модуль должен быть package-managed, синхронизирован и выключен. Версия в ZIP обязана быть выше установленной. После обновления снова примените миграции перед включением.</p>
+            </div>
+            <form class="module-upload-form" method="post" action="/admin/modules/update" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                <label>
+                    <span>Новая версия (.zip)</span>
+                    <input type="file" name="package" accept=".zip,application/zip" required>
+                </label>
+                <label>
+                    <span>Подпись (.sig), опционально</span>
+                    <input type="file" name="signature" accept=".sig,application/json,text/plain">
+                </label>
+                <button class="admin-button" type="submit">Проверить и обновить</button>
             </form>
         </section>
 

@@ -20,6 +20,28 @@ final readonly class ModulePackageUploadService
 
     public function install(UploadedFile $package, ?UploadedFile $signature = null): ModuleManifest
     {
+        return $this->withStagedPackage(
+            $package,
+            $signature,
+            fn (string $packagePath): ModuleManifest => $this->lifecycle->install($packagePath),
+        );
+    }
+
+    public function update(UploadedFile $package, ?UploadedFile $signature = null): ModuleManifest
+    {
+        return $this->withStagedPackage(
+            $package,
+            $signature,
+            fn (string $packagePath): ModuleManifest => $this->lifecycle->update($packagePath),
+        );
+    }
+
+    /** @param callable(string): ModuleManifest $operation */
+    private function withStagedPackage(
+        UploadedFile $package,
+        ?UploadedFile $signature,
+        callable $operation,
+    ): ModuleManifest {
         $this->assertPackage($package);
         if ($signature !== null) {
             $this->assertSignature($signature);
@@ -47,7 +69,7 @@ final readonly class ModulePackageUploadService
                 @chmod($signaturePath, 0600);
             }
 
-            return $this->lifecycle->install($packagePath);
+            return $operation($packagePath);
         } finally {
             if (is_file($signaturePath)) {
                 @unlink($signaturePath);

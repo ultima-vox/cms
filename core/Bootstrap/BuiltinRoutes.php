@@ -134,6 +134,11 @@ final readonly class BuiltinRoutes
             $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'install']),
         );
         $routes->post(
+            '/admin/modules/update',
+            'module.update-package',
+            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'updatePackage']),
+        );
+        $routes->post(
             '/admin/modules/sync',
             'module.sync',
             $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'sync']),

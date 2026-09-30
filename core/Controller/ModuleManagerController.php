@@ -104,6 +104,37 @@ final readonly class ModuleManagerController
     }
 
     /** @param array<string, string> $variables */
+    public function updatePackage(Request $request, array $variables = []): Response
+    {
+        unset($variables);
+
+        if (($denied = $this->requireMutation($request)) !== null) {
+            return $denied;
+        }
+
+        $package = $request->file('package');
+        if ($package === null) {
+            return Response::html('<h1>ZIP-пакет обновления не выбран.</h1><p><a href="/admin/modules">Вернуться к модулям</a></p>', 422);
+        }
+
+        try {
+            $lifecycle = new ModulePackageLifecycle($this->db, $this->rootPath);
+            $manifest = (new ModulePackageUploadService($lifecycle, $this->rootPath))->update(
+                $package,
+                $request->file('signature'),
+            );
+            $this->audit($request, 'module.update', $manifest->code, [
+                'version' => $manifest->version,
+                'signed_upload' => $request->file('signature') !== null,
+            ]);
+
+            return Response::redirect('/admin/modules?updated=' . rawurlencode($manifest->code));
+        } catch (Throwable $exception) {
+            return $this->error($exception, 422);
+        }
+    }
+
+    /** @param array<string, string> $variables */
     public function sync(Request $request, array $variables = []): Response
     {
         unset($variables);
@@ -246,6 +277,7 @@ final readonly class ModuleManagerController
         }
         foreach ([
             'installed' => 'пакет загружен и установлен в выключенном состоянии',
+            'updated' => 'код пакета обновлён; перед включением примените миграции',
             'enabled' => 'включён',
             'disabled' => 'выключен',
             'migrated' => 'миграции применены',
