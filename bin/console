@@ -8,6 +8,7 @@ use Core\Extension\ModuleLoader;
 use Core\Extension\ModuleManager;
 use Core\Extension\ModuleMigrationRunner;
 use Core\Extension\ModulePackageLifecycle;
+use Core\Extension\ModulePackagePurger;
 use Core\MigrationRunner;
 use Core\View\PhpTemplateLinter;
 use Core\View\TwigTemplateLinter;
@@ -85,6 +86,29 @@ switch ($command) {
             STDOUT,
             sprintf(
                 "Removed module package code: %s. Module data and migration history were preserved.\n",
+                $code,
+            ),
+        );
+        exit(0);
+
+    case 'modules:purge':
+        $code = trim((string) ($argv[2] ?? ''));
+        $confirm = '';
+        foreach (array_slice($argv, 3) as $argument) {
+            if (str_starts_with($argument, '--confirm=')) {
+                $confirm = substr($argument, strlen('--confirm='));
+            }
+        }
+        if ($code === '' || $confirm === '') {
+            fwrite(STDERR, "Usage: php bin/console modules:purge <module-code> --confirm=<module-code>\n");
+            exit(1);
+        }
+
+        (new ModulePackagePurger(Database::connection(), $rootPath))->purge($code, $confirm);
+        fwrite(
+            STDOUT,
+            sprintf(
+                "Purged module package: %s. Declared module data and migration history were destroyed.\n",
                 $code,
             ),
         );
@@ -274,6 +298,7 @@ switch ($command) {
             "  modules:install <zip>      Verify, install and inventory a disabled module package\n" .
             "  modules:update <zip>       Replace a disabled installer-managed module with a newer package\n" .
             "  modules:remove <code>      Remove disabled installer-managed package code; preserve its data\n" .
+            "  modules:purge <code>       Destructively remove package and declared module data; requires --confirm=<code>\n" .
             "  modules:inventory          List installer-managed module packages\n" .
             "  modules:migrate <code>     Apply pending migrations owned by one module\n" .
             "  extensions:sync            Sync module metadata and enabled extension permissions\n" .
