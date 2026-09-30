@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Модули — Ultima Vox CMS</title>
+    <link rel="stylesheet" href="/assets/admin.css">
+    <link rel="stylesheet" href="/assets/modules.css">
+</head>
+<body class="admin-shell">
+    <aside class="admin-shell__sidebar">
+        <div class="admin-brand">ULTIMA VOX</div>
+        <nav class="admin-nav" aria-label="Основная навигация">
+            <a class="admin-nav__item" href="/admin">Обзор</a>
+            <a class="admin-nav__item" href="/admin/structure">Структура</a>
+            <a class="admin-nav__item" href="/admin/infosystems">Инфосистемы</a>
+            <a class="admin-nav__item" href="/admin/layouts">Макеты</a>
+            <a class="admin-nav__item admin-nav__item--active" href="/admin/modules">Модули</a>
+        </nav>
+    </aside>
+
+    <main class="admin-shell__main">
+        <header class="admin-page-header">
+            <div>
+                <p class="admin-eyebrow">System</p>
+                <h1 class="admin-header__title">Модули</h1>
+                <p class="admin-page-header__description">Состояние модулей, зависимости и lifecycle-операции. Установка ZIP-пакетов будет добавлена отдельным безопасным upload-потоком.</p>
+            </div>
+            <form method="post" action="/admin/modules/sync">
+                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                <button class="admin-button" type="submit">Синхронизировать</button>
+            </form>
+        </header>
+
+        {% if notice %}<div class="admin-notice">{{ notice }}</div>{% endif %}
+
+        <section class="admin-panel admin-panel--flush">
+            {% if modules is empty %}
+                <div class="admin-empty">
+                    <h2 class="admin-panel__title">Модули не обнаружены</h2>
+                    <p>Проверьте каталог <code>modules/</code> и manifests.</p>
+                </div>
+            {% else %}
+                <div class="module-list">
+                    <div class="module-list__head">
+                        <span>Модуль</span><span>Версия</span><span>Состояние</span><span>Источник</span><span>Зависимости</span><span>Действия</span>
+                    </div>
+                    {% for module in modules %}
+                        <article class="module-row">
+                            <div>
+                                <strong>{{ module.name }}</strong>
+                                <code class="module-code">{{ module.code }}</code>
+                            </div>
+                            <div>
+                                <strong>{{ module.version }}</strong>
+                                <span class="module-meta">API {{ module.extension_api }}</span>
+                            </div>
+                            <div>
+                                {% if not module.synchronized %}
+                                    <span class="admin-badge">не синхронизирован</span>
+                                {% elseif module.enabled %}
+                                    <span class="admin-badge admin-badge--success">включён</span>
+                                {% else %}
+                                    <span class="admin-badge">выключен</span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if module.package_managed %}
+                                    <span class="admin-badge">package</span>
+                                {% else %}
+                                    <span class="module-meta">bundled/project</span>
+                                {% endif %}
+                            </div>
+                            <div class="module-deps">
+                                {% if module.requires is empty %}
+                                    <span class="module-meta">нет</span>
+                                {% else %}
+                                    {% for dependency, constraint in module.requires %}
+                                        <code>{{ dependency }} {{ constraint }}</code>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <div class="module-actions">
+                                <form method="post" action="/admin/modules/{{ module.code }}/migrate">
+                                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                    <button class="admin-button admin-button--small" type="submit">Миграции</button>
+                                </form>
+
+                                {% if module.synchronized %}
+                                    {% if module.enabled %}
+                                        <form method="post" action="/admin/modules/{{ module.code }}/disable">
+                                            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                            <button class="admin-button admin-button--small" type="submit">Выключить</button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="/admin/modules/{{ module.code }}/enable">
+                                            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                            <button class="admin-button admin-button--small admin-button--primary" type="submit">Включить</button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+
+                                {% if module.package_managed and module.synchronized and not module.enabled %}
+                                    <form method="post" action="/admin/modules/{{ module.code }}/remove" onsubmit="return confirm('Удалить код модуля {{ module.code }}? Данные будут сохранены.')">
+                                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                        <button class="admin-button admin-button--small admin-button--danger" type="submit">Удалить пакет</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>
