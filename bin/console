@@ -7,6 +7,7 @@ use Core\Database;
 use Core\Extension\ModuleLoader;
 use Core\Extension\ModuleManager;
 use Core\Extension\ModuleMigrationRunner;
+use Core\Extension\ModulePackageInstaller;
 use Core\MigrationRunner;
 use Core\View\PhpTemplateLinter;
 use Core\View\TwigTemplateLinter;
@@ -31,6 +32,26 @@ switch ($command) {
         foreach ($applied as $migration) {
             fwrite(STDOUT, sprintf("Applied: %s\n", $migration));
         }
+        exit(0);
+
+    case 'modules:install':
+        $archive = trim((string) ($argv[2] ?? ''));
+        if ($archive === '') {
+            fwrite(STDERR, "Usage: php bin/console modules:install <package.zip>\n");
+            exit(1);
+        }
+
+        $manifest = (new ModulePackageInstaller($rootPath))->install($archive);
+        fwrite(
+            STDOUT,
+            sprintf(
+                "Installed module package: %s %s (disabled; run extensions:sync, modules:migrate %s, then extensions:enable %s when ready).\n",
+                $manifest->code,
+                $manifest->version,
+                $manifest->code,
+                $manifest->code,
+            ),
+        );
         exit(0);
 
     case 'modules:migrate':
@@ -194,6 +215,7 @@ switch ($command) {
             STDOUT,
             "Ultima Vox CMS\n\nCommands:\n" .
             "  migrate                    Apply pending Core SQL migrations\n" .
+            "  modules:install <zip>      Verify and install a disabled module package\n" .
             "  modules:migrate <code>     Apply pending migrations owned by one module\n" .
             "  extensions:sync            Sync module metadata and enabled extension permissions\n" .
             "  extensions:list            List module lifecycle state\n" .
