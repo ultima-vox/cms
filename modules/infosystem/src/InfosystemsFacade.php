@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace UltimaVox\Modules\Infosystem;
 
 use Core\Extension\Api\ContentApi;
-use Core\Repository\InfosystemRepository;
 use Core\Site\SiteContext;
 use Core\View\Render\TemplateFacadeContext;
 use RuntimeException;
+use UltimaVox\Modules\Infosystem\Repository\InfosystemRepository;
 
 final class InfosystemsFacade
 {
