@@ -25,7 +25,7 @@ $projectRoot = dirname(__DIR__);
 $core = new ExtensionCore(new RuntimeApi(Database::connection(), $projectRoot));
 $core->routes()->get('/smoke', 'smoke.route', static fn (): null => null);
 $core->extensions()->register('smoke.point', 'smoke.extension', new stdClass());
-$core->admin()->navigation('smoke', 'Smoke', '/admin/smoke', null, 500);
+$core->admin()->navigation('smoke', 'Smoke', '/admin/smoke', null, 500, 'database');
 $core->permissions()->define('smoke.manage', 'Manage smoke', ['admin']);
 $core->events()->listen(SmokeEvent::class, static function (SmokeEvent $event): void {
     $event->handled = true;
@@ -69,6 +69,9 @@ if (!$event->handled) {
 
 if (($core->admin()->items()[0]->code ?? null) !== 'smoke') {
     throw new RuntimeException('Admin registry did not expose the registered navigation item.');
+}
+if (($core->admin()->items()[0]->icon ?? null) !== 'database') {
+    throw new RuntimeException('Admin registry did not preserve the navigation icon code.');
 }
 
 if (($core->permissions()->definitions()[0]->code ?? null) !== 'smoke.manage') {

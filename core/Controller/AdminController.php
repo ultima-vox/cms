@@ -9,8 +9,10 @@ use Core\Extension\Api\AdminNavigationItem;
 use Core\Extension\Api\SitesApi;
 use Core\Http\Request;
 use Core\Http\Response;
+use Core\Repository\AuditLogRepository;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
+use Core\Version;
 use Core\View\TwigRenderer;
 
 final class AdminController
@@ -20,6 +22,7 @@ final class AdminController
         private readonly TwigRenderer $view,
         private readonly AdminApi $admin,
         private readonly SitesApi $sites,
+        private readonly AuditLogRepository $audit,
     ) {
     }
 
@@ -47,6 +50,9 @@ final class AdminController
             'navigation' => $navigation,
             'admin_site' => $this->sites->admin(),
             'admin_sites' => $this->sites->active(),
+            'activity' => $this->audit->recent(8),
+            'cms_version' => Version::STRING,
+            'php_version' => PHP_VERSION,
         ]));
     }
 }

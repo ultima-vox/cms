@@ -12,6 +12,7 @@ final readonly class AdminNavigationItem
         public string $path,
         public ?string $permission,
         public int $order,
+        public string $icon = 'module',
     ) {
     }
 }

@@ -16,7 +16,7 @@ final readonly class BuiltinExtensions
             ['superadmin', 'admin'],
         );
 
-        $core->admin()->navigation('structure', 'Структура', '/admin/structure', 'structure.manage', 10);
-        $core->admin()->navigation('layouts', 'Макеты', '/admin/layouts', 'layouts.manage', 20);
+        $core->admin()->navigation('structure', 'Структура', '/admin/structure', 'structure.manage', 10, 'structure');
+        $core->admin()->navigation('layouts', 'Макеты', '/admin/layouts', 'layouts.manage', 20, 'layout');
     }
 }

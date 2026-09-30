@@ -20,12 +20,14 @@ final class AdminApi
         string $path,
         ?string $permission = null,
         int $order = 100,
+        string $icon = 'module',
     ): void {
         $this->assertMutable();
         $code = trim($code);
         $label = trim($label);
         $path = trim($path);
         $permission = $permission !== null ? trim($permission) : null;
+        $icon = trim($icon);
 
         if (!preg_match('/^[a-z][a-z0-9._-]{0,79}$/', $code)) {
             throw new RuntimeException('Admin navigation code is invalid.');
@@ -39,6 +41,9 @@ final class AdminApi
         if ($permission !== null && !preg_match('/^[a-z][a-z0-9._-]{0,127}$/', $permission)) {
             throw new RuntimeException('Admin navigation permission code is invalid.');
         }
+        if (!preg_match('/^[a-z][a-z0-9-]{0,39}$/', $icon)) {
+            throw new RuntimeException('Admin navigation icon code is invalid.');
+        }
         if (isset($this->navigation[$code])) {
             throw new RuntimeException(sprintf('Admin navigation item "%s" is already registered.', $code));
         }
@@ -49,6 +54,7 @@ final class AdminApi
             $path,
             $permission !== '' ? $permission : null,
             $order,
+            $icon,
         );
     }
 
