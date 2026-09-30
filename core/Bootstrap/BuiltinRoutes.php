@@ -53,116 +53,31 @@ final readonly class BuiltinRoutes
 
         $routes->get('/admin/structure', 'structure.index', [$this->structureController, 'index']);
         $routes->get('/admin/structure/create', 'structure.create', [$this->structureController, 'createForm']);
-        $routes->post(
-            '/admin/structure',
-            'structure.store',
-            $this->permissionGate->require(
-                'structure.manage',
-                $this->invalidate->wrap(
-                    $this->html->wrap([$this->structureController, 'store'], ['content' => 'rich']),
-                    $siteTags,
-                ),
-            ),
-        );
-        $routes->post(
-            '/admin/structure/reorder',
-            'structure.reorder',
-            $this->permissionGate->require(
-                'structure.manage',
-                $this->invalidate->wrap([$this->structureController, 'reorder'], $siteTags),
-            ),
-        );
+        $routes->post('/admin/structure', 'structure.store', $this->permissionGate->require('structure.manage', $this->invalidate->wrap($this->html->wrap([$this->structureController, 'store'], ['content' => 'rich']), $siteTags)));
+        $routes->post('/admin/structure/reorder', 'structure.reorder', $this->permissionGate->require('structure.manage', $this->invalidate->wrap([$this->structureController, 'reorder'], $siteTags)));
         $routes->get('/admin/structure/{id:\\d+}/edit', 'structure.edit', [$this->structureController, 'editForm']);
-        $routes->post(
-            '/admin/structure/{id:\\d+}',
-            'structure.update',
-            $this->permissionGate->require(
-                'structure.manage',
-                $this->invalidate->wrap(
-                    $this->html->wrap([$this->structureController, 'update'], ['content' => 'rich']),
-                    $siteTags,
-                ),
-            ),
-        );
-        $routes->post(
-            '/admin/structure/{id:\\d+}/delete',
-            'structure.delete',
-            $this->permissionGate->require(
-                'structure.manage',
-                $this->invalidate->wrap([$this->structureController, 'delete'], $siteTags),
-            ),
-        );
+        $routes->post('/admin/structure/{id:\\d+}', 'structure.update', $this->permissionGate->require('structure.manage', $this->invalidate->wrap($this->html->wrap([$this->structureController, 'update'], ['content' => 'rich']), $siteTags)));
+        $routes->post('/admin/structure/{id:\\d+}/delete', 'structure.delete', $this->permissionGate->require('structure.manage', $this->invalidate->wrap([$this->structureController, 'delete'], $siteTags)));
 
         $routes->get('/admin/layouts', 'layout.index', [$this->layoutController, 'index']);
         $routes->get('/admin/layouts/create', 'layout.create', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'createForm']));
         $routes->post('/admin/layouts', 'layout.store', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'store']));
         $routes->get('/admin/layouts/{id:\\d+}/edit', 'layout.edit', $this->permissionGate->require('templates.code.edit', [$this->layoutController, 'editForm']));
-        $routes->post(
-            '/admin/layouts/{id:\\d+}',
-            'layout.update',
-            $this->permissionGate->require(
-                'templates.code.edit',
-                $this->invalidate->wrap([$this->layoutController, 'update'], $layoutTags),
-            ),
-        );
-        $routes->post(
-            '/admin/layouts/{id:\\d+}/reset',
-            'layout.reset',
-            $this->permissionGate->require(
-                'templates.code.edit',
-                $this->invalidate->wrap([$this->layoutController, 'reset'], $layoutTags),
-            ),
-        );
-        $routes->post(
-            '/admin/layouts/{id:\\d+}/delete',
-            'layout.delete',
-            $this->permissionGate->require(
-                'templates.code.edit',
-                $this->invalidate->wrap([$this->layoutController, 'delete'], $layoutTags),
-            ),
-        );
+        $routes->post('/admin/layouts/{id:\\d+}', 'layout.update', $this->permissionGate->require('templates.code.edit', $this->invalidate->wrap([$this->layoutController, 'update'], $layoutTags)));
+        $routes->post('/admin/layouts/{id:\\d+}/reset', 'layout.reset', $this->permissionGate->require('templates.code.edit', $this->invalidate->wrap([$this->layoutController, 'reset'], $layoutTags)));
+        $routes->post('/admin/layouts/{id:\\d+}/delete', 'layout.delete', $this->permissionGate->require('templates.code.edit', $this->invalidate->wrap([$this->layoutController, 'delete'], $layoutTags)));
 
         $moduleCodePattern = '[a-z][a-z0-9._-]{0,79}';
-        $routes->get(
-            '/admin/modules',
-            'module.index',
-            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'index']),
-        );
-        $routes->post(
-            '/admin/modules/install',
-            'module.install',
-            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'install']),
-        );
-        $routes->post(
-            '/admin/modules/update',
-            'module.update-package',
-            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'updatePackage']),
-        );
-        $routes->post(
-            '/admin/modules/sync',
-            'module.sync',
-            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'sync']),
-        );
-        $routes->post(
-            '/admin/modules/{code:' . $moduleCodePattern . '}/enable',
-            'module.enable',
-            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'enable']),
-        );
-        $routes->post(
-            '/admin/modules/{code:' . $moduleCodePattern . '}/disable',
-            'module.disable',
-            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'disable']),
-        );
-        $routes->post(
-            '/admin/modules/{code:' . $moduleCodePattern . '}/migrate',
-            'module.migrate',
-            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'migrate']),
-        );
-        $routes->post(
-            '/admin/modules/{code:' . $moduleCodePattern . '}/remove',
-            'module.remove',
-            $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'remove']),
-        );
+        $routes->get('/admin/modules', 'module.index', $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'index']));
+        $routes->post('/admin/modules/install', 'module.install', $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'install']));
+        $routes->post('/admin/modules/update', 'module.update-package', $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'updatePackage']));
+        $routes->post('/admin/modules/sync', 'module.sync', $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'sync']));
+        $routes->post('/admin/modules/{code:' . $moduleCodePattern . '}/enable', 'module.enable', $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'enable']));
+        $routes->post('/admin/modules/{code:' . $moduleCodePattern . '}/disable', 'module.disable', $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'disable']));
+        $routes->post('/admin/modules/{code:' . $moduleCodePattern . '}/migrate', 'module.migrate', $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'migrate']));
+        $routes->post('/admin/modules/{code:' . $moduleCodePattern . '}/remove', 'module.remove', $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'remove']));
+        $routes->get('/admin/modules/{code:' . $moduleCodePattern . '}/purge', 'module.purge-form', $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'purgeForm']));
+        $routes->post('/admin/modules/{code:' . $moduleCodePattern . '}/purge', 'module.purge', $this->permissionGate->require('modules.manage', [$this->moduleManagerController, 'purge']));
     }
 
     public function registerPublicFallback(RoutesApi $routes): void
