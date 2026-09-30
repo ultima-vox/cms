@@ -10,7 +10,7 @@ New packages therefore declare metadata in a static UTF-8 JSON file:
 module.json
 ```
 
-`module.php` remains a compatibility fallback for already installed legacy modules, but package installation and validation must never require or execute it.
+`module.php` remains a compatibility fallback for already installed legacy modules, but package installation and validation never require or execute it.
 
 ## Manifest
 
@@ -37,9 +37,9 @@ Fields:
 - `name` — human-readable name;
 - `version` — semantic version;
 - `extension_api` — compatible stable Extension API range;
-- `default_enabled` — initial state hint for bundled modules; marketplace/third-party packages should normally use `false`;
+- `default_enabled` — installable packages must use `false`; bundled first-party modules may use `true` as a build-time bootstrap hint;
 - `requires` — explicit Core/module version constraints;
-- `provider` — trusted runtime provider class instantiated only after installation and activation.
+- `provider` — runtime provider class instantiated only after installation and activation.
 
 ## Discovery
 
@@ -52,21 +52,83 @@ When `module.json` is present, discovery does not execute `module.php`.
 
 At actual module load time, Core may load the installed module's `autoload.php` and instantiate the declared provider.
 
-## Package archive policy
+## ZIP package layout
 
-The future installable archive uses the same static manifest and must be verified before extraction into `modules/`.
+Installable packages are ZIP archives with `module.json` at the archive root. The installer intentionally does not guess or strip an arbitrary top-level directory.
 
-The installer must reject:
+Example:
 
-- packages without `module.json`;
-- absolute paths or path traversal (`..`);
-- ambiguous backslash paths;
-- duplicate/conflicting entries;
-- archive bombs via file-count/uncompressed-size limits;
-- package code/version that is incompatible with Core/Extension API;
-- unsigned commercial packages once signature verification is enabled.
+```text
+reviews.zip
+├── module.json
+├── autoload.php
+├── src/
+│   └── ReviewsModule.php
+├── migrations/
+│   └── 001_initial.sql
+└── templates/
+    └── admin/
+```
 
-Extraction must happen into a staging directory first. Moving a verified module into `modules/<code>` must be atomic where the filesystem permits it.
+ZIP installation requires the PHP `zip` extension. The normal CMS runtime does not require that extension unless package installation is used.
+
+## Installation
+
+```bash
+php bin/console modules:install /path/to/reviews.zip
+```
+
+The installer performs the following sequence:
+
+1. opens the archive read-only;
+2. validates every archive path and filesystem entry;
+3. enforces package file-count and uncompressed-size limits;
+4. reads and validates root `module.json` without executing package PHP;
+5. checks Core, Extension API and declared module version dependencies;
+6. requires `default_enabled=false`;
+7. extracts files one-by-one into a hidden staging directory inside `modules/`;
+8. re-reads the staged static manifest;
+9. atomically renames the staging directory to `modules/<code>` when the filesystem permits it.
+
+The installer rejects an existing target directory. Package updates are a separate lifecycle and are not implemented by overwriting installed code.
+
+## Archive security policy
+
+The installer rejects:
+
+- packages without root `module.json`;
+- absolute paths;
+- `.` / `..` traversal segments;
+- backslash-based archive paths;
+- duplicate paths and case-conflicting paths;
+- symlinks and special Unix filesystem entries;
+- more than 5,000 archive entries;
+- individual files above 32 MiB;
+- total uncompressed package size above 128 MiB;
+- manifests above 64 KiB;
+- incompatible Core or Extension API versions;
+- missing/incompatible declared module dependencies;
+- `default_enabled=true` packages;
+- overwrite attempts against an already installed module.
+
+Commercial package signature verification is intentionally a later layer; the archive/install boundary is designed so signature verification can be inserted before extraction without changing module runtime APIs.
+
+## Activation lifecycle
+
+Installation only places verified package code on disk. It does not migrate, synchronize, or enable the module automatically.
+
+The explicit lifecycle is:
+
+```bash
+php bin/console modules:install reviews.zip
+php bin/console extensions:sync
+php bin/console modules:migrate reviews
+php bin/console extensions:enable reviews
+```
+
+This separation prevents a copied/uploaded package from becoming executable merely because it appeared under `modules/`.
+
+Disabling a module never deletes its data. Uninstall/data cleanup and package update/rollback remain separate lifecycle operations.
 
 ## Composer policy
 
