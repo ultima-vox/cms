@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Core\Repository;
+namespace UltimaVox\Modules\Infosystem\Repository;
 
 use PDO;
 use RuntimeException;

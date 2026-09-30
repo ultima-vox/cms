@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Core\Controller;
+namespace UltimaVox\Modules\Infosystem\Admin;
 
 use Core\Http\Request;
 use Core\Http\Response;
-use Core\Repository\InfosystemItemSearchRepository;
-use Core\Repository\InfosystemManagementRepository;
 use Core\Security\AuthService;
 use Core\View\TwigRenderer;
 use RuntimeException;
+use UltimaVox\Modules\Infosystem\Repository\InfosystemItemSearchRepository;
+use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
 
 final class InfosystemItemListController
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Core\Infosystem;
+namespace UltimaVox\Modules\Infosystem;
 
 use RuntimeException;
 

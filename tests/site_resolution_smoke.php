@@ -6,15 +6,16 @@ use Core\Database;
 use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
 use Core\Http\Request;
-use Core\Repository\InfosystemManagementRepository;
-use Core\Repository\InfosystemRepository;
 use Core\Repository\NodeRepository;
 use Core\Repository\SiteRepository;
 use Core\Repository\StructureRepository;
 use Core\Site\AdminSiteSelector;
 use Core\Site\SiteResolver;
+use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
+use UltimaVox\Modules\Infosystem\Repository\InfosystemRepository;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/modules/infosystem/autoload.php';
 
 $db = Database::connection();
 $siteRepository = new SiteRepository($db);

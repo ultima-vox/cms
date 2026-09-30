@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Core\Controller;
+namespace UltimaVox\Modules\Infosystem\Admin;
 
 use Core\Http\Request;
 use Core\Http\Response;
-use Core\Infosystem\FieldSchema;
 use Core\Repository\AuditLogRepository;
-use Core\Repository\InfosystemManagementRepository;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
 use Core\View\TwigRenderer;
 use RuntimeException;
 use Throwable;
+use UltimaVox\Modules\Infosystem\FieldSchema;
+use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
 
 final class InfosystemController
 {
