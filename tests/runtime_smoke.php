@@ -85,12 +85,13 @@ if (!mkdir($templateDir, 0775, true) && !is_dir($templateDir)) {
 }
 
 file_put_contents(
-    $templateDir . '/template.html.php',
+    $templateDir . '/template.php',
     '<?= text($title) ?>|<?= html($body) ?>|<?= isset($smokeAlias) ? "alias" : "missing" ?>',
 );
+file_put_contents($templateDir . '/legacy.html.php', 'legacy-compatible');
 
 $renderer = new PhpRenderer($root, $core);
-$result = $renderer->renderResult('smoke/template.html.php', [
+$result = $renderer->renderResult('smoke/template.php', [
     'title' => '🔥 <span>Title</span>',
     'body' => SafeHtml::fromTrustedStorage('<span>HTML</span>'),
 ]);
@@ -101,6 +102,9 @@ if ($output !== '🔥 &lt;span&gt;Title&lt;/span&gt;|<span>HTML</span>|alias') {
 }
 if (!$result->context instanceof RenderContext) {
     throw new RuntimeException('PHP renderer did not return render metadata context.');
+}
+if ($renderer->render('smoke/legacy.html.php') !== 'legacy-compatible') {
+    throw new RuntimeException('Legacy .html.php template compatibility was lost.');
 }
 
 $engine = new RenderEngine();
@@ -145,7 +149,7 @@ if (!in_array('shop.product:1', $dependencies, true)
 }
 
 try {
-    $renderer->render('../template.html.php');
+    $renderer->render('../template.php');
     throw new RuntimeException('Template traversal was accepted.');
 } catch (RuntimeException $exception) {
     if ($exception->getMessage() === 'Template traversal was accepted.') {
@@ -153,7 +157,8 @@ try {
     }
 }
 
-@unlink($templateDir . '/template.html.php');
+@unlink($templateDir . '/template.php');
+@unlink($templateDir . '/legacy.html.php');
 @rmdir($templateDir);
 @rmdir($root . '/templates');
 @rmdir($root);

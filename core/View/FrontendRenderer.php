@@ -28,7 +28,7 @@ final readonly class FrontendRenderer
         array $context = [],
         ?RenderContext $renderContext = null,
     ): RenderResult {
-        if (str_ends_with($template, '.html.php')) {
+        if (str_ends_with($template, '.php')) {
             return $this->php->renderResult($template, $context, $renderContext);
         }
 

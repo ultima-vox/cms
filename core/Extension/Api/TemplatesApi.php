@@ -66,7 +66,7 @@ final class TemplatesApi
             throw new RuntimeException('View source type is invalid.');
         }
 
-        if (!preg_match('#^[a-zA-Z0-9][a-zA-Z0-9_./-]*\.html\.php$#', $templatePath)
+        if (!preg_match('#^[a-zA-Z0-9][a-zA-Z0-9_./-]*\.php$#', $templatePath)
             || str_contains($templatePath, '..')) {
             throw new RuntimeException('View template path is invalid.');
         }
@@ -95,6 +95,7 @@ final class TemplatesApi
             if (!is_object($facade)) {
                 throw new RuntimeException(sprintf('Template facade $%s factory must return an object.', $variable));
             }
+
             $result[$variable] = $facade;
         }
 
@@ -113,6 +114,7 @@ final class TemplatesApi
                 if (!is_object($facade)) {
                     throw new RuntimeException(sprintf('Dynamic template facade $%s must be an object.', $variable));
                 }
+
                 $result[$variable] = $facade;
             }
         }
