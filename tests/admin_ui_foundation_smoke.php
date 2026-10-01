@@ -14,6 +14,7 @@ $requiredFiles = [
     'public/assets/admin/js/core/storage.js',
     'public/assets/admin/js/components/command-palette.js',
     'public/assets/admin/js/components/dialog.js',
+    'public/assets/admin/js/components/dropdown.js',
     'public/assets/admin/js/components/sidebar.js',
     'public/assets/admin/js/components/site-switcher.js',
 ];
@@ -65,6 +66,7 @@ $app = $read('public/assets/admin/js/app.js');
 foreach ([
     './components/command-palette.js',
     './components/dialog.js',
+    './components/dropdown.js',
     './components/sidebar.js',
     './components/site-switcher.js',
 ] as $module) {
@@ -85,5 +87,26 @@ $assertContains($http, 'if (!response.ok)', 'Admin Fetch must reject non-success
 $dialog = $read('public/assets/admin/js/components/dialog.js');
 $assertContains($dialog, '[data-dialog-open]', 'Dialog component must use a stable behavior hook.');
 $assertContains($dialog, '[data-dialog-close]', 'Dialog component must expose a stable close hook.');
+
+$dropdown = $read('public/assets/admin/js/components/dropdown.js');
+foreach ([
+    '[data-dropdown]',
+    '[data-dropdown-trigger]',
+    '[data-dropdown-menu]',
+    '[data-dropdown-item]',
+    "aria-haspopup', 'menu",
+    "aria-expanded', 'false",
+    "event.key === 'Escape'",
+    "event.key === 'ArrowDown'",
+    "event.key === 'ArrowUp'",
+] as $contract) {
+    $assertContains($dropdown, $contract, 'Missing dropdown behavior contract: ' . $contract);
+}
+
+$assertContains(
+    $dropdown,
+    'scope = document',
+    'Dropdown initializer must support scoped re-initialization for future partial updates.',
+);
 
 echo "Admin UI foundation smoke: OK\n";
