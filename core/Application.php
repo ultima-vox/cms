@@ -21,6 +21,7 @@ use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
 use Core\Extension\ModuleLoader;
 use Core\Http\Request;
+use Core\Layout\LayoutHierarchyResolver;
 use Core\Layout\LayoutTemplateService;
 use Core\Repository\AuditLogRepository;
 use Core\Repository\LayoutRepository;
@@ -36,7 +37,6 @@ use Core\Site\AdminSiteSelector;
 use Core\Site\SiteContext;
 use Core\Site\SiteResolver;
 use Core\View\AdminTwigRendererFactory;
-use Core\View\FrontendRenderer;
 use Core\View\PhpRenderer;
 
 final class Application
@@ -53,6 +53,7 @@ final class Application
 
         $db = Database::connection();
         $siteRepository = new SiteRepository($db);
+        $layoutRepository = new LayoutRepository($db);
         $adminSite = $this->isAdminPath($request->path)
             ? (new AdminSiteSelector($siteRepository))->current()
             : new SiteContext(1, 'default', 'Default site', '');
@@ -69,9 +70,7 @@ final class Application
             $core->admin(),
             $core->sites(),
         ))->create();
-        $frontend = new FrontendRenderer(
-            new PhpRenderer($this->rootPath, $core),
-        );
+        $php = new PhpRenderer($this->rootPath, $core);
 
         $audit = new AuditLogRepository($db);
         $permissionGate = new PermissionGate($auth);
@@ -92,7 +91,7 @@ final class Application
             ),
             new LayoutController(
                 $auth,
-                new LayoutRepository($db),
+                $layoutRepository,
                 new LayoutTemplateService($this->rootPath),
                 $audit,
                 $twig,
@@ -108,7 +107,9 @@ final class Application
             new NodeController(
                 new NodeRepository($db),
                 $siteResolver,
-                $frontend,
+                $php,
+                $core->pages(),
+                new LayoutHierarchyResolver($layoutRepository),
                 new PageCache($core->cache()),
                 $core->delivery(),
                 $auth,
