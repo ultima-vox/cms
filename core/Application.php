@@ -35,6 +35,7 @@ use Core\Security\SecurityHeaders;
 use Core\Site\AdminSiteSelector;
 use Core\Site\SiteContext;
 use Core\Site\SiteResolver;
+use Core\View\AdminShellContext;
 use Core\View\FrontendRenderer;
 use Core\View\PhpRenderer;
 use Core\View\TwigRenderer;
@@ -68,6 +69,8 @@ final class Application
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
+        $twig->addGlobal('admin_shell', new AdminShellContext($auth, $core->admin(), $core->sites()));
+
         $audit = new AuditLogRepository($db);
         $permissionGate = new PermissionGate($auth);
         $html = new HtmlSanitizingHandler(new HtmlSanitizer());

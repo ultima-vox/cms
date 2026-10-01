@@ -1,61 +1,47 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Макеты — Ultima Vox CMS</title>
-    <link rel="stylesheet" href="/assets/admin.css">
-    <link rel="stylesheet" href="/assets/layouts.css">
-</head>
-<body class="admin-shell">
-    <aside class="admin-shell__sidebar">
-        <div class="admin-brand">ULTIMA VOX</div>
-        <nav class="admin-nav" aria-label="Основная навигация">
-            <a class="admin-nav__item" href="/admin">Обзор</a>
-            <a class="admin-nav__item" href="/admin/structure">Структура</a>
-            <a class="admin-nav__item" href="/admin/infosystems">Инфосистемы</a>
-            <a class="admin-nav__item admin-nav__item--active" href="/admin/layouts">Макеты</a>
-        </nav>
-    </aside>
+{% extends 'admin/_shell.twig' %}
+{% set admin_active = 'layouts' %}
+{% set admin_title = 'Макеты' %}
 
-    <main class="admin-shell__main">
-        <header class="admin-page-header">
-            <div>
-                <p class="admin-eyebrow">Presentation</p>
-                <h1 class="admin-header__title">Макеты</h1>
-                <p class="admin-page-header__description">Обычные HTML/PHP-макеты без XML/XSLT и отдельного шаблонного языка публичного сайта.</p>
+{% block styles %}<link rel="stylesheet" href="/assets/layouts.css">{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <header class="admin-page-header">
+        <div>
+            <p class="admin-eyebrow">Presentation</p>
+            <h1 class="admin-header__title">Макеты</h1>
+            <p class="admin-page-header__description">Обычные HTML/PHP-макеты без XML/XSLT и отдельного шаблонного языка публичного сайта.</p>
+        </div>
+        <a class="admin-button admin-button--primary" href="/admin/layouts/create">Новый макет</a>
+    </header>
+
+    {% if deleted %}<div class="admin-notice admin-notice--success">Макет удалён.</div>{% endif %}
+
+    <section class="admin-panel admin-panel--flush">
+        {% if layouts is empty %}
+            <div class="admin-empty">
+                <h2 class="admin-panel__title">Макетов пока нет</h2>
+                <p>Создайте первый HTML/PHP-макет для страниц сайта.</p>
             </div>
-            <a class="admin-button admin-button--primary" href="/admin/layouts/create">Новый макет</a>
-        </header>
-
-        {% if deleted %}<div class="admin-notice">Макет удалён.</div>{% endif %}
-
-        <section class="admin-panel admin-panel--flush">
-            {% if layouts is empty %}
-                <div class="admin-empty">
-                    <h2 class="admin-panel__title">Макетов пока нет</h2>
-                    <p>Создайте первый HTML/PHP-макет для страниц сайта.</p>
+        {% else %}
+            <div class="layout-list">
+                <div class="layout-list__head">
+                    <span>Макет</span><span>Файл</span><span>Узлы</span><span>Тип</span><span></span>
                 </div>
-            {% else %}
-                <div class="layout-list">
-                    <div class="layout-list__head">
-                        <span>Макет</span><span>Файл</span><span>Узлы</span><span>Тип</span><span></span>
-                    </div>
-                    {% for layout in layouts %}
-                        <div class="layout-row">
-                            <div>
-                                <strong>{{ layout.name }}</strong>
-                                {% if layout.description %}<p class="layout-row__description">{{ layout.description }}</p>{% endif %}
-                            </div>
-                            <code>{{ layout.template_path }}</code>
-                            <span>{{ layout.node_count }}</span>
-                            <span>{% if layout.is_system %}<span class="admin-badge">системный</span>{% else %}пользовательский{% endif %}</span>
-                            <a class="admin-link" href="/admin/layouts/{{ layout.id }}/edit">Изменить</a>
+                {% for layout in layouts %}
+                    <div class="layout-row">
+                        <div>
+                            <strong>{{ layout.name }}</strong>
+                            {% if layout.description %}<p class="layout-row__description">{{ layout.description }}</p>{% endif %}
                         </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </section>
-    </main>
-</body>
-</html>
+                        <code>{{ layout.template_path }}</code>
+                        <span>{{ layout.node_count }}</span>
+                        <span>{% if layout.is_system %}<span class="admin-badge">системный</span>{% else %}пользовательский{% endif %}</span>
+                        <a class="admin-link" href="/admin/layouts/{{ layout.id }}/edit">Изменить</a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
