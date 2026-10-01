@@ -87,4 +87,6 @@ try {
     }
 }
 
+require __DIR__ . '/page_runtime_continuation_smoke.php';
+
 fwrite(STDOUT, "PAGE EXECUTION REGISTRY OK\n");
