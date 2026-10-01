@@ -68,7 +68,7 @@ final class NodeController
 
         $template = isset($node['template_path']) && is_string($node['template_path']) && $node['template_path'] !== ''
             ? $node['template_path']
-            : 'layouts/main.html.php';
+            : 'layouts/main.php';
 
         $title = trim((string) ($node['title'] ?? ''));
         if ($title === '') {
@@ -159,7 +159,7 @@ final class NodeController
     private function notFound(string $path): Response
     {
         return Response::html(
-            $this->view->render('errors/404.html.php', ['path' => $path]),
+            $this->view->render('errors/404.php', ['path' => $path]),
             404,
         )->withHeader('Cache-Control', 'no-store');
     }
