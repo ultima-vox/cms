@@ -9,24 +9,33 @@ use Core\Delivery\Page\PageCacheEntry;
 use Core\Delivery\ResourceHint;
 use Core\Delivery\ResourceHintHeader;
 use Core\Extension\Api\DeliveryApi;
+use Core\Extension\Api\PagesApi;
 use Core\Http\Request;
 use Core\Http\Response;
+use Core\Layout\LayoutExecutionStage;
+use Core\Layout\LayoutHierarchyResolver;
+use Core\Page\PageExecutionChain;
+use Core\Page\PageExecutionContext;
+use Core\Page\PageExecutorStage;
+use Core\Page\PageRuntime;
+use Core\Page\PageTypeSelection;
 use Core\Repository\NodeRepository;
 use Core\Routing\SystemPathPolicy;
 use Core\Security\AuthService;
 use Core\Site\SiteContext;
 use Core\Site\SiteResolver;
-use Core\View\FrontendRenderer;
-use Core\View\PageViewModel;
+use Core\View\PhpRenderer;
 use Core\View\Render\RenderContext;
-use Core\View\SafeHtml;
+use Core\View\Render\RenderResult;
 
 final class NodeController
 {
     public function __construct(
         private readonly NodeRepository $nodes,
         private readonly SiteResolver $sites,
-        private readonly FrontendRenderer $view,
+        private readonly PhpRenderer $view,
+        private readonly PagesApi $pages,
+        private readonly LayoutHierarchyResolver $layouts,
         private readonly PageCache $pageCache,
         private readonly DeliveryApi $delivery,
         private readonly AuthService $auth,
@@ -66,41 +75,39 @@ final class NodeController
             return $this->notFound($request->path);
         }
 
-        $template = isset($node['template_path']) && is_string($node['template_path']) && $node['template_path'] !== ''
-            ? $node['template_path']
-            : 'layouts/main.php';
-
-        $title = trim((string) ($node['title'] ?? ''));
-        if ($title === '') {
-            $title = (string) ($node['name'] ?? '');
-        }
-
-        $page = new PageViewModel(
-            id: (int) $node['id'],
-            name: (string) ($node['name'] ?? ''),
-            title: $title,
-            path: (string) ($node['path'] ?? $request->path),
-            content: SafeHtml::fromTrustedStorage((string) ($node['content'] ?? '')),
-            metaDescription: isset($node['meta_description']) && is_string($node['meta_description'])
-                ? $node['meta_description']
-                : null,
-        );
-
+        $selection = PageTypeSelection::fromNode($node);
         $renderContext = new RenderContext();
         $renderContext->dependency('site:' . $site->id);
         $renderContext->dependency('node:' . (int) $node['id']);
         $renderContext->dependency('site:' . $site->id . ':node:' . (int) $node['id']);
-        $renderContext->dependency('template:' . $template);
-        if (isset($node['layout_id']) && is_numeric($node['layout_id'])) {
-            $renderContext->dependency('layout:' . (int) $node['layout_id']);
-        }
+        $renderContext->dependency('page_type:' . $selection->code);
 
-        $result = $this->view->renderResult($template, [
-            'site' => $site,
-            'page' => $page,
-            'node' => $node,
-            'content' => (string) ($node['content'] ?? ''),
-        ], $renderContext);
+        $context = new PageExecutionContext(
+            $request,
+            $site,
+            $node,
+            $selection->configuration,
+            $renderContext,
+        );
+
+        $layoutId = isset($node['layout_id']) && is_numeric($node['layout_id'])
+            ? (int) $node['layout_id']
+            : 0;
+        $layoutDefinitions = $layoutId > 0
+            ? $this->layouts->resolve($layoutId)
+            : $this->layouts->resolveDefault();
+
+        $stages = [];
+        foreach ($layoutDefinitions as $layout) {
+            $stages[] = new LayoutExecutionStage($layout, $this->view);
+        }
+        $stages[] = new PageExecutorStage($this->pages->resolve($selection->code));
+
+        $page = new PageRuntime(
+            $context,
+            new PageExecutionChain($stages),
+        );
+        $result = new RenderResult($page->start()->value(), $renderContext);
 
         if ($cacheEligible) {
             $entry = $this->pageCache->put($site->id, $request->path, $variant, $result);

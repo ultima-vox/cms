@@ -16,6 +16,17 @@ final readonly class LayoutHierarchyResolver
     }
 
     /** @return list<LayoutDefinition> Outermost layout first, selected layout last. */
+    public function resolveDefault(): array
+    {
+        $layoutId = $this->layouts->defaultSystemId();
+        if ($layoutId === null) {
+            throw new RuntimeException('Default system layout was not found.');
+        }
+
+        return $this->resolve($layoutId);
+    }
+
+    /** @return list<LayoutDefinition> Outermost layout first, selected layout last. */
     public function resolve(int $layoutId): array
     {
         $rows = $this->layouts->ancestry($layoutId, self::MAX_LAYOUT_STAGES);

@@ -13,5 +13,5 @@ return [
     'requires' => [
         'core' => '>=0.1.0',
     ],
-    'provider' => UltimaVox\Modules\Infosystem\InfosystemModule::class,
+    'provider' => UltimaVox\Modules\Infosystem\InfosystemProvider::class,
 ];

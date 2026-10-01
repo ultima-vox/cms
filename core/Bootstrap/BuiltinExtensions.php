@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Core\Bootstrap;
 
 use Core\Extension\Core;
+use Core\Page\CoreContentPageExecutor;
 
 final readonly class BuiltinExtensions
 {
     public function register(Core $core): void
     {
+        $core->pages()->executor('core.content', new CoreContentPageExecutor());
+
         $core->permissions()->define(
             'templates.code.edit',
             'Edit trusted PHP templates',

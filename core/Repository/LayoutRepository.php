@@ -68,6 +68,21 @@ final class LayoutRepository
         return is_array($layout) ? $layout : null;
     }
 
+    public function defaultSystemId(): ?int
+    {
+        $value = $this->db->query(
+            'SELECT id FROM layouts WHERE is_system = TRUE ORDER BY id LIMIT 1'
+        )->fetchColumn();
+
+        if ($value === false) {
+            return null;
+        }
+
+        $id = (int) $value;
+
+        return $id > 0 ? $id : null;
+    }
+
     /** @return list<array<string, mixed>> */
     public function ancestry(int $id, int $maximumDepth): array
     {
