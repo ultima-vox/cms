@@ -75,6 +75,12 @@ final readonly class InfosystemPageExecutor implements PageExecutorInterface
             $source = $source->limit((int) $limit);
         }
 
-        return SafeHtml::fromTrustedStorage($source->show());
+        $html = $source->show();
+        if (($context->configuration['include_content'] ?? true) !== false) {
+            $context->renderContext->dependency('node:' . $nodeId . ':content');
+            $html = (string) ($context->node['content'] ?? '') . $html;
+        }
+
+        return SafeHtml::fromTrustedStorage($html);
     }
 }
