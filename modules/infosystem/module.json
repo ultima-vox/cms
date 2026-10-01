@@ -7,5 +7,5 @@
   "requires": {
     "core": ">=0.1.0"
   },
-  "provider": "UltimaVox\\Modules\\Infosystem\\InfosystemModule"
+  "provider": "UltimaVox\\Modules\\Infosystem\\InfosystemProvider"
 }
