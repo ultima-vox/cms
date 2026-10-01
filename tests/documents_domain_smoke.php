@@ -57,6 +57,10 @@ try {
         throw new RuntimeException('Previous published document version was not archived.');
     }
 
+    if ($repository->findActiveByCode(1, 'missing-document') !== null) {
+        throw new RuntimeException('Missing document lookup returned a record.');
+    }
+
     try {
         $repository->create(1, 'footer-contacts', 'Duplicate');
         throw new RuntimeException('Duplicate site-scoped document code was accepted.');
@@ -64,10 +68,6 @@ try {
         if ($exception->getMessage() === 'Duplicate site-scoped document code was accepted.') {
             throw $exception;
         }
-    }
-
-    if ($repository->findActiveByCode(1, 'missing-document') !== null) {
-        throw new RuntimeException('Missing document lookup returned a record.');
     }
 } finally {
     if ($db->inTransaction()) {
