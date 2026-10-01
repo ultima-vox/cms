@@ -112,8 +112,8 @@ final class LayoutRepository
             ORDER BY depth DESC
             SQL
         );
-        $statement->bindValue('id', $id, PDO::PARAM_INT);
-        $statement->bindValue('maximum_depth', $maximumDepth, PDO::PARAM_INT);
+        $statement->bindValue(':id', $id, PDO::PARAM_INT);
+        $statement->bindValue(':maximum_depth', $maximumDepth, PDO::PARAM_INT);
         $statement->execute();
 
         $rows = $statement->fetchAll();
