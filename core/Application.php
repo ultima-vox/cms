@@ -70,7 +70,6 @@ final class Application
             $core->sites(),
         ))->create();
         $frontend = new FrontendRenderer(
-            $twig,
             new PhpRenderer($this->rootPath, $core),
         );
 

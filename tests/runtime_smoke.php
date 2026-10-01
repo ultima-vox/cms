@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Core\Database;
 use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
+use Core\View\FrontendRenderer;
 use Core\View\PhpRenderer;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderEngine;
@@ -45,6 +46,17 @@ $core->templates()->facade('smokeFacade', static fn (TemplateFacadeContext $cont
 $core->templates()->facadeProvider(
     static fn (TemplateFacadeContext $context, array $facades): array => ['smokeAlias' => $facades['smokeFacade']],
 );
+$core->templates()->view('smoke.view', 'smoke.source', 'smoke/template.php');
+
+try {
+    $core->templates()->view('legacy.view', 'smoke.source', 'smoke/legacy.html.php');
+    throw new RuntimeException('Template registry accepted legacy .html.php path.');
+} catch (RuntimeException $exception) {
+    if ($exception->getMessage() === 'Template registry accepted legacy .html.php path.') {
+        throw $exception;
+    }
+}
+
 $core->freeze();
 
 try {
@@ -88,7 +100,7 @@ file_put_contents(
     $templateDir . '/template.php',
     '<?= text($title) ?>|<?= html($body) ?>|<?= isset($smokeAlias) ? "alias" : "missing" ?>',
 );
-file_put_contents($templateDir . '/legacy.html.php', 'legacy-compatible');
+file_put_contents($templateDir . '/legacy.html.php', 'legacy');
 
 $renderer = new PhpRenderer($root, $core);
 $result = $renderer->renderResult('smoke/template.php', [
@@ -103,8 +115,24 @@ if ($output !== '🔥 &lt;span&gt;Title&lt;/span&gt;|<span>HTML</span>|alias') {
 if (!$result->context instanceof RenderContext) {
     throw new RuntimeException('PHP renderer did not return render metadata context.');
 }
-if ($renderer->render('smoke/legacy.html.php') !== 'legacy-compatible') {
-    throw new RuntimeException('Legacy .html.php template compatibility was lost.');
+
+try {
+    $renderer->render('smoke/legacy.html.php');
+    throw new RuntimeException('PHP renderer accepted legacy .html.php template.');
+} catch (RuntimeException $exception) {
+    if ($exception->getMessage() === 'PHP renderer accepted legacy .html.php template.') {
+        throw $exception;
+    }
+}
+
+$frontend = new FrontendRenderer($renderer);
+try {
+    $frontend->render('smoke/template.twig');
+    throw new RuntimeException('Frontend renderer accepted Twig template.');
+} catch (RuntimeException $exception) {
+    if ($exception->getMessage() === 'Frontend renderer accepted Twig template.') {
+        throw $exception;
+    }
 }
 
 $engine = new RenderEngine();

@@ -73,7 +73,8 @@ final class PhpRenderer
     {
         $template = trim($template);
 
-        if (!preg_match('#^[a-zA-Z0-9][a-zA-Z0-9_./-]*\.php$#', $template)
+        if (str_ends_with($template, '.html.php')
+            || !preg_match('#^[a-zA-Z0-9][a-zA-Z0-9_./-]*\.php$#', $template)
             || str_contains($template, '..')) {
             throw new RuntimeException('Invalid PHP template path.');
         }
