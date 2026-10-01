@@ -74,7 +74,7 @@ final class InfosystemModule implements ModuleInterface
         $core->templates()->view(
             'infosystem.list',
             'infosystem.items',
-            'modules/infosystem/templates/list.html.php',
+            'modules/infosystem/templates/list.php',
         );
 
         $core->templates()->facade(
