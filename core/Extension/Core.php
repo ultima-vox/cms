@@ -14,6 +14,7 @@ use Core\Extension\Api\ContentApi;
 use Core\Extension\Api\DeliveryApi;
 use Core\Extension\Api\EventsApi;
 use Core\Extension\Api\ExtensionsApi;
+use Core\Extension\Api\PagesApi;
 use Core\Extension\Api\PermissionsApi;
 use Core\Extension\Api\RoutesApi;
 use Core\Extension\Api\RuntimeApi;
@@ -26,6 +27,7 @@ final class Core
     private RoutesApi $routes;
     private TemplatesApi $templates;
     private ContentApi $content;
+    private PagesApi $pages;
     private AdminApi $admin;
     private PermissionsApi $permissions;
     private EventsApi $events;
@@ -40,6 +42,7 @@ final class Core
         $this->routes = new RoutesApi();
         $this->templates = new TemplatesApi();
         $this->content = new ContentApi();
+        $this->pages = new PagesApi();
         $this->admin = new AdminApi();
         $this->permissions = new PermissionsApi();
         $this->events = new EventsApi();
@@ -81,6 +84,11 @@ final class Core
     public function content(): ContentApi
     {
         return $this->content;
+    }
+
+    public function pages(): PagesApi
+    {
+        return $this->pages;
     }
 
     public function admin(): AdminApi
@@ -127,6 +135,7 @@ final class Core
         $this->routes->freeze();
         $this->templates->freeze();
         $this->content->freeze();
+        $this->pages->freeze();
         $this->admin->freeze();
         $this->permissions->freeze();
         $this->events->freeze();

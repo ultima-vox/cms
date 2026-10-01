@@ -29,6 +29,28 @@ foreach ($constructor->getParameters() as $parameter) {
     }
 }
 
+$coreIterator = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($root . '/core', RecursiveDirectoryIterator::SKIP_DOTS),
+);
+
+/** @var SplFileInfo $coreFile */
+foreach ($coreIterator as $coreFile) {
+    if (!$coreFile->isFile() || strtolower($coreFile->getExtension()) !== 'php') {
+        continue;
+    }
+
+    $source = file_get_contents($coreFile->getPathname());
+    if ($source === false) {
+        throw new RuntimeException('Unable to read Core source: ' . $coreFile->getPathname());
+    }
+
+    if (str_contains($source, 'UltimaVox\\Modules\\')) {
+        throw new RuntimeException(
+            'Core must not import business module namespaces: ' . $coreFile->getPathname(),
+        );
+    }
+}
+
 $coreSources = [
     'core/Controller/NodeController.php',
     'core/Controller/StructureController.php',
@@ -89,5 +111,7 @@ foreach ($requiredModuleFiles as $path) {
         throw new RuntimeException('Infosystem module does not own expected domain file: ' . $path);
     }
 }
+
+require __DIR__ . '/page_execution_registry_smoke.php';
 
 fwrite(STDOUT, "CORE MODULE BOUNDARY OK\n");
