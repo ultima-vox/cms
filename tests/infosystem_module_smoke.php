@@ -22,6 +22,9 @@ $loaded = (new ModuleLoader($rootPath))->load($core);
 if (!in_array('infosystem', $loaded, true)) {
     throw new RuntimeException('Infosystem module was not discovered.');
 }
+if (!$core->pages()->has('infosystem.list')) {
+    throw new RuntimeException('Infosystem page executor was not registered.');
+}
 
 $renderedEvent = null;
 $core->events()->listen(
@@ -31,6 +34,19 @@ $core->events()->listen(
     },
 );
 $core->freeze();
+
+$db->exec(
+    <<<'SQL'
+    UPDATE nodes n
+    SET page_type = 'infosystem.list',
+        updated_at = CURRENT_TIMESTAMP
+    FROM node_module_bindings b
+    WHERE b.node_id = n.id
+      AND b.module_code = 'infosystem'
+      AND b.binding_code = 'primary'
+      AND n.page_type = 'core.content'
+    SQL
+);
 
 $infosystemId = (int) $db->query("SELECT id FROM infosystems WHERE site_id = 1 AND code = 'catalog'")->fetchColumn();
 $nodeId = (int) $db->query("SELECT id FROM nodes WHERE site_id = 1 AND path = '/'")->fetchColumn();
