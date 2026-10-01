@@ -59,6 +59,18 @@ final readonly class PageRuntime
         return $path !== '' ? $path : $this->context->request->path;
     }
 
+    public function metaDescription(): ?string
+    {
+        $description = $this->context->node['meta_description'] ?? null;
+        if (!is_string($description)) {
+            return null;
+        }
+
+        $description = trim($description);
+
+        return $description !== '' ? $description : null;
+    }
+
     public function setting(string $key, mixed $default = null): mixed
     {
         return $this->context->configuration[$key] ?? $default;
