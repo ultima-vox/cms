@@ -20,6 +20,7 @@ final class LayoutRepository
             <<<'SQL'
             SELECT
                 l.id,
+                l.parent_id,
                 l.name,
                 l.template_path,
                 l.description,
@@ -46,6 +47,7 @@ final class LayoutRepository
             <<<'SQL'
             SELECT
                 l.id,
+                l.parent_id,
                 l.name,
                 l.template_path,
                 l.description,
@@ -64,6 +66,59 @@ final class LayoutRepository
         $layout = $statement->fetch();
 
         return is_array($layout) ? $layout : null;
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function ancestry(int $id, int $maximumDepth): array
+    {
+        if ($id < 1) {
+            throw new RuntimeException('Layout id must be positive.');
+        }
+        if ($maximumDepth < 1) {
+            throw new RuntimeException('Layout hierarchy depth must be positive.');
+        }
+
+        $statement = $this->db->prepare(
+            <<<'SQL'
+            WITH RECURSIVE layout_chain AS (
+                SELECT
+                    l.id,
+                    l.parent_id,
+                    l.name,
+                    l.template_path,
+                    ARRAY[l.id]::bigint[] AS visited,
+                    FALSE AS cycle,
+                    1 AS depth
+                FROM layouts l
+                WHERE l.id = :id
+
+                UNION ALL
+
+                SELECT
+                    parent.id,
+                    parent.parent_id,
+                    parent.name,
+                    parent.template_path,
+                    child.visited || parent.id,
+                    parent.id = ANY(child.visited) AS cycle,
+                    child.depth + 1
+                FROM layouts parent
+                JOIN layout_chain child ON parent.id = child.parent_id
+                WHERE child.cycle = FALSE
+                  AND child.depth <= :maximum_depth
+            )
+            SELECT id, parent_id, name, template_path, cycle, depth
+            FROM layout_chain
+            ORDER BY depth DESC
+            SQL
+        );
+        $statement->bindValue(':id', $id, PDO::PARAM_INT);
+        $statement->bindValue(':maximum_depth', $maximumDepth, PDO::PARAM_INT);
+        $statement->execute();
+
+        $rows = $statement->fetchAll();
+
+        return is_array($rows) ? $rows : [];
     }
 
     public function create(string $name, string $templatePath, ?string $description): int
