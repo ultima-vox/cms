@@ -66,7 +66,8 @@ final class TemplatesApi
             throw new RuntimeException('View source type is invalid.');
         }
 
-        if (!preg_match('#^[a-zA-Z0-9][a-zA-Z0-9_./-]*\.php$#', $templatePath)
+        if (str_ends_with($templatePath, '.html.php')
+            || !preg_match('#^[a-zA-Z0-9][a-zA-Z0-9_./-]*\.php$#', $templatePath)
             || str_contains($templatePath, '..')) {
             throw new RuntimeException('View template path is invalid.');
         }

@@ -18,6 +18,7 @@ foreach ([$templates, $moduleTemplates, $moduleSource] as $directory) {
 }
 
 $valid = $templates . '/valid.php';
+$legacy = $templates . '/legacy.html.php';
 $invalid = $templates . '/invalid.php';
 $moduleTemplate = $moduleTemplates . '/list.php';
 $moduleSourceFile = $moduleSource . '/Broken.php';
@@ -29,6 +30,21 @@ try {
     if ($checked !== ['layouts/valid.php']) {
         throw new RuntimeException('PHP template linter returned an unexpected template list.');
     }
+
+    file_put_contents($legacy, '<main>legacy</main>');
+    try {
+        (new PhpTemplateLinter($root . '/templates'))->lint();
+        throw new RuntimeException('PHP template linter accepted legacy .html.php suffix.');
+    } catch (RuntimeException $exception) {
+        if ($exception->getMessage() === 'PHP template linter accepted legacy .html.php suffix.') {
+            throw $exception;
+        }
+
+        if (!str_contains($exception->getMessage(), 'layouts/legacy.html.php')) {
+            throw new RuntimeException('PHP template linter legacy-suffix error does not identify the template.');
+        }
+    }
+    @unlink($legacy);
 
     file_put_contents($moduleTemplate, '<section><?= text($title) ?></section>');
     file_put_contents($moduleSourceFile, '<?php if (true) {');
@@ -54,6 +70,7 @@ try {
     }
 } finally {
     @unlink($valid);
+    @unlink($legacy);
     @unlink($invalid);
     @unlink($moduleTemplate);
     @unlink($moduleSourceFile);

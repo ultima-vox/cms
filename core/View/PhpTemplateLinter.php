@@ -43,9 +43,15 @@ final class PhpTemplateLinter
                 continue;
             }
 
+            if (str_ends_with(strtolower($file->getFilename()), '.html.php')) {
+                throw new RuntimeException(
+                    sprintf('Устаревший суффикс шаблона .html.php: %s. Используйте обычный .php.', $relative),
+                );
+            }
+
             $source = file_get_contents($file->getPathname());
             if ($source === false) {
-                throw new RuntimeException('Не удалось прочитать PHP/HTML-шаблон: ' . $file->getPathname());
+                throw new RuntimeException('Не удалось прочитать PHP-шаблон: ' . $file->getPathname());
             }
 
             try {
