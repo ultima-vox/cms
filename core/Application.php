@@ -35,10 +35,9 @@ use Core\Security\SecurityHeaders;
 use Core\Site\AdminSiteSelector;
 use Core\Site\SiteContext;
 use Core\Site\SiteResolver;
-use Core\View\AdminShellContext;
+use Core\View\AdminTwigRendererFactory;
 use Core\View\FrontendRenderer;
 use Core\View\PhpRenderer;
-use Core\View\TwigRenderer;
 
 final class Application
 {
@@ -57,19 +56,23 @@ final class Application
         $adminSite = $this->isAdminPath($request->path)
             ? (new AdminSiteSelector($siteRepository))->current()
             : new SiteContext(1, 'default', 'Default site', '');
-        $twig = new TwigRenderer($this->rootPath);
         $core = new ExtensionCore(new RuntimeApi($db, $this->rootPath, $adminSite));
         (new BuiltinExtensions())->register($core);
 
-        $frontend = new FrontendRenderer(
-            $twig,
-            new PhpRenderer($this->rootPath, $core),
-        );
         $auth = new AuthService(
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
-        $twig->addGlobal('admin_shell', new AdminShellContext($auth, $core->admin(), $core->sites()));
+        $twig = (new AdminTwigRendererFactory(
+            $this->rootPath,
+            $auth,
+            $core->admin(),
+            $core->sites(),
+        ))->create();
+        $frontend = new FrontendRenderer(
+            $twig,
+            new PhpRenderer($this->rootPath, $core),
+        );
 
         $audit = new AuditLogRepository($db);
         $permissionGate = new PermissionGate($auth);

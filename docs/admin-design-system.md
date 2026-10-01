@@ -22,9 +22,26 @@ Core semantic tokens include:
 - `--uv-success`, `--uv-warning`, `--uv-danger` and their soft variants — semantic states.
 - `--uv-radius*`, `--uv-space-*` — geometry and spacing.
 
+## Shared admin shell
+
+Authenticated admin screens extend `templates/admin/_shell.twig`. The shell owns global application chrome and behavior:
+
+- registry-driven sidebar navigation;
+- active SiteContext selector;
+- command palette;
+- current-user controls and logout;
+- shared admin CSS/JS;
+- responsive shell behavior.
+
+Page and module templates should contain only their working-area markup and use the `styles` / `scripts` blocks for domain-specific assets. Do not copy sidebar/topbar markup into a module template.
+
+Admin renderers must be created through `AdminTwigRendererFactory`. It injects the lazy `AdminShellContext`, so changes to shell globals do not require patches across modules.
+
+Twig remains an internal admin/legacy renderer. Public site templates continue to use native HTML/PHP templates and do not inherit this contract.
+
 ## Component contract
 
-Modules should prefer the shared classes before adding module CSS:
+Modules should prefer shared classes before adding module CSS:
 
 - `.admin-page-header`, `.admin-page-title`, `.admin-page-description`
 - `.admin-panel`, `.admin-panel--flush`
@@ -55,13 +72,14 @@ The default icon is `module`, so installing a module never requires a Core patch
 
 ## Command palette
 
-`Ctrl/Cmd + K` opens the global palette. Version 1 searches registered admin navigation locally and performs no extra HTTP request. Entity search (products, pages, media, orders, etc.) must be added later through a typed search-provider API rather than hard-coded into the shell.
+`Ctrl/Cmd + K` opens the global palette. Version 1 searches registered admin navigation locally and performs no extra HTTP request. Entity search (products, pages, media, orders, etc.) must be added through a typed search-provider API rather than hard-coded into the shell.
 
 ## Migration policy
 
-1. New admin screens use Design System 1.0 classes immediately.
-2. Existing Structure, Layouts, Infosystems and Sites screens keep their routes/controllers and are migrated incrementally.
+1. New admin screens extend the shared shell and use Design System 1.0 classes immediately.
+2. Existing first-party screens are migrated incrementally without changing routes, permissions, CSRF or business behavior.
 3. Domain-specific styles are reduced as shared components absorb duplicated CSS.
-4. The global admin shell/navigation will be centralized after existing module templates are migrated, so modules no longer duplicate sidebar markup.
+4. Module entry screens must not duplicate global navigation or global assets.
+5. Deep domain editors may keep specialized layout CSS, but their controls should use the shared form/table/status primitives.
 
-This migration is presentation-only unless a PR explicitly documents a behavior or API change. Existing admin routes, permissions, CSRF behavior and module lifecycle remain authoritative.
+Presentation migrations must remain behavior-neutral unless a PR explicitly documents an API or workflow change.

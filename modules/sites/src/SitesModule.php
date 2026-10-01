@@ -15,7 +15,7 @@ use Core\Repository\UserRepository;
 use Core\Security\AuthService;
 use Core\Site\AdminSiteSelector;
 use Core\Site\SiteResolver;
-use Core\View\TwigRenderer;
+use Core\View\AdminTwigRendererFactory;
 
 final class SitesModule implements ModuleInterface
 {
@@ -28,12 +28,18 @@ final class SitesModule implements ModuleInterface
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
+        $view = (new AdminTwigRendererFactory(
+            $core->runtime()->rootPath(),
+            $auth,
+            $core->admin(),
+            $core->sites(),
+        ))->create();
         $controller = new SitesController(
             $auth,
             new SitesManagementRepository($db),
             $selector,
             new SiteResolver($sites, Config::string('APP_URL', 'http://localhost')),
-            new TwigRenderer($core->runtime()->rootPath()),
+            $view,
         );
         $invalidate = new DeliveryInvalidatingHandler($core->delivery());
 

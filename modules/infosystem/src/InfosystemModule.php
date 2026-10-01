@@ -17,9 +17,9 @@ use Core\Repository\StructureRepository;
 use Core\Repository\UserRepository;
 use Core\Security\AuthService;
 use Core\Security\PermissionGate;
+use Core\View\AdminTwigRendererFactory;
 use Core\View\Render\RenderNodeInterface;
 use Core\View\Render\TemplateFacadeContext;
-use Core\View\TwigRenderer;
 use RuntimeException;
 use UltimaVox\Modules\Infosystem\Admin\InfosystemBindingController;
 use UltimaVox\Modules\Infosystem\Admin\InfosystemController;
@@ -119,14 +119,16 @@ final class InfosystemModule implements ModuleInterface
     {
         $db = $core->runtime()->database();
         $siteId = $core->sites()->adminId();
-        $twig = new TwigRenderer(
-            $core->runtime()->rootPath(),
-            [dirname(__DIR__) . '/templates'],
-        );
         $auth = new AuthService(
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
+        $twig = (new AdminTwigRendererFactory(
+            $core->runtime()->rootPath(),
+            $auth,
+            $core->admin(),
+            $core->sites(),
+        ))->create([dirname(__DIR__) . '/templates']);
         $management = new InfosystemManagementRepository($db, $siteId);
         $controller = new InfosystemController(
             $auth,
