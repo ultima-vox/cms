@@ -36,9 +36,7 @@ use Core\Site\AdminSiteSelector;
 use Core\Site\SiteContext;
 use Core\Site\SiteResolver;
 use Core\View\AdminShellContext;
-use Core\View\FrontendRenderer;
-use Core\View\PhpRenderer;
-use Core\View\TwigRenderer;
+use Core\View\TemplateRenderer;
 
 final class Application
 {
@@ -57,19 +55,15 @@ final class Application
         $adminSite = $this->isAdminPath($request->path)
             ? (new AdminSiteSelector($siteRepository))->current()
             : new SiteContext(1, 'default', 'Default site', '');
-        $twig = new TwigRenderer($this->rootPath);
         $core = new ExtensionCore(new RuntimeApi($db, $this->rootPath, $adminSite));
         (new BuiltinExtensions())->register($core);
 
-        $frontend = new FrontendRenderer(
-            $twig,
-            new PhpRenderer($this->rootPath, $core),
-        );
+        $view = new TemplateRenderer($this->rootPath, $core);
         $auth = new AuthService(
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
-        $twig->addGlobal('admin_shell', new AdminShellContext($auth, $core->admin(), $core->sites()));
+        $view->addGlobal('admin_shell', new AdminShellContext($auth, $core->admin(), $core->sites()));
 
         $audit = new AuditLogRepository($db);
         $permissionGate = new PermissionGate($auth);
@@ -80,24 +74,24 @@ final class Application
         );
 
         $builtinRoutes = new BuiltinRoutes(
-            new AuthController($auth, $twig),
-            new AdminController($auth, $twig, $core->admin(), $core->sites(), $audit),
+            new AuthController($auth, $view),
+            new AdminController($auth, $view, $core->admin(), $core->sites(), $audit),
             new StructureController(
                 $auth,
                 new StructureRepository($db, $core->sites()->adminId()),
                 $audit,
-                $twig,
+                $view,
             ),
             new LayoutController(
                 $auth,
                 new LayoutRepository($db),
                 new LayoutTemplateService($this->rootPath),
                 $audit,
-                $twig,
+                $view,
             ),
             new ModuleManagerController(
                 $auth,
-                $twig,
+                $view,
                 $audit,
                 $db,
                 $this->rootPath,
@@ -106,7 +100,7 @@ final class Application
             new NodeController(
                 new NodeRepository($db),
                 $siteResolver,
-                $frontend,
+                $view,
                 new PageCache($core->cache()),
                 $core->delivery(),
                 $auth,

@@ -1,0 +1,11 @@
+<?php
+
+declare(strict_types=1);
+?>
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Инфосистемы — Ultima Vox CMS</title><link rel="stylesheet" href="/assets/admin.css"><link rel="stylesheet" href="/assets/infosystems.css"></head>
+<body class="admin-shell"><aside class="admin-shell__sidebar"><div class="admin-brand">ULTIMA VOX</div><nav class="admin-nav" aria-label="Основная навигация"><a class="admin-nav__item" href="/admin">Обзор</a><a class="admin-nav__item" href="/admin/structure">Структура</a><a class="admin-nav__item admin-nav__item--active" href="/admin/infosystems">Инфосистемы</a><a class="admin-nav__item" href="/admin/layouts">Макеты</a></nav></aside>
+<main class="admin-shell__main"><header class="admin-page-header"><div><p class="admin-eyebrow">Content storage</p><h1 class="admin-header__title">Инфосистемы</h1><p class="admin-page-header__description">Каталоги, новости, услуги и другие структурированные наборы контента.</p></div><a class="admin-button admin-button--primary" href="/admin/infosystems/create">Новая инфосистема</a></header>
+<?php if (!empty($deleted)): ?><div class="admin-notice">Инфосистема удалена.</div><?php endif; ?>
+<section class="admin-panel admin-panel--flush"><?php if ($infosystems === []): ?><div class="admin-empty">Инфосистем пока нет.</div><?php else: ?><div class="infosystem-list__head"><span>Название</span><span>Код</span><span>Группы</span><span>Элементы</span><span>Узлы</span><span></span></div><?php foreach ($infosystems as $system): ?><div class="infosystem-row"><div><a class="admin-link infosystem-row__name" href="/admin/infosystems/<?= (int) $system['id'] ?>"><?= text($system['name']) ?></a><?php if (($system['description'] ?? '') !== ''): ?><p class="infosystem-row__description"><?= text($system['description']) ?></p><?php endif; ?></div><code><?= text($system['code']) ?></code><span><?= (int) $system['group_count'] ?></span><span><?= (int) $system['item_count'] ?></span><span><?= (int) $system['node_count'] ?></span><a class="admin-link" href="/admin/infosystems/<?= (int) $system['id'] ?>/edit">Настройки</a></div><?php endforeach; ?><?php endif; ?></section>
+</main></body></html>

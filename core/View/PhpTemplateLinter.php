@@ -31,13 +31,13 @@ final class PhpTemplateLinter
 
         /** @var SplFileInfo $file */
         foreach ($iterator as $file) {
-            if (!$file->isFile() || !str_ends_with(strtolower($file->getFilename()), '.html.php')) {
+            if (!$file->isFile() || strtolower($file->getExtension()) !== 'php') {
                 continue;
             }
 
             $source = file_get_contents($file->getPathname());
             if ($source === false) {
-                throw new RuntimeException('Не удалось прочитать PHP/HTML-шаблон: ' . $file->getPathname());
+                throw new RuntimeException('Не удалось прочитать PHP-шаблон: ' . $file->getPathname());
             }
 
             $relative = ltrim(str_replace($this->templatesPath, '', $file->getPathname()), DIRECTORY_SEPARATOR);
@@ -62,7 +62,6 @@ final class PhpTemplateLinter
         }
 
         sort($checked, SORT_STRING);
-
         return $checked;
     }
 }

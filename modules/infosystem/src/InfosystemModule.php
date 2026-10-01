@@ -19,7 +19,7 @@ use Core\Security\AuthService;
 use Core\Security\PermissionGate;
 use Core\View\Render\RenderNodeInterface;
 use Core\View\Render\TemplateFacadeContext;
-use Core\View\TwigRenderer;
+use Core\View\TemplateRenderer;
 use RuntimeException;
 use UltimaVox\Modules\Infosystem\Admin\InfosystemBindingController;
 use UltimaVox\Modules\Infosystem\Admin\InfosystemController;
@@ -74,7 +74,7 @@ final class InfosystemModule implements ModuleInterface
         $core->templates()->view(
             'infosystem.list',
             'infosystem.items',
-            'modules/infosystem/templates/list.html.php',
+            'modules/infosystem/templates/list.php',
         );
 
         $core->templates()->facade(
@@ -119,8 +119,9 @@ final class InfosystemModule implements ModuleInterface
     {
         $db = $core->runtime()->database();
         $siteId = $core->sites()->adminId();
-        $twig = new TwigRenderer(
+        $view = new TemplateRenderer(
             $core->runtime()->rootPath(),
+            $core,
             [dirname(__DIR__) . '/templates'],
         );
         $auth = new AuthService(
@@ -133,13 +134,13 @@ final class InfosystemModule implements ModuleInterface
             $management,
             new FieldSchema(),
             new AuditLogRepository($db),
-            $twig,
+            $view,
         );
         $listController = new InfosystemItemListController(
             $auth,
             $management,
             new InfosystemItemSearchRepository($db),
-            $twig,
+            $view,
         );
         $bindingController = new InfosystemBindingController(
             $auth,
@@ -147,7 +148,7 @@ final class InfosystemModule implements ModuleInterface
             new StructureRepository($db, $siteId),
             $bindings,
             $siteId,
-            $twig,
+            $view,
         );
         $gate = new PermissionGate($auth);
         $html = new HtmlSanitizingHandler(new HtmlSanitizer());
