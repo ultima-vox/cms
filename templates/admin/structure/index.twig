@@ -1,64 +1,51 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Структура — Ultima Vox CMS</title>
-    <link rel="stylesheet" href="/assets/admin.css">
-    <link rel="stylesheet" href="/assets/structure.css">
-</head>
-<body class="admin-shell">
-    <aside class="admin-shell__sidebar">
-        <div class="admin-brand">ULTIMA VOX</div>
-        <nav class="admin-nav" aria-label="Основная навигация">
-            <a class="admin-nav__item" href="/admin">Обзор</a>
-            <a class="admin-nav__item admin-nav__item--active" href="/admin/structure">Структура</a>
-            <a class="admin-nav__item" href="/admin/infosystems">Инфосистемы</a>
-            <a class="admin-nav__item" href="/admin/layouts">Макеты</a>
-        </nav>
-    </aside>
+{% extends 'admin/_shell.twig' %}
+{% set admin_active = 'structure' %}
+{% set admin_title = 'Структура' %}
 
-    <main class="admin-shell__main">
-        <header class="admin-page-header">
-            <div>
-                <p class="admin-eyebrow">Content</p>
-                <h1 class="admin-header__title">Структура сайта</h1>
-                <p class="admin-page-header__description">Узлы определяют URL, макет и связанный источник контента.</p>
+{% block styles %}<link rel="stylesheet" href="/assets/structure.css">{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <header class="admin-page-header">
+        <div>
+            <p class="admin-eyebrow">Content</p>
+            <h1 class="admin-header__title">Структура сайта</h1>
+            <p class="admin-page-header__description">Узлы определяют URL, макет и связанный источник контента.</p>
+        </div>
+        <a class="admin-button admin-button--primary" href="/admin/structure/create">Новый узел</a>
+    </header>
+
+    {% if saved %}<div class="admin-notice admin-notice--success">Изменения сохранены.</div>{% endif %}
+    {% if deleted %}<div class="admin-notice admin-notice--success">Узел удалён.</div>{% endif %}
+
+    <section class="admin-panel admin-panel--flush">
+        {% if nodes is empty %}
+            <div class="admin-empty">
+                <h2 class="admin-panel__title">Структура пока пуста</h2>
+                <p>Создайте корневой узел. Его URL всегда <code>/</code>.</p>
+                <a class="admin-button admin-button--primary" href="/admin/structure/create">Создать корневой узел</a>
             </div>
-            <a class="admin-button admin-button--primary" href="/admin/structure/create">Новый узел</a>
-        </header>
-
-        {% if saved %}<div class="admin-notice">Изменения сохранены.</div>{% endif %}
-        {% if deleted %}<div class="admin-notice">Узел удалён.</div>{% endif %}
-
-        <section class="admin-panel admin-panel--flush">
-            {% if nodes is empty %}
-                <div class="admin-empty">
-                    <h2 class="admin-panel__title">Структура пока пуста</h2>
-                    <p>Создайте корневой узел. Его URL всегда <code>/</code>.</p>
-                    <a class="admin-button admin-button--primary" href="/admin/structure/create">Создать корневой узел</a>
+        {% else %}
+            <div class="structure-list" id="structure-list" data-csrf="{{ csrf_token }}">
+                <div class="structure-list__head">
+                    <span>Страница</span><span>URL</span><span>Статус</span><span>Макет</span><span></span>
                 </div>
-            {% else %}
-                <div class="structure-list" id="structure-list" data-csrf="{{ csrf_token }}">
-                    <div class="structure-list__head">
-                        <span>Страница</span><span>URL</span><span>Статус</span><span>Макет</span><span></span>
-                    </div>
-                    {% for node in nodes %}
-                        <div class="structure-row" draggable="true" data-id="{{ node.id }}" data-parent="{{ node.parent_id ?? '' }}" data-sorting="{{ node.sorting }}">
-                            <div class="structure-row__name" style="--tree-depth: {{ node.depth }}">
-                                <span class="structure-row__drag" title="Перетащить">⋮⋮</span>
-                                <span><strong>{{ node.name }}</strong>{% if not node.is_active %} <span class="admin-badge">выключен</span>{% endif %}</span>
-                            </div>
-                            <code class="structure-row__path">{{ node.path }}</code>
-                            <span class="admin-status admin-status--{{ node.status }}">{{ node.status }}</span>
-                            <span class="structure-row__muted">{{ node.layout_name ?? '—' }}</span>
-                            <a class="admin-link" href="/admin/structure/{{ node.id }}/edit">Изменить</a>
+                {% for node in nodes %}
+                    <div class="structure-row" draggable="true" data-id="{{ node.id }}" data-parent="{{ node.parent_id ?? '' }}" data-sorting="{{ node.sorting }}">
+                        <div class="structure-row__name" style="--tree-depth: {{ node.depth }}">
+                            <span class="structure-row__drag" title="Перетащить">⋮⋮</span>
+                            <span><strong>{{ node.name }}</strong>{% if not node.is_active %} <span class="admin-badge">выключен</span>{% endif %}</span>
                         </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </section>
-    </main>
-    <script src="/assets/structure.js" defer></script>
-</body>
-</html>
+                        <code class="structure-row__path">{{ node.path }}</code>
+                        <span class="admin-status admin-status--{{ node.status }}">{{ node.status }}</span>
+                        <span class="structure-row__muted">{{ node.layout_name ?? '—' }}</span>
+                        <a class="admin-link" href="/admin/structure/{{ node.id }}/edit">Изменить</a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="/assets/structure.js" defer></script>{% endblock %}
