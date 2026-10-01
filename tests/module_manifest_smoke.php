@@ -16,7 +16,7 @@ foreach ($manifests as $manifest) {
     $byCode[$manifest->code] = $manifest;
 }
 
-foreach (['infosystem', 'sites'] as $code) {
+foreach (['documents', 'infosystem', 'sites'] as $code) {
     $manifest = $byCode[$code] ?? null;
     if ($manifest === null || $manifest->version !== '1.0.0') {
         throw new RuntimeException(sprintf('%s module manifest is missing or invalid.', $code));
@@ -32,8 +32,10 @@ foreach (['infosystem', 'sites'] as $code) {
     }
 }
 
-if (!is_file($root . '/modules/infosystem/module.json')) {
-    throw new RuntimeException('Infosystem static module.json manifest is missing.');
+foreach (['documents', 'infosystem'] as $code) {
+    if (!is_file($root . '/modules/' . $code . '/module.json')) {
+        throw new RuntimeException(sprintf('%s static module.json manifest is missing.', $code));
+    }
 }
 
 $temp = sys_get_temp_dir() . '/uvcms-static-manifest-' . bin2hex(random_bytes(6));
