@@ -12,7 +12,7 @@ $db = Database::connection();
 $runner = new ModuleMigrationRunner($db, $root);
 
 $applied = $runner->migrate('infosystem');
-if ($applied !== ['001_public_delivery_index.sql']) {
+if ($applied !== ['001_public_delivery_index.sql', '002_page_type.sql']) {
     throw new RuntimeException('Unexpected infosystem module migration result.');
 }
 
