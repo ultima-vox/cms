@@ -147,4 +147,6 @@ try {
     }
 }
 
+require __DIR__ . '/layout_execution_stage_smoke.php';
+
 fwrite(STDOUT, "PAGE RUNTIME CONTINUATION OK\n");
