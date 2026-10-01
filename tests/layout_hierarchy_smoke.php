@@ -17,15 +17,21 @@ $db->beginTransaction();
 try {
     $insert = $db->prepare(
         <<<'SQL'
-        INSERT INTO layouts (parent_id, name, template_path, description)
-        VALUES (:parent_id, :name, :template_path, 'Hierarchy smoke test')
+        INSERT INTO layouts (parent_id, code, name, template_path, description)
+        VALUES (:parent_id, :code, :name, :template_path, 'Hierarchy smoke test')
         RETURNING id
         SQL
     );
 
-    $createLayout = static function (?int $parentId, string $name, string $templatePath) use ($insert): int {
+    $createLayout = static function (
+        ?int $parentId,
+        string $code,
+        string $name,
+        string $templatePath,
+    ) use ($insert): int {
         $insert->execute([
             'parent_id' => $parentId,
+            'code' => $code,
             'name' => $name,
             'template_path' => $templatePath,
         ]);
@@ -33,9 +39,9 @@ try {
         return (int) $insert->fetchColumn();
     };
 
-    $outerId = $createLayout(null, 'Smoke outer', 'layouts/smoke-outer.php');
-    $middleId = $createLayout($outerId, 'Smoke middle', 'layouts/smoke-middle.php');
-    $innerId = $createLayout($middleId, 'Smoke inner', 'layouts/smoke-inner.php');
+    $outerId = $createLayout(null, 'smoke-outer', 'Smoke outer', 'layouts/smoke-outer.php');
+    $middleId = $createLayout($outerId, 'smoke-middle', 'Smoke middle', 'layouts/smoke-middle.php');
+    $innerId = $createLayout($middleId, 'smoke-inner', 'Smoke inner', 'layouts/smoke-inner.php');
 
     $hierarchy = $resolver->resolve($innerId);
     $ids = array_map(static fn ($layout): int => $layout->id, $hierarchy);
@@ -77,6 +83,7 @@ try {
     for ($depth = 1; $depth <= LayoutHierarchyResolver::MAX_LAYOUT_STAGES + 1; ++$depth) {
         $parentId = $createLayout(
             $parentId,
+            'smoke-depth-' . $depth,
             'Depth ' . $depth,
             'layouts/smoke-depth-' . $depth . '.php',
         );

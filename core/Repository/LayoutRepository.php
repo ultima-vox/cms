@@ -21,6 +21,7 @@ final class LayoutRepository
             SELECT
                 l.id,
                 l.parent_id,
+                l.code,
                 l.name,
                 l.template_path,
                 l.description,
@@ -48,6 +49,7 @@ final class LayoutRepository
             SELECT
                 l.id,
                 l.parent_id,
+                l.code,
                 l.name,
                 l.template_path,
                 l.description,
@@ -63,6 +65,40 @@ final class LayoutRepository
             SQL
         );
         $statement->execute(['id' => $id]);
+        $layout = $statement->fetch();
+
+        return is_array($layout) ? $layout : null;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findByCode(string $code): ?array
+    {
+        $code = strtolower(trim($code));
+        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,79}$/', $code)) {
+            throw new RuntimeException('Layout code is invalid.');
+        }
+
+        $statement = $this->db->prepare(
+            <<<'SQL'
+            SELECT
+                l.id,
+                l.parent_id,
+                l.code,
+                l.name,
+                l.template_path,
+                l.description,
+                l.is_system,
+                l.created_at,
+                l.updated_at,
+                COUNT(n.id)::int AS node_count
+            FROM layouts l
+            LEFT JOIN nodes n ON n.layout_id = l.id
+            WHERE l.code = :code
+            GROUP BY l.id
+            LIMIT 1
+            SQL
+        );
+        $statement->execute(['code' => $code]);
         $layout = $statement->fetch();
 
         return is_array($layout) ? $layout : null;
@@ -140,12 +176,13 @@ final class LayoutRepository
     {
         $statement = $this->db->prepare(
             <<<'SQL'
-            INSERT INTO layouts (name, template_path, description)
-            VALUES (:name, :template_path, :description)
+            INSERT INTO layouts (code, name, template_path, description)
+            VALUES (:code, :name, :template_path, :description)
             RETURNING id
             SQL
         );
         $statement->execute([
+            'code' => $this->codeFromTemplatePath($templatePath),
             'name' => $name,
             'template_path' => $templatePath,
             'description' => $description,
@@ -196,5 +233,18 @@ final class LayoutRepository
         $statement->execute(['template_path' => $templatePath]);
 
         return $statement->fetchColumn() !== false;
+    }
+
+    private function codeFromTemplatePath(string $templatePath): string
+    {
+        if (!preg_match(
+            '#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.(?:html\.php|php|twig)$#',
+            trim($templatePath),
+            $matches,
+        )) {
+            throw new RuntimeException('Layout template path cannot be converted to a stable code.');
+        }
+
+        return $matches[1];
     }
 }
