@@ -1,118 +1,98 @@
 # Admin UI Foundation
 
-Ultima Vox admin UI is HTML-first and renderer-neutral.
+Ultima Vox Admin is HTML-first and renderer-neutral. The target runtime is native PHP templates, CSS and vanilla JavaScript. The UI layer must not depend on Twig, a SPA framework, Node.js or a frontend build process at runtime.
 
 ## Runtime contract
 
-- Native PHP views are the target rendering layer.
-- CSS owns presentation.
-- Vanilla JavaScript ES modules own progressive enhancement.
-- Fetch API is transport only; it does not become a second presentation layer.
-- PHP remains the source of truth for rendered HTML and business rules.
-- No Twig, React, Vue, HTMX, jQuery, or frontend framework runtime is required.
-
-## Compatibility entrypoints
-
-Existing templates may keep loading:
-
-```html
-<link rel="stylesheet" href="/assets/admin.css">
-<script src="/assets/admin.js" defer></script>
-```
-
-`/assets/admin.js` is a compatibility bootstrap that loads the modular admin application.
-
-The future native PHP shell may load the ES module directly:
-
-```html
-<script type="module" src="/assets/admin/js/app.js"></script>
-```
+- Server rendering remains authoritative for full admin pages and forms.
+- `/assets/admin.css` is the single shared production stylesheet entrypoint.
+- `/assets/admin.js` is the compatibility bootstrap. It loads `/assets/admin/js/app.js` as an ES module, so the current shell can keep a classic deferred script while the future PHP shell may switch directly to `type="module"`.
+- Domain screens may load their own CSS/JS after the shared assets, but must reuse shared `admin-*` primitives before adding domain-specific controls.
+- JavaScript progressively enhances server-rendered HTML. Core form workflows must not require JavaScript unless the feature itself is inherently interactive.
 
 ## CSS contract
 
-Shared admin controls use semantic `--uv-*` tokens from `/assets/admin.css`.
+Shared semantic tokens use the `--uv-*` namespace. Domain styles must consume semantic tokens rather than copy palette values where practical.
 
-The current production stylesheet remains a single file to avoid an `@import` request waterfall. Domain styles can migrate to shared primitives incrementally.
+Core primitives currently cover:
 
-Compatibility aliases such as `--admin-muted` and `--admin-border` are temporary and exist only for legacy domain styles.
+- application shell, navigation and topbar;
+- page headers, panels, metrics and toolbars;
+- buttons and icon buttons;
+- inputs, selects, textareas, checkbox/radio rows and switches;
+- tables and status rows;
+- badges, notices, empty states and danger zones;
+- dialogs and the command palette;
+- focus-visible, disabled, invalid, busy and reduced-motion states.
 
-## JavaScript structure
+`--admin-muted` and `--admin-border` are temporary compatibility aliases for older domain styles. New code must use `--uv-muted` and `--uv-border`.
 
-```text
-public/assets/admin/js/
-├── app.js
-├── core/
-│   ├── csrf.js
-│   ├── dom.js
-│   ├── http.js
-│   └── storage.js
-└── components/
-    ├── command-palette.js
-    ├── dialog.js
-    ├── sidebar.js
-    └── site-switcher.js
-```
+Known migration item: `admin-textarea--small` currently belongs to `infosystems.css` although Structure and Layouts also use the modifier. Move it into the shared control contract when domain CSS is consolidated; do not duplicate the rule across modules.
 
-### Core rules
+## JavaScript contract
 
-- JS modules must not query repositories or contain domain business logic.
-- CSRF tokens are read only from server-rendered DOM.
-- CSRF tokens must not be stored in localStorage/sessionStorage.
-- Fetch requests default to same-origin credentials.
-- Non-2xx responses are failures.
-- Behavior is attached through stable `data-*` hooks rather than renderer-specific markup.
-- Component initializers should be safe to call again after future partial HTML updates.
+Shared modules live under `public/assets/admin/js`.
 
-## Stable shell hooks
+### Core
 
-Current behavior depends on these renderer-neutral hooks:
+- `core/storage.js` — safe optional UI preferences in localStorage.
+- `core/dom.js` — DOM query/delegation and busy-state helpers.
+- `core/csrf.js` — reads CSRF only from server-rendered DOM and appends it to FormData when needed.
+- `core/http.js` — same-origin Fetch wrapper with timeout, response parsing and typed HTTP errors.
 
-```text
-data-admin-shell
-data-admin-collapse
-data-site-select
-data-command-open
-data-command-input
-data-command-item
-data-command-empty
-data-dialog-open
-data-dialog-close
-data-dialog-backdrop-close
-```
+The HTTP core defines transport behavior only. It must not contain business routes or module-specific payloads.
 
-When Twig is replaced by native PHP, these hooks should be preserved unless a dedicated UI migration changes the contract.
+### Components
 
-## CSRF sources
+- `components/sidebar.js` — persisted sidebar collapse state.
+- `components/site-switcher.js` — progressive enhancement of the existing site selector form.
+- `components/command-palette.js` — local navigation command palette.
+- `components/dialog.js` — generic native `<dialog>` open/close behavior.
 
-The JS helper accepts a server-rendered token from either:
+Stable DOM hooks are `data-*` attributes. JavaScript behavior must not depend on visual CSS selectors when a dedicated behavior hook is appropriate.
+
+Generic dialog hooks:
 
 ```html
-<meta name="csrf-token" content="...">
+<button type="button" data-dialog-open="example-dialog">Open</button>
+
+<dialog id="example-dialog" class="admin-dialog" data-dialog-backdrop-close>
+    <button type="button" data-dialog-close>Close</button>
+</dialog>
 ```
 
-or the existing hidden form field:
+## Async interaction rules
 
-```html
-<input type="hidden" name="_csrf" value="...">
-```
+Use native `fetch()` only when an operation benefits from an in-place update. Do not convert ordinary create/edit forms to client-side applications without a concrete UX reason.
 
-Mutating endpoints remain responsible for server-side CSRF validation.
+Preferred response forms:
 
-## Partial updates
+1. normal POST -> validation/save -> `303 See Other` for regular forms;
+2. server-rendered HTML fragment for partial list/editor updates where PHP remains responsible for markup;
+3. JSON for state-oriented operations where returning markup is not appropriate;
+4. SSE only for long-running server-side operations that need progress updates.
 
-Future partial interactions should follow:
+Do not invent parallel frontend business logic. Backend permissions, validation, CSRF, audit and persistence remain authoritative.
 
-```text
-User action
--> Fetch API
--> existing admin endpoint/controller
--> server-side validation/business logic
--> HTML fragment or JSON response
--> local DOM update
-```
+## Security invariants
 
-Prefer PHP-rendered HTML fragments for presentation. Use JSON for data-oriented actions where rendering HTML on the client is not required.
+- Never place CSRF tokens, credentials, API keys or other secrets in localStorage.
+- Mutating async operations must use the same backend CSRF and permission checks as normal forms.
+- Fetch defaults to `credentials: same-origin`.
+- HTTP failures must remain failures; callers decide how to present them and must not show false success.
+- Server output remains responsible for escaping and validation. Client validation is additional UX, not a security boundary.
 
-## Long-running operations
+## Renderer migration boundary
 
-Use normal Fetch for starting an operation. Server-Sent Events may be introduced later for long-running progress reporting. WebSockets are not part of the foundation contract.
+The native-PHP template migration owns renderer classes, application composition and conversion of Twig files. The UI foundation owns shared CSS/JS and stable DOM behavior contracts.
+
+A PHP shell should preserve the existing behavior hooks where possible:
+
+- `data-admin-collapse`;
+- `data-site-select`;
+- `data-command-open`;
+- `data-command-input`;
+- `data-command-item`;
+- `data-command-empty`.
+
+This keeps renderer migration independent from interaction implementation and avoids a second UI rewrite.
