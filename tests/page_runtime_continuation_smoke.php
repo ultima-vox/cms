@@ -67,7 +67,7 @@ $innerStage = new class implements PageExecutionStageInterface {
 $chain = new PageExecutionChain([
     $outerStage,
     $innerStage,
-    new PageExecutorStage($terminalExecutor, $context),
+    new PageExecutorStage($terminalExecutor),
 ]);
 $page = new PageRuntime($context, $chain);
 
