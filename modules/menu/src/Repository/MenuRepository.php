@@ -45,7 +45,7 @@ final readonly class MenuRepository
     }
 
     /** @return list<array<string, mixed>> */
-    public function findActiveLinkItems(int $menuId): array
+    public function findLinkItems(int $menuId): array
     {
         if ($menuId < 1) {
             throw new RuntimeException('Menu item lookup requires a positive menu id.');
@@ -53,11 +53,10 @@ final readonly class MenuRepository
 
         $statement = $this->db->prepare(
             <<<'SQL'
-            SELECT id, menu_id, parent_id, label, url, sorting
+            SELECT id, menu_id, parent_id, label, url, sorting, is_active
             FROM menu_items
             WHERE menu_id = :menu_id
               AND kind = 'link'
-              AND is_active = TRUE
             ORDER BY parent_id NULLS FIRST, sorting, id
             SQL
         );
