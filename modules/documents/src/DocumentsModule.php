@@ -44,6 +44,7 @@ final readonly class DocumentsModule implements ModuleInterface
                 'additionalProperties' => false,
             ],
             configurationValidator: new DocumentsPageConfigurationValidator(),
+            provisioner: new DocumentsPageProvisioner($repository),
             isDefault: true,
             sorting: 10,
             description: 'Страница на основе опубликованной версии документа.',
