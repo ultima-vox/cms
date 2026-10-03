@@ -56,7 +56,7 @@ The implementation is intentionally different:
 HTTP request
     -> Site resolution
     -> Structure resolution
-    -> Page execution preparation
+    -> Page type resolution and configuration validation
     -> Layout execution chain
     -> terminal page executor
     -> native PHP views
@@ -65,30 +65,61 @@ HTTP request
 
 Core owns the generic pipeline and registries only.
 
-A module may register a page executor under a stable code, for example `catalog`, `news`, or another module-defined code. Core stores and resolves that code without importing the module implementation.
+A module registers a page type under a stable code such as `documents.page`, `infosystem.list` or a future `shop.catalog`. Core stores and resolves that code without importing the module implementation.
+
+## Page type contract
+
+A page type is more than an executor. It is a module-owned declaration containing:
+
+- stable `code`;
+- human-readable `name` and `description`;
+- terminal `PageExecutorInterface`;
+- JSON-Schema-compatible configuration metadata for admin/API consumers;
+- optional `PageConfigurationValidatorInterface` for authoritative normalization and validation;
+- deterministic sorting metadata;
+- optional default-page marker.
+
+Example module registration:
+
+```php
+$core->pages()->type(new PageTypeDefinition(
+    code: 'module.page-type',
+    name: 'Module page',
+    executor: $executor,
+    configurationSchema: [
+        'type' => 'object',
+        'properties' => [
+            'limit' => ['type' => 'integer', 'minimum' => 1],
+        ],
+        'additionalProperties' => false,
+    ],
+    configurationValidator: $validator,
+));
+```
+
+The JSON schema is presentation/discovery metadata. Runtime correctness never depends on a JavaScript form or schema renderer: the module validator is authoritative and executes on the server before the page executor.
+
+Only one registered page type may declare itself as the default. Core does not choose that module and does not contain a hard-coded Documents/Shop/Infosystem default. If no installed module declares a default, the registry returns no default and a caller must make the page type explicit.
+
+The registry is frozen after application boot, exactly like routes, templates and content sources.
+
+`PagesApi::executor()` remains a transitional shorthand for executor-only extensions; first-party modules use the full `PageTypeDefinition` contract.
 
 ## Page execution contract
 
 A page executor receives a request-scoped execution context and returns trusted render output. It may contribute dependencies, assets, cache policy, schema and resource hints through the shared `RenderContext`.
 
-The first Core contract is deliberately small:
+Production resolution is:
 
-```php
-$core->pages()->executor('module.page-type', $executor);
-
-$executor = $core->pages()->resolve('module.page-type');
+```text
+node.page_type
+    -> PagesApi::definition()
+    -> module configuration validator
+    -> nested layout stages
+    -> definition executor
 ```
 
-The registry is frozen after application boot, exactly like routes, templates and content sources.
-
-Future PRs will build on this stable contract:
-
-1. request-scoped `$page->execute()` continuation;
-2. nested layouts;
-3. reusable Documents module;
-4. module-owned page type metadata/configuration schemas;
-5. Menu/Navigation module through generic extension contracts;
-6. Infosystem and Shop adapters implemented entirely in their modules.
+`NodeController` never branches on a module code and never imports a module class.
 
 ## `execute()`, `show()` and `view()` convention
 
@@ -144,3 +175,9 @@ The availability of `$menus` or `$documents` is provided by installed modules th
 All nested execution occurs inside one request-scoped `RenderContext`. Every executor/source must register the dependencies it actually uses. The resulting dependency graph is used for page cache and static-page invalidation.
 
 This makes dynamic rendering, page cache and static publishing different delivery modes of the same execution pipeline rather than separate rendering systems.
+
+## Remaining transition work
+
+The next Structure integration must consume `PagesApi::definitions()` and `PagesApi::default()` generically. It must not hard-code `documents.page` when creating a normal page. Module-specific provisioning of page resources belongs behind an extension contract, not in `StructureController`.
+
+After Structure no longer relies on the legacy Core content field, `core.content`, `CoreContentPageExecutor` and `nodes.content` can be removed in a separate cleanup migration.
