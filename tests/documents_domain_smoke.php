@@ -13,7 +13,12 @@ $root = dirname(__DIR__);
 $db = Database::connection();
 $migrations = new ModuleMigrationRunner($db, $root);
 $applied = $migrations->migrate('documents');
-if ($applied !== ['001_documents.sql'] && $applied !== []) {
+$validResults = [
+    [],
+    ['001_documents.sql', '002_migrate_node_content.sql'],
+    ['002_migrate_node_content.sql'],
+];
+if (!in_array($applied, $validResults, true)) {
     throw new RuntimeException('Unexpected documents module migration result.');
 }
 

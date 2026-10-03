@@ -47,6 +47,7 @@ require __DIR__ . '/layout_hierarchy_smoke.php';
 require __DIR__ . '/layout_code_smoke.php';
 require __DIR__ . '/node_page_type_schema_smoke.php';
 require __DIR__ . '/module_migration_smoke.php';
+require __DIR__ . '/documents_content_migration_smoke.php';
 require __DIR__ . '/documents_domain_smoke.php';
 require __DIR__ . '/documents_frontend_smoke.php';
 require __DIR__ . '/module_package_inventory_smoke.php';
