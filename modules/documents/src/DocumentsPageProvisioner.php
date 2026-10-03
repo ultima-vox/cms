@@ -17,8 +17,21 @@ final readonly class DocumentsPageProvisioner implements PageTypeProvisionerInte
 
     public function provision(PageTypeProvisioningContext $context): array
     {
-        $requested = $context->requestedConfiguration['document'] ?? null;
-        if (is_string($requested) && trim($requested) !== '') {
+        foreach (array_keys($context->requestedConfiguration) as $key) {
+            if ($key !== 'document') {
+                throw new RuntimeException(sprintf(
+                    'Unknown Documents provisioning configuration key: %s.',
+                    (string) $key,
+                ));
+            }
+        }
+
+        if (array_key_exists('document', $context->requestedConfiguration)) {
+            $requested = $context->requestedConfiguration['document'];
+            if (!is_string($requested) || trim($requested) === '') {
+                throw new RuntimeException('Documents provisioning requires a non-empty document code when specified.');
+            }
+
             $code = strtolower(trim($requested));
             if ($this->repository->findActiveByCode($context->siteId, $code) === null) {
                 throw new RuntimeException(sprintf(
