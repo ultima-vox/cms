@@ -71,7 +71,7 @@ WHERE n.page_type = 'core.content'
   )
   AND EXISTS (
       SELECT 1
-      FROM documents d
+      FROM inserted_documents d
       JOIN inserted_versions v ON v.document_id = d.id
       WHERE d.site_id = n.site_id
         AND d.code = 'node-' || n.id::text
