@@ -8,6 +8,7 @@ use Core\Extension\Core as ExtensionCore;
 use Core\Extension\ModuleLoader;
 use Core\Http\Request;
 use Core\Page\PageExecutionContext;
+use Core\Page\PageTypeProvisioningContext;
 use Core\Site\SiteContext;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderEngine;
@@ -38,6 +39,58 @@ try {
     $documentId = $repository->create(1, 'footer-contacts', 'Footer contacts');
     $versionId = $repository->createDraftVersion($documentId, '<p>Primary footer</p>');
     $repository->publishVersion($documentId, $versionId);
+
+    $autoProvisioned = $core->pages()->provisionConfiguration(
+        'documents.page',
+        new PageTypeProvisioningContext(
+            siteId: 1,
+            nodeId: 987654,
+            nodeName: 'Provisioned page',
+            nodeTitle: 'Provisioned title',
+            nodePath: '/provisioned-page/',
+        ),
+    );
+    if ($autoProvisioned !== ['document' => 'node-987654']) {
+        throw new RuntimeException('Documents provisioner returned unexpected automatic configuration.');
+    }
+
+    $autoDocument = $repository->findActiveByCode(1, 'node-987654');
+    if (!is_array($autoDocument) || ($autoDocument['name'] ?? null) !== 'Provisioned title') {
+        throw new RuntimeException('Documents provisioner did not create the automatic document.');
+    }
+    $autoVersion = $repository->currentPublishedVersion((int) $autoDocument['id']);
+    if (!is_array($autoVersion) || ($autoVersion['content'] ?? null) !== '') {
+        throw new RuntimeException('Documents provisioner did not publish the initial empty document version.');
+    }
+
+    $autoProvisionedAgain = $core->pages()->provisionConfiguration(
+        'documents.page',
+        new PageTypeProvisioningContext(
+            siteId: 1,
+            nodeId: 987654,
+            nodeName: 'Provisioned page',
+            nodeTitle: 'Provisioned title',
+            nodePath: '/provisioned-page/',
+        ),
+    );
+    if ($autoProvisionedAgain !== $autoProvisioned) {
+        throw new RuntimeException('Documents provisioner is not idempotent for an existing automatic document.');
+    }
+
+    $selectedProvisioned = $core->pages()->provisionConfiguration(
+        'documents.page',
+        new PageTypeProvisioningContext(
+            siteId: 1,
+            nodeId: 987655,
+            nodeName: 'Selected document page',
+            nodeTitle: 'Selected document page',
+            nodePath: '/selected-document/',
+            requestedConfiguration: ['document' => 'footer-contacts'],
+        ),
+    );
+    if ($selectedProvisioned !== ['document' => 'footer-contacts']) {
+        throw new RuntimeException('Documents provisioner did not preserve an explicitly selected document.');
+    }
 
     $secondSite = $db->query(
         "INSERT INTO sites (code, name) VALUES ('documents-smoke', 'Documents Smoke') RETURNING id"
