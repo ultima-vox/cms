@@ -28,7 +28,7 @@ final class DocumentsFacade
             return $this->resolved[$code];
         }
 
-        $site = $this->context->variable('site');
+        $site = $this->context->variables()['site'] ?? null;
         if (!$site instanceof SiteContext) {
             throw new RuntimeException('Documents facade requires the current site context.');
         }
