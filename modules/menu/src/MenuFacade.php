@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace UltimaVox\Modules\Menu;
 
+use Core\Extension\Api\ExtensionsApi;
 use Core\View\Render\TemplateFacadeContext;
 use UltimaVox\Modules\Menu\Repository\MenuRepository;
 
@@ -13,6 +14,7 @@ final readonly class MenuFacade
     public function __construct(
         private TemplateFacadeContext $context,
         private MenuRepository $repository,
+        private ExtensionsApi $extensions,
         private array $menu,
     ) {
     }
@@ -44,6 +46,11 @@ final readonly class MenuFacade
 
     private function source(): MenuSource
     {
-        return new MenuSource($this->context, $this->repository, $this->menu);
+        return new MenuSource(
+            $this->context,
+            $this->repository,
+            $this->extensions,
+            $this->menu,
+        );
     }
 }

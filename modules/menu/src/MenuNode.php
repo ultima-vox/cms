@@ -8,7 +8,7 @@ final readonly class MenuNode
 {
     /** @param list<MenuNode> $children */
     public function __construct(
-        public int $id,
+        public string $key,
         public string $label,
         public string $url,
         public bool $current,

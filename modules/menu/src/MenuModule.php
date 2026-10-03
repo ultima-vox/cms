@@ -21,11 +21,13 @@ final readonly class MenuModule implements ModuleInterface
             'modules/menu/templates/default.php',
         );
 
+        $extensions = $core->extensions();
         $core->templates()->facade(
             'menus',
             static fn (TemplateFacadeContext $context): MenusFacade => new MenusFacade(
                 $context,
                 $repository,
+                $extensions,
             ),
         );
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace UltimaVox\Modules\Menu;
 
+use Core\Extension\Api\ExtensionsApi;
 use Core\Site\SiteContext;
 use Core\View\Render\TemplateFacadeContext;
 use RuntimeException;
@@ -17,6 +18,7 @@ final class MenusFacade
     public function __construct(
         private readonly TemplateFacadeContext $context,
         private readonly MenuRepository $repository,
+        private readonly ExtensionsApi $extensions,
     ) {
     }
 
@@ -40,6 +42,7 @@ final class MenusFacade
         return $this->resolved[$code] = new MenuFacade(
             $this->context,
             $this->repository,
+            $this->extensions,
             $menu,
         );
     }

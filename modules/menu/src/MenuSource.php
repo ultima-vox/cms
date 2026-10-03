@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace UltimaVox\Modules\Menu;
 
+use Core\Extension\Api\ExtensionsApi;
+use Core\Site\SiteContext;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderSource;
 use Core\View\Render\TemplateFacadeContext;
+use JsonException;
 use RuntimeException;
 use UltimaVox\Modules\Menu\Repository\MenuRepository;
 
@@ -20,6 +23,7 @@ final class MenuSource extends RenderSource
     public function __construct(
         private readonly TemplateFacadeContext $templateContext,
         private readonly MenuRepository $repository,
+        private readonly ExtensionsApi $extensions,
         private readonly array $menu,
     ) {
         parent::__construct($templateContext->renderEngine());
@@ -50,9 +54,27 @@ final class MenuSource extends RenderSource
             throw new RuntimeException('Menu render source requires a site-scoped menu.');
         }
 
-        $rows = $this->repository->findLinkItems($menuId);
-        $currentPath = $this->currentPath();
-        $items = $this->buildTree($rows, $currentPath);
+        $variables = $this->templateContext->variables();
+        $site = $variables['site'] ?? null;
+        if (!$site instanceof SiteContext || $site->id !== $siteId) {
+            throw new RuntimeException('Menu render source requires the matching current site context.');
+        }
+        $currentNode = $variables['node'] ?? [];
+        if (!is_array($currentNode)) {
+            $currentNode = [];
+        }
+
+        $rows = $this->repository->findItems($menuId);
+        $currentPath = $this->normalizeInternalPath((string) ($currentNode['path'] ?? '/')) ?? '/';
+        $sourceContext = new NavigationSourceContext(
+            $site,
+            $context,
+            $currentNode,
+            $menuId,
+            $code,
+        );
+        $navigation = $this->buildNavigationTree($rows, $sourceContext);
+        $items = $this->decorateNodes($navigation, $currentPath);
 
         $context->dependency('menu:' . $menuId);
         $context->dependency('site:' . $siteId . ':menu:' . $menuId);
@@ -78,21 +100,11 @@ final class MenuSource extends RenderSource
         );
     }
 
-    private function currentPath(): string
-    {
-        $node = $this->templateContext->variables()['node'] ?? null;
-        if (!is_array($node)) {
-            return '/';
-        }
-
-        return $this->normalizeInternalPath((string) ($node['path'] ?? '/')) ?? '/';
-    }
-
     /**
      * @param list<array<string, mixed>> $rows
-     * @return list<MenuNode>
+     * @return list<NavigationNode>
      */
-    private function buildTree(array $rows, string $currentPath): array
+    private function buildNavigationTree(array $rows, NavigationSourceContext $sourceContext): array
     {
         /** @var array<int, list<array<string, mixed>>> $children */
         $children = [];
@@ -109,7 +121,7 @@ final class MenuSource extends RenderSource
             bool $parentVisible,
             int $depth,
             array $trail,
-        ) use (&$walk, &$visited, $children, $currentPath): array {
+        ) use (&$walk, &$visited, $children, $sourceContext): array {
             if ($depth > self::MAX_DEPTH) {
                 throw new RuntimeException('Menu tree exceeds the maximum depth.');
             }
@@ -128,26 +140,35 @@ final class MenuSource extends RenderSource
                 $nextTrail = $trail;
                 $nextTrail[$id] = true;
                 $visible = $parentVisible && $this->databaseBoolean($row['is_active'] ?? false);
+                $kind = (string) ($row['kind'] ?? '');
+
+                if ($kind === 'source') {
+                    if (($children[$id] ?? []) !== []) {
+                        throw new RuntimeException('Dynamic Menu source items cannot contain child menu items.');
+                    }
+                    if (!$visible) {
+                        continue;
+                    }
+
+                    foreach ($this->resolveSource($row, $sourceContext) as $node) {
+                        $result[] = $node;
+                    }
+                    continue;
+                }
+
+                if ($kind !== 'link') {
+                    throw new RuntimeException(sprintf('Unsupported Menu item kind: %s.', $kind));
+                }
+
                 $childNodes = $walk($id, $visible, $depth + 1, $nextTrail);
                 if (!$visible) {
                     continue;
                 }
 
-                $url = trim((string) ($row['url'] ?? ''));
-                $normalizedUrl = $this->normalizeInternalPath($url);
-                $current = $normalizedUrl !== null && $normalizedUrl === $currentPath;
-                $active = $current
-                    || ($normalizedUrl !== null
-                        && $normalizedUrl !== '/'
-                        && str_starts_with($currentPath, $normalizedUrl))
-                    || $this->hasActiveChild($childNodes);
-
-                $result[] = new MenuNode(
-                    $id,
+                $result[] = new NavigationNode(
+                    'menu-item:' . $id,
                     (string) ($row['label'] ?? ''),
-                    $url,
-                    $current,
-                    $active,
+                    trim((string) ($row['url'] ?? '')),
                     $childNodes,
                 );
             }
@@ -161,6 +182,89 @@ final class MenuSource extends RenderSource
         }
 
         return $tree;
+    }
+
+    /** @param array<string, mixed> $row @return list<NavigationNode> */
+    private function resolveSource(array $row, NavigationSourceContext $context): array
+    {
+        $sourceCode = strtolower(trim((string) ($row['source_code'] ?? '')));
+        if (!preg_match('/^[a-z][a-z0-9._-]{0,127}$/', $sourceCode)) {
+            throw new RuntimeException('Dynamic Menu source code is invalid.');
+        }
+
+        $source = $this->extensions->get(NavigationSourceInterface::EXTENSION_POINT, $sourceCode);
+        if (!$source instanceof NavigationSourceInterface) {
+            throw new RuntimeException(sprintf(
+                'Menu navigation source "%s" must implement NavigationSourceInterface.',
+                $sourceCode,
+            ));
+        }
+
+        $nodes = $source->resolve($context, $this->decodeSourceConfiguration($row['source_config'] ?? null));
+        foreach ($nodes as $node) {
+            if (!$node instanceof NavigationNode) {
+                throw new RuntimeException(sprintf(
+                    'Menu navigation source "%s" returned an invalid node.',
+                    $sourceCode,
+                ));
+            }
+        }
+
+        return $nodes;
+    }
+
+    /** @return array<string, mixed> */
+    private function decodeSourceConfiguration(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        if (!is_string($value) || trim($value) === '') {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            throw new RuntimeException('Menu source configuration contains invalid JSON.', 0, $exception);
+        }
+
+        if (!is_array($decoded) || ($decoded !== [] && array_is_list($decoded))) {
+            throw new RuntimeException('Menu source configuration must be a JSON object.');
+        }
+
+        return $decoded;
+    }
+
+    /** @param list<NavigationNode> $nodes @return list<MenuNode> */
+    private function decorateNodes(array $nodes, string $currentPath, int $depth = 1): array
+    {
+        if ($depth > self::MAX_DEPTH) {
+            throw new RuntimeException('Resolved Menu navigation exceeds the maximum depth.');
+        }
+
+        $result = [];
+        foreach ($nodes as $node) {
+            $children = $this->decorateNodes($node->children, $currentPath, $depth + 1);
+            $normalizedUrl = $this->normalizeInternalPath($node->url);
+            $current = $normalizedUrl !== null && $normalizedUrl === $currentPath;
+            $active = $current
+                || ($normalizedUrl !== null
+                    && $normalizedUrl !== '/'
+                    && str_starts_with($currentPath, $normalizedUrl))
+                || $this->hasActiveChild($children);
+
+            $result[] = new MenuNode(
+                $node->key,
+                $node->label,
+                $node->url,
+                $current,
+                $active,
+                $children,
+            );
+        }
+
+        return $result;
     }
 
     /** @param list<MenuNode> $nodes */
