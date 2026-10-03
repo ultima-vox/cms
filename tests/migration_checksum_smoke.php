@@ -50,6 +50,7 @@ require __DIR__ . '/module_migration_smoke.php';
 require __DIR__ . '/documents_content_migration_smoke.php';
 require __DIR__ . '/documents_domain_smoke.php';
 require __DIR__ . '/documents_frontend_smoke.php';
+require __DIR__ . '/structure_page_provisioning_smoke.php';
 require __DIR__ . '/module_package_inventory_smoke.php';
 require __DIR__ . '/module_package_purge_smoke.php';
 require __DIR__ . '/installer_state_smoke.php';
