@@ -13,7 +13,15 @@ final readonly class MenuModule implements ModuleInterface
 {
     public function register(Core $core): void
     {
-        $repository = new MenuRepository($core->runtime()->database());
+        $db = $core->runtime()->database();
+        $repository = new MenuRepository($db);
+        $extensions = $core->extensions();
+
+        $extensions->register(
+            NavigationSourceInterface::EXTENSION_POINT,
+            'structure.children',
+            new StructureNavigationSource($db),
+        );
 
         $core->templates()->view(
             'menu.default',
@@ -21,7 +29,6 @@ final readonly class MenuModule implements ModuleInterface
             'modules/menu/templates/default.php',
         );
 
-        $extensions = $core->extensions();
         $core->templates()->facade(
             'menus',
             static fn (TemplateFacadeContext $context): MenusFacade => new MenusFacade(
