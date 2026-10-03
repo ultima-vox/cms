@@ -76,6 +76,7 @@ A page type is more than an executor. It is a module-owned declaration containin
 - terminal `PageExecutorInterface`;
 - JSON-Schema-compatible configuration metadata for admin/API consumers;
 - optional `PageConfigurationValidatorInterface` for authoritative normalization and validation;
+- optional `PageTypeProvisionerInterface` for creating or binding resources after a node is persisted;
 - deterministic sorting metadata;
 - optional default-page marker.
 
@@ -94,6 +95,7 @@ $core->pages()->type(new PageTypeDefinition(
         'additionalProperties' => false,
     ],
     configurationValidator: $validator,
+    provisioner: $provisioner,
 ));
 ```
 
@@ -104,6 +106,27 @@ Only one registered page type may declare itself as the default. Core does not c
 The registry is frozen after application boot, exactly like routes, templates and content sources.
 
 `PagesApi::executor()` remains a transitional shorthand for executor-only extensions; first-party modules use the full `PageTypeDefinition` contract.
+
+## Page resource provisioning
+
+Some page types need a module-owned resource before their configuration is valid. A Documents page may need a Document; a future Shop page may bind an existing shop/category; another module may not need provisioning at all.
+
+Core exposes only the generic provisioning context and registry call:
+
+```text
+persist Structure node
+    -> obtain node id/path/site
+    -> PagesApi::provisionConfiguration(page_type, context)
+    -> module provisioner (optional)
+    -> module validator
+    -> persist final page_config
+```
+
+The caller must perform node persistence, module provisioning and final `page_config` persistence inside one database transaction whenever the provisioner uses the shared application database. Module repositories must therefore participate in an existing transaction rather than commit it themselves.
+
+Provisioning is idempotent where practical. For example, the Documents default provisioner reuses an already existing `node-<id>` document on retry instead of creating a duplicate.
+
+Provisioning does **not** define destructive lifecycle semantics. Removing a Structure node or changing its page type must not implicitly purge module-owned business data. Detach/archive/purge behavior, when needed, is a separate explicit contract and destructive purge remains protected.
 
 ## Page execution contract
 
@@ -178,6 +201,6 @@ This makes dynamic rendering, page cache and static publishing different deliver
 
 ## Remaining transition work
 
-The next Structure integration must consume `PagesApi::definitions()` and `PagesApi::default()` generically. It must not hard-code `documents.page` when creating a normal page. Module-specific provisioning of page resources belongs behind an extension contract, not in `StructureController`.
+The next Structure integration must consume `PagesApi::definitions()` and `PagesApi::default()` generically. It must persist the node first, invoke generic provisioning and store the returned `page_config` without knowing which module handled it.
 
 After Structure no longer relies on the legacy Core content field, `core.content`, `CoreContentPageExecutor` and `nodes.content` can be removed in a separate cleanup migration.
