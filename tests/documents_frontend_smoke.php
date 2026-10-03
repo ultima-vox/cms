@@ -39,10 +39,14 @@ try {
     $versionId = $repository->createDraftVersion($documentId, '<p>Primary footer</p>');
     $repository->publishVersion($documentId, $versionId);
 
-    $secondSiteId = (int) $db->query("SELECT id FROM sites WHERE code = 'second'")->fetchColumn();
+    $secondSite = $db->query(
+        "INSERT INTO sites (code, name) VALUES ('documents-smoke', 'Documents Smoke') RETURNING id"
+    );
+    $secondSiteId = (int) $secondSite->fetchColumn();
     if ($secondSiteId < 1) {
-        throw new RuntimeException('Second smoke-test site is missing.');
+        throw new RuntimeException('Documents smoke-test site was not created.');
     }
+
     $secondDocumentId = $repository->create($secondSiteId, 'footer-contacts', 'Second footer');
     $secondVersionId = $repository->createDraftVersion($secondDocumentId, '<p>Second footer</p>');
     $repository->publishVersion($secondDocumentId, $secondVersionId);
@@ -90,7 +94,7 @@ try {
     $executor = $core->pages()->resolve('documents.page');
     $pageHtml = $executor->execute(new PageExecutionContext(
         new Request('GET', '/document', '/document', [], [], [], []),
-        new SiteContext($secondSiteId, 'second', 'Second Site', 'second.test'),
+        new SiteContext($secondSiteId, 'documents-smoke', 'Documents Smoke', 'documents-smoke.test'),
         ['id' => 2, 'site_id' => $secondSiteId],
         ['document' => 'footer-contacts'],
         $pageContext,
