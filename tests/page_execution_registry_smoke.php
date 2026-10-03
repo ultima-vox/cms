@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Core\Extension\Api\PagesApi;
 use Core\Http\Request;
+use Core\Page\PageConfigurationValidatorInterface;
 use Core\Page\PageExecutionContext;
 use Core\Page\PageExecutorInterface;
+use Core\Page\PageTypeDefinition;
 use Core\Site\SiteContext;
 use Core\View\Render\RenderContext;
 use Core\View\SafeHtml;
@@ -21,15 +23,53 @@ $executor = new class implements PageExecutorInterface {
         return SafeHtml::fromTrustedStorage('<p>page-executor-ok</p>');
     }
 };
+$validator = new class implements PageConfigurationValidatorInterface {
+    public function validate(array $configuration): array
+    {
+        $limit = $configuration['limit'] ?? 10;
+        if (is_string($limit) && ctype_digit($limit)) {
+            $limit = (int) $limit;
+        }
+        if (!is_int($limit) || $limit < 1 || $limit > 100) {
+            throw new RuntimeException('Smoke page limit is invalid.');
+        }
 
-$pages->executor('smoke.page', $executor);
+        return ['limit' => $limit];
+    }
+};
+$definition = new PageTypeDefinition(
+    code: 'SMOKE.PAGE',
+    name: 'Smoke page',
+    executor: $executor,
+    configurationSchema: [
+        'type' => 'object',
+        'properties' => [
+            'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100],
+        ],
+        'additionalProperties' => false,
+    ],
+    configurationValidator: $validator,
+    isDefault: true,
+    sorting: 20,
+    description: 'Smoke page type.',
+);
+$pages->type($definition);
 
 if (!$pages->has('SMOKE.PAGE')) {
-    throw new RuntimeException('Page executor registry did not normalize executor codes.');
+    throw new RuntimeException('Page type registry did not normalize type codes.');
 }
 
-if ($pages->resolve('smoke.page') !== $executor) {
-    throw new RuntimeException('Page executor registry returned an unexpected executor instance.');
+if ($pages->definition('smoke.page') !== $definition || $pages->resolve('smoke.page') !== $executor) {
+    throw new RuntimeException('Page type registry returned an unexpected definition or executor.');
+}
+
+if ($pages->default() !== $definition) {
+    throw new RuntimeException('Page type registry did not expose the registered default type.');
+}
+
+$normalized = $pages->validateConfiguration('smoke.page', ['limit' => '25']);
+if ($normalized !== ['limit' => 25]) {
+    throw new RuntimeException('Page type configuration validator did not normalize configuration.');
 }
 
 $renderContext = new RenderContext();
@@ -45,7 +85,7 @@ $context = new PageExecutionContext(
     ),
     new SiteContext(1, 'default', 'Default site', 'example.test'),
     ['id' => 10, 'path' => '/demo/'],
-    ['view' => 'smoke.default'],
+    $normalized,
     $renderContext,
 );
 
@@ -59,30 +99,50 @@ if (!in_array('page-executor:smoke', $renderContext->dependencies(), true)) {
 }
 
 try {
-    $pages->executor('smoke.page', $executor);
-    throw new RuntimeException('Page executor registry accepted a duplicate executor code.');
+    $pages->type($definition);
+    throw new RuntimeException('Page type registry accepted a duplicate type code.');
 } catch (RuntimeException $exception) {
-    if ($exception->getMessage() === 'Page executor registry accepted a duplicate executor code.') {
+    if ($exception->getMessage() === 'Page type registry accepted a duplicate type code.') {
         throw $exception;
     }
 }
 
 try {
-    $pages->resolve('missing.page');
-    throw new RuntimeException('Page executor registry resolved an unknown executor code.');
+    $pages->type(new PageTypeDefinition(
+        code: 'second.default',
+        name: 'Second default',
+        executor: $executor,
+        isDefault: true,
+    ));
+    throw new RuntimeException('Page type registry accepted a second default type.');
 } catch (RuntimeException $exception) {
-    if ($exception->getMessage() === 'Page executor registry resolved an unknown executor code.') {
+    if ($exception->getMessage() === 'Page type registry accepted a second default type.') {
         throw $exception;
     }
+}
+
+try {
+    $pages->definition('missing.page');
+    throw new RuntimeException('Page type registry resolved an unknown type code.');
+} catch (RuntimeException $exception) {
+    if ($exception->getMessage() === 'Page type registry resolved an unknown type code.') {
+        throw $exception;
+    }
+}
+
+$pages->executor('legacy.shorthand', $executor);
+$definitions = $pages->definitions();
+if (count($definitions) !== 2 || $definitions[0]->code !== 'smoke.page') {
+    throw new RuntimeException('Page type definitions were not exposed in deterministic order.');
 }
 
 $pages->freeze();
 
 try {
     $pages->executor('late.page', $executor);
-    throw new RuntimeException('Frozen page executor registry accepted late registration.');
+    throw new RuntimeException('Frozen page type registry accepted late registration.');
 } catch (LogicException $exception) {
-    if ($exception->getMessage() === 'Frozen page executor registry accepted late registration.') {
+    if ($exception->getMessage() === 'Frozen page type registry accepted late registration.') {
         throw $exception;
     }
 }
