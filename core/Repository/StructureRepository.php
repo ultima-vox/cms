@@ -86,7 +86,7 @@ final class StructureRepository
                 content, meta_description, status, is_active, sorting, publish_at
             ) VALUES (
                 :site_id, :parent_id, :layout_id, :name, :slug, :path, :title,
-                :content, :meta_description, :status, :is_active, :sorting, :publish_at
+                :content, :meta_description, :status, CAST(:is_active AS BOOLEAN), :sorting, :publish_at
             )
             RETURNING id
             SQL
@@ -102,7 +102,7 @@ final class StructureRepository
             'content' => $data['content'],
             'meta_description' => $data['meta_description'],
             'status' => $data['status'],
-            'is_active' => $data['is_active'],
+            'is_active' => (bool) $data['is_active'] ? 'true' : 'false',
             'sorting' => $data['sorting'],
             'publish_at' => $data['publish_at'],
         ]);
@@ -140,7 +140,7 @@ final class StructureRepository
                     content = :content,
                     meta_description = :meta_description,
                     status = :status,
-                    is_active = :is_active,
+                    is_active = CAST(:is_active AS BOOLEAN),
                     sorting = :sorting,
                     publish_at = :publish_at,
                     updated_at = CURRENT_TIMESTAMP
@@ -160,7 +160,7 @@ final class StructureRepository
                 'content' => $data['content'],
                 'meta_description' => $data['meta_description'],
                 'status' => $data['status'],
-                'is_active' => $data['is_active'],
+                'is_active' => (bool) $data['is_active'] ? 'true' : 'false',
                 'sorting' => $data['sorting'],
                 'publish_at' => $data['publish_at'],
             ]);
