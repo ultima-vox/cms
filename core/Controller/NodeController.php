@@ -76,17 +76,20 @@ final class NodeController
         }
 
         $selection = PageTypeSelection::fromNode($node);
+        $definition = $this->pages->definition($selection->code);
+        $configuration = $definition->validateConfiguration($selection->configuration);
+
         $renderContext = new RenderContext();
         $renderContext->dependency('site:' . $site->id);
         $renderContext->dependency('node:' . (int) $node['id']);
         $renderContext->dependency('site:' . $site->id . ':node:' . (int) $node['id']);
-        $renderContext->dependency('page_type:' . $selection->code);
+        $renderContext->dependency('page_type:' . $definition->code);
 
         $context = new PageExecutionContext(
             $request,
             $site,
             $node,
-            $selection->configuration,
+            $configuration,
             $renderContext,
         );
 
@@ -101,7 +104,7 @@ final class NodeController
         foreach ($layoutDefinitions as $layout) {
             $stages[] = new LayoutExecutionStage($layout, $this->view);
         }
-        $stages[] = new PageExecutorStage($this->pages->resolve($selection->code));
+        $stages[] = new PageExecutorStage($definition->executor);
 
         $page = new PageRuntime(
             $context,
