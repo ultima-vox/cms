@@ -18,12 +18,29 @@ require_once dirname(__DIR__) . '/modules/documents/autoload.php';
 $rootPath = dirname(__DIR__);
 $db = Database::connection();
 
-$rootStatement = $db->query(
-    'SELECT id FROM nodes WHERE site_id = 1 AND parent_id IS NULL ORDER BY id LIMIT 1'
+$siteStatement = $db->query(
+    "INSERT INTO sites (code, name) VALUES ('structure-provisioning-smoke', 'Structure Provisioning Smoke') RETURNING id"
 );
+$siteId = (int) $siteStatement->fetchColumn();
+if ($siteId < 1) {
+    throw new RuntimeException('Structure provisioning smoke site was not created.');
+}
+
+$rootStatement = $db->prepare(
+    <<<'SQL'
+    INSERT INTO nodes (
+        site_id, parent_id, name, slug, path, title, content, status, page_type, page_config
+    )
+    VALUES (
+        :site_id, NULL, 'Provisioning Root', '', '/', 'Provisioning Root', '', 'draft', 'fixture.root', '{}'::jsonb
+    )
+    RETURNING id
+    SQL
+);
+$rootStatement->execute(['site_id' => $siteId]);
 $rootNodeId = (int) $rootStatement->fetchColumn();
 if ($rootNodeId < 1) {
-    throw new RuntimeException('Structure provisioning smoke requires the default site root node.');
+    throw new RuntimeException('Structure provisioning smoke root node was not created.');
 }
 
 $core = new ExtensionCore(new RuntimeApi($db, $rootPath));
@@ -31,7 +48,7 @@ $core = new ExtensionCore(new RuntimeApi($db, $rootPath));
 (new ModuleLoader($rootPath))->load($core);
 $core->freeze();
 
-$structure = new StructureRepository($db, 1);
+$structure = new StructureRepository($db, $siteId);
 $service = new StructurePageProvisioningService(
     $db,
     $structure,
@@ -54,60 +71,74 @@ $nodeData = static fn (string $slug, string $name): array => [
     'publish_at' => null,
 ];
 
-$db->beginTransaction();
 try {
-    $nodeId = $service->create($nodeData('page-provisioning-success', 'Provisioned page'));
-    $node = $structure->find($nodeId);
-    if (!is_array($node) || ($node['page_type'] ?? null) !== 'documents.page') {
-        throw new RuntimeException('Structure service did not select the registered default page type.');
+    $db->beginTransaction();
+    try {
+        $nodeId = $service->create($nodeData('page-provisioning-success', 'Provisioned page'));
+        $node = $structure->find($nodeId);
+        if (!is_array($node) || ($node['page_type'] ?? null) !== 'documents.page') {
+            throw new RuntimeException('Structure service did not select the registered default page type.');
+        }
+
+        $configuration = json_decode(
+            (string) ($node['page_config'] ?? '{}'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        );
+        $expectedCode = 'node-' . $nodeId;
+        if (!is_array($configuration) || ($configuration['document'] ?? null) !== $expectedCode) {
+            throw new RuntimeException('Structure service did not persist provisioned page configuration.');
+        }
+
+        $document = $documents->findActiveByCode($siteId, $expectedCode);
+        if (!is_array($document) || ($document['name'] ?? null) !== 'Provisioned page title') {
+            throw new RuntimeException('Default page provisioner did not create the module-owned resource.');
+        }
+
+        $published = $documents->currentPublishedVersion((int) $document['id']);
+        if (!is_array($published) || ($published['status'] ?? null) !== 'published') {
+            throw new RuntimeException('Default page provisioner did not publish an initial document version.');
+        }
+    } finally {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
     }
 
-    $configuration = json_decode(
-        (string) ($node['page_config'] ?? '{}'),
-        true,
-        512,
-        JSON_THROW_ON_ERROR,
+    $failedSlug = 'page-provisioning-rollback';
+    try {
+        $service->create(
+            $nodeData($failedSlug, 'Rollback page'),
+            'documents.page',
+            ['document' => 'missing-provisioning-document'],
+        );
+        throw new RuntimeException('Structure provisioning accepted a missing explicitly selected document.');
+    } catch (RuntimeException $exception) {
+        if ($exception->getMessage() === 'Structure provisioning accepted a missing explicitly selected document.') {
+            throw $exception;
+        }
+    }
+
+    $failedNode = $db->prepare(
+        'SELECT COUNT(*) FROM nodes WHERE site_id = :site_id AND slug = :slug'
     );
-    $expectedCode = 'node-' . $nodeId;
-    if (!is_array($configuration) || ($configuration['document'] ?? null) !== $expectedCode) {
-        throw new RuntimeException('Structure service did not persist provisioned page configuration.');
-    }
-
-    $document = $documents->findActiveByCode(1, $expectedCode);
-    if (!is_array($document) || ($document['name'] ?? null) !== 'Provisioned page title') {
-        throw new RuntimeException('Default page provisioner did not create the module-owned resource.');
-    }
-
-    $published = $documents->currentPublishedVersion((int) $document['id']);
-    if (!is_array($published) || ($published['status'] ?? null) !== 'published') {
-        throw new RuntimeException('Default page provisioner did not publish an initial document version.');
+    $failedNode->execute([
+        'site_id' => $siteId,
+        'slug' => $failedSlug,
+    ]);
+    if ((int) $failedNode->fetchColumn() !== 0) {
+        throw new RuntimeException('Failed page provisioning did not roll back the Structure node.');
     }
 } finally {
-    if ($db->inTransaction()) {
-        $db->rollBack();
-    }
-}
+    $deleteNodes = $db->prepare('DELETE FROM nodes WHERE site_id = :site_id');
+    $deleteNodes->execute(['site_id' => $siteId]);
 
-$failedSlug = 'page-provisioning-rollback';
-try {
-    $service->create(
-        $nodeData($failedSlug, 'Rollback page'),
-        'documents.page',
-        ['document' => 'missing-provisioning-document'],
-    );
-    throw new RuntimeException('Structure provisioning accepted a missing explicitly selected document.');
-} catch (RuntimeException $exception) {
-    if ($exception->getMessage() === 'Structure provisioning accepted a missing explicitly selected document.') {
-        throw $exception;
-    }
-}
+    $deleteDocuments = $db->prepare('DELETE FROM documents WHERE site_id = :site_id');
+    $deleteDocuments->execute(['site_id' => $siteId]);
 
-$failedNode = $db->prepare(
-    'SELECT COUNT(*) FROM nodes WHERE site_id = 1 AND slug = :slug'
-);
-$failedNode->execute(['slug' => $failedSlug]);
-if ((int) $failedNode->fetchColumn() !== 0) {
-    throw new RuntimeException('Failed page provisioning did not roll back the Structure node.');
+    $deleteSite = $db->prepare('DELETE FROM sites WHERE id = :site_id');
+    $deleteSite->execute(['site_id' => $siteId]);
 }
 
 fwrite(STDOUT, "STRUCTURE PAGE PROVISIONING OK\n");
