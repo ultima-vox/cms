@@ -45,7 +45,7 @@ jobs:
           coverage: none
 
       - name: Validate Composer metadata
-        run: composer validate --strict --no-check-lock
+        run: composer validate --strict
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -55,8 +55,16 @@ jobs:
           find core public templates tests modules -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l bin/console
 
-      - name: Legacy/admin Twig syntax check
+      - name: Native PHP template syntax check
         run: php bin/console templates:lint
+
+      - name: Twig-free architecture check
+        run: |
+          test -z "$(find core modules templates -type f -name '*.twig' -print -quit)"
+          ! grep -R -n --include='*.php' 'Twig\\' core modules
+          ! grep -R -n 'TwigRenderer\|TwigTemplateLinter\|AdminTwigRendererFactory' core modules tests bin
+          ! grep -n '"twig/twig"' composer.json composer.lock
+          ! grep -R -n 'name: Legacy/admin T[w]ig syntax check' .github/workflows bin
 
       - name: Extension and render runtime smoke test
         run: php tests/runtime_smoke.php

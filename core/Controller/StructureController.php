@@ -10,7 +10,7 @@ use Core\Repository\AuditLogRepository;
 use Core\Repository\StructureRepository;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
-use Core\View\TwigRenderer;
+use Core\View\AdminPhpRenderer;
 use RuntimeException;
 use Throwable;
 
@@ -20,7 +20,7 @@ final class StructureController
         private readonly AuthService $auth,
         private readonly StructureRepository $structure,
         private readonly AuditLogRepository $audit,
-        private readonly TwigRenderer $view,
+        private readonly AdminPhpRenderer $view,
     ) {
     }
 
@@ -32,7 +32,7 @@ final class StructureController
             return $denied;
         }
 
-        return Response::html($this->view->render('admin/structure/index.twig', [
+        return Response::html($this->view->render('admin/structure/index.php', [
             'nodes' => $this->flattenTree($this->structure->all()),
             'csrf_token' => Csrf::token(),
             'saved' => isset($request->query['saved']),
@@ -179,7 +179,7 @@ final class StructureController
             'publish_at' => null,
         ], $node ?? []);
 
-        return Response::html($this->view->render('admin/structure/form.twig', [
+        return Response::html($this->view->render('admin/structure/form.php', [
             'node' => $form,
             'nodes' => $this->flattenTree($this->structure->all()),
             'layouts' => $this->structure->layouts(),

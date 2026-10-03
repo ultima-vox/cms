@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 use Core\Site\SiteContext;
-use Core\View\TwigRenderer;
+use Core\View\AdminPhpRenderer;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 $rootPath = dirname(__DIR__);
-$coreTemplate = $rootPath . '/templates/admin/infosystems/index.twig';
+$coreTemplate = $rootPath . '/templates/admin/infosystems/index.php';
 $moduleTemplates = $rootPath . '/modules/infosystem/templates';
 
 if (is_file($coreTemplate)) {
@@ -16,7 +16,7 @@ if (is_file($coreTemplate)) {
 }
 
 $site = new SiteContext(1, 'default', 'Default site', 'localhost');
-$renderer = new TwigRenderer($rootPath, [$moduleTemplates]);
+$renderer = new AdminPhpRenderer($rootPath, [$moduleTemplates]);
 $renderer->addGlobal('admin_shell', new class ($site) {
     public function __construct(private readonly SiteContext $site)
     {
@@ -48,7 +48,7 @@ $renderer->addGlobal('admin_shell', new class ($site) {
     }
 });
 
-$html = $renderer->render('admin/infosystems/index.twig', [
+$html = $renderer->render('admin/infosystems/index.php', [
     'deleted' => false,
     'infosystems' => [],
 ]);

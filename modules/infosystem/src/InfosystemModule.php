@@ -17,7 +17,7 @@ use Core\Repository\StructureRepository;
 use Core\Repository\UserRepository;
 use Core\Security\AuthService;
 use Core\Security\PermissionGate;
-use Core\View\AdminTwigRendererFactory;
+use Core\View\AdminPhpRendererFactory;
 use Core\View\Render\RenderNodeInterface;
 use Core\View\Render\TemplateFacadeContext;
 use RuntimeException;
@@ -123,7 +123,7 @@ final class InfosystemModule implements ModuleInterface
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
-        $twig = (new AdminTwigRendererFactory(
+        $adminView = (new AdminPhpRendererFactory(
             $core->runtime()->rootPath(),
             $auth,
             $core->admin(),
@@ -135,13 +135,13 @@ final class InfosystemModule implements ModuleInterface
             $management,
             new FieldSchema(),
             new AuditLogRepository($db),
-            $twig,
+            $adminView,
         );
         $listController = new InfosystemItemListController(
             $auth,
             $management,
             new InfosystemItemSearchRepository($db),
-            $twig,
+            $adminView,
         );
         $bindingController = new InfosystemBindingController(
             $auth,
@@ -149,7 +149,7 @@ final class InfosystemModule implements ModuleInterface
             new StructureRepository($db, $siteId),
             $bindings,
             $siteId,
-            $twig,
+            $adminView,
         );
         $gate = new PermissionGate($auth);
         $html = new HtmlSanitizingHandler(new HtmlSanitizer());

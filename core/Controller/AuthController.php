@@ -9,13 +9,13 @@ use Core\Http\Response;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
 use Core\Security\LoginStatus;
-use Core\View\TwigRenderer;
+use Core\View\AdminPhpRenderer;
 
 final class AuthController
 {
     public function __construct(
         private readonly AuthService $auth,
-        private readonly TwigRenderer $view,
+        private readonly AdminPhpRenderer $view,
     ) {
     }
 
@@ -28,7 +28,7 @@ final class AuthController
             return Response::redirect('/admin');
         }
 
-        return Response::html($this->view->render('admin/login.twig', [
+        return Response::html($this->view->render('admin/login.php', [
             'csrf_token' => Csrf::token(),
             'error' => null,
         ]));
@@ -65,7 +65,7 @@ final class AuthController
             ? 'Слишком много попыток входа. Повторите позже.'
             : 'Неверный email или пароль.';
 
-        return Response::html($this->view->render('admin/login.twig', [
+        return Response::html($this->view->render('admin/login.php', [
             'csrf_token' => Csrf::token(),
             'error' => $error,
             'email' => $email,

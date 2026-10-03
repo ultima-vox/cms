@@ -11,7 +11,6 @@ use Core\Extension\ModulePackageLifecycle;
 use Core\Extension\ModulePackagePurger;
 use Core\MigrationRunner;
 use Core\View\PhpTemplateLinter;
-use Core\View\TwigTemplateLinter;
 use Dotenv\Dotenv;
 
 $rootPath = dirname(__DIR__);
@@ -226,16 +225,12 @@ switch ($command) {
             (new PhpTemplateLinter($rootPath . '/templates'))->lint(),
             (new PhpTemplateLinter($rootPath . '/modules'))->lint(),
         );
-        $twigChecked = array_merge(
-            (new TwigTemplateLinter($rootPath . '/templates'))->lint(),
-            (new TwigTemplateLinter($rootPath . '/modules'))->lint(),
-        );
         fwrite(
             STDOUT,
             sprintf(
-                "Templates OK: %d PHP/HTML template(s), %d Twig admin/legacy template(s), including module-owned templates.\n",
+                "Templates OK: %d native PHP template(s), including module-owned templates.
+",
                 count($phpChecked),
-                count($twigChecked),
             ),
         );
         exit(0);
@@ -307,7 +302,7 @@ switch ($command) {
             "  extensions:disable <code>  Disable a synchronized module\n" .
             "  modules:list               Validate and list discovered module manifests\n" .
             "  health                     Check database connectivity\n" .
-            "  templates:lint             Parse core and module-owned PHP/Twig templates\n" .
+            "  templates:lint             Parse core and module-owned native PHP templates\n" .
             "  user:create                Create the initial super administrator\n"
         );
         exit($command === 'help' ? 0 : 1);
