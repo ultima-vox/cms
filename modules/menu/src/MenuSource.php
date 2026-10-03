@@ -229,7 +229,7 @@ final class MenuSource extends RenderSource
             throw new RuntimeException('Menu source configuration contains invalid JSON.', 0, $exception);
         }
 
-        if (!is_array($decoded) || array_is_list($decoded)) {
+        if (!is_array($decoded) || ($decoded !== [] && array_is_list($decoded))) {
             throw new RuntimeException('Menu source configuration must be a JSON object.');
         }
 
