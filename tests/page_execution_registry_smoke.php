@@ -132,7 +132,9 @@ try {
 
 $pages->executor('legacy.shorthand', $executor);
 $definitions = $pages->definitions();
-if (count($definitions) !== 2 || $definitions[0]->code !== 'smoke.page') {
+if (count($definitions) !== 2
+    || $definitions[0]->code !== 'legacy.shorthand'
+    || $definitions[1]->code !== 'smoke.page') {
     throw new RuntimeException('Page type definitions were not exposed in deterministic order.');
 }
 
