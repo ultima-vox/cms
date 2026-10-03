@@ -13,13 +13,13 @@ use Core\Repository\AuditLogRepository;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
 use Core\Version;
-use Core\View\TwigRenderer;
+use Core\View\AdminPhpRenderer;
 
 final class AdminController
 {
     public function __construct(
         private readonly AuthService $auth,
-        private readonly TwigRenderer $view,
+        private readonly AdminPhpRenderer $view,
         private readonly AdminApi $admin,
         private readonly SitesApi $sites,
         private readonly AuditLogRepository $audit,
@@ -44,7 +44,7 @@ final class AdminController
             fn (AdminNavigationItem $item): bool => $item->permission === null || $this->auth->can($item->permission),
         ));
 
-        return Response::html($this->view->render('admin/index.twig', [
+        return Response::html($this->view->render('admin/index.php', [
             'csrf_token' => Csrf::token(),
             'user' => $user,
             'navigation' => $navigation,

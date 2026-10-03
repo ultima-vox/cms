@@ -9,7 +9,7 @@ use Core\Http\Response;
 use Core\Repository\AuditLogRepository;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
-use Core\View\TwigRenderer;
+use Core\View\AdminPhpRenderer;
 use RuntimeException;
 use Throwable;
 use UltimaVox\Modules\Infosystem\FieldSchema;
@@ -22,7 +22,7 @@ final class InfosystemController
         private readonly InfosystemManagementRepository $infosystems,
         private readonly FieldSchema $fieldSchema,
         private readonly AuditLogRepository $audit,
-        private readonly TwigRenderer $view,
+        private readonly AdminPhpRenderer $view,
     ) {
     }
 
@@ -34,7 +34,7 @@ final class InfosystemController
             return $denied;
         }
 
-        return Response::html($this->view->render('admin/infosystems/index.twig', [
+        return Response::html($this->view->render('admin/infosystems/index.php', [
             'infosystems' => $this->infosystems->all(),
             'deleted' => isset($request->query['deleted']),
         ]));
@@ -167,7 +167,7 @@ final class InfosystemController
             return Response::html('<h1>404 Not Found</h1>', 404);
         }
 
-        return Response::html($this->view->render('admin/infosystems/manage.twig', [
+        return Response::html($this->view->render('admin/infosystems/manage.php', [
             'infosystem' => $system,
             'groups' => $this->flattenGroups($this->infosystems->groups($id)),
             'items' => $this->infosystems->items($id),
@@ -442,7 +442,7 @@ final class InfosystemController
             $form['field_schema'] = $form['fields'];
         }
 
-        return Response::html($this->view->render('admin/infosystems/form.twig', [
+        return Response::html($this->view->render('admin/infosystems/form.php', [
             'infosystem' => $form,
             'csrf_token' => Csrf::token(),
             'error' => $error,
@@ -463,7 +463,7 @@ final class InfosystemController
             'is_active' => true,
         ], $group ?? []);
 
-        return Response::html($this->view->render('admin/infosystems/group_form.twig', [
+        return Response::html($this->view->render('admin/infosystems/group_form.php', [
             'infosystem' => $system,
             'group' => $form,
             'groups' => $this->flattenGroups($this->infosystems->groups((int) $system['id'])),
@@ -500,7 +500,7 @@ final class InfosystemController
             $form['properties'] = $item['properties'];
         }
 
-        return Response::html($this->view->render('admin/infosystems/item_form.twig', [
+        return Response::html($this->view->render('admin/infosystems/item_form.php', [
             'infosystem' => $system,
             'item' => $form,
             'fields' => is_array($system['field_schema'] ?? null) ? $system['field_schema'] : [],

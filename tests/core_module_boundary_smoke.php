@@ -71,11 +71,11 @@ foreach ($coreSources as $path) {
     }
 }
 
-$structureTemplate = file_get_contents($root . '/templates/admin/structure/form.twig');
+$structureTemplate = file_get_contents($root . '/templates/admin/structure/form.php');
 if ($structureTemplate === false) {
     throw new RuntimeException('Unable to read structure form template.');
 }
-foreach (['name="infosystem_id"', 'node.infosystem_id', 'infosystem_name'] as $forbidden) {
+foreach (['name="infosystem_id"', "[\'infosystem_id\']", 'infosystem_name'] as $forbidden) {
     if (str_contains($structureTemplate, $forbidden)) {
         throw new RuntimeException('Core structure UI contains infosystem coupling: ' . $forbidden);
     }

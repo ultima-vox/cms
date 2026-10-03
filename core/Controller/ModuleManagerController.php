@@ -15,7 +15,7 @@ use Core\Http\Response;
 use Core\Repository\AuditLogRepository;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
-use Core\View\TwigRenderer;
+use Core\View\AdminPhpRenderer;
 use PDO;
 use Throwable;
 
@@ -23,7 +23,7 @@ final readonly class ModuleManagerController
 {
     public function __construct(
         private AuthService $auth,
-        private TwigRenderer $view,
+        private AdminPhpRenderer $view,
         private AuditLogRepository $audit,
         private PDO $db,
         private string $rootPath,
@@ -66,7 +66,7 @@ final readonly class ModuleManagerController
             ];
         }
 
-        return Response::html($this->view->render('admin/modules/index.twig', [
+        return Response::html($this->view->render('admin/modules/index.php', [
             'csrf_token' => Csrf::token(),
             'modules' => $modules,
             'notice' => $this->notice($request),
@@ -141,7 +141,7 @@ final readonly class ModuleManagerController
                 return Response::html('<h1>Purge не поддерживается этим модулем.</h1><p><a href="/admin/modules">Вернуться к модулям</a></p>', 409);
             }
 
-            return Response::html($this->view->render('admin/modules/purge.twig', [
+            return Response::html($this->view->render('admin/modules/purge.php', [
                 'csrf_token' => Csrf::token(),
                 'module' => [
                     'code' => $manifest->code,

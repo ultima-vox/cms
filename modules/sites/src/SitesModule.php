@@ -15,7 +15,7 @@ use Core\Repository\UserRepository;
 use Core\Security\AuthService;
 use Core\Site\AdminSiteSelector;
 use Core\Site\SiteResolver;
-use Core\View\AdminTwigRendererFactory;
+use Core\View\AdminPhpRendererFactory;
 
 final class SitesModule implements ModuleInterface
 {
@@ -28,7 +28,7 @@ final class SitesModule implements ModuleInterface
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
-        $view = (new AdminTwigRendererFactory(
+        $view = (new AdminPhpRendererFactory(
             $core->runtime()->rootPath(),
             $auth,
             $core->admin(),
@@ -68,25 +68,9 @@ final class SitesModule implements ModuleInterface
         $routes->get('/admin/sites/create', 'sites.create', [$controller, 'createForm']);
         $routes->post('/admin/sites', 'sites.store', [$controller, 'store']);
         $routes->get('/admin/sites/{id:\\d+}/edit', 'sites.edit', [$controller, 'editForm']);
-        $routes->post(
-            '/admin/sites/{id:\\d+}',
-            'sites.update',
-            $invalidate->wrap([$controller, 'update'], $siteTags),
-        );
-        $routes->post(
-            '/admin/sites/{id:\\d+}/domains',
-            'sites.domain.store',
-            $invalidate->wrap([$controller, 'addDomain'], $siteTags),
-        );
-        $routes->post(
-            '/admin/sites/{id:\\d+}/domains/{domainId:\\d+}/primary',
-            'sites.domain.primary',
-            $invalidate->wrap([$controller, 'makePrimary'], $siteTags),
-        );
-        $routes->post(
-            '/admin/sites/{id:\\d+}/domains/{domainId:\\d+}/delete',
-            'sites.domain.delete',
-            $invalidate->wrap([$controller, 'deleteDomain'], $siteTags),
-        );
+        $routes->post('/admin/sites/{id:\\d+}', 'sites.update', $invalidate->wrap([$controller, 'update'], $siteTags));
+        $routes->post('/admin/sites/{id:\\d+}/domains', 'sites.domain.store', $invalidate->wrap([$controller, 'addDomain'], $siteTags));
+        $routes->post('/admin/sites/{id:\\d+}/domains/{domainId:\\d+}/primary', 'sites.domain.primary', $invalidate->wrap([$controller, 'makePrimary'], $siteTags));
+        $routes->post('/admin/sites/{id:\\d+}/domains/{domainId:\\d+}/delete', 'sites.domain.delete', $invalidate->wrap([$controller, 'deleteDomain'], $siteTags));
     }
 }
