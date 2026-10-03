@@ -8,6 +8,8 @@ use Core\Page\PageConfigurationValidatorInterface;
 use Core\Page\PageExecutionContext;
 use Core\Page\PageExecutorInterface;
 use Core\Page\PageTypeDefinition;
+use Core\Page\PageTypeProvisionerInterface;
+use Core\Page\PageTypeProvisioningContext;
 use Core\Site\SiteContext;
 use Core\View\Render\RenderContext;
 use Core\View\SafeHtml;
@@ -37,6 +39,21 @@ $validator = new class implements PageConfigurationValidatorInterface {
         return ['limit' => $limit];
     }
 };
+$provisioner = new class implements PageTypeProvisionerInterface {
+    public function provision(PageTypeProvisioningContext $context): array
+    {
+        if ($context->siteId !== 1
+            || $context->nodeId !== 10
+            || $context->nodeName !== 'Demo'
+            || $context->nodePath !== '/demo/') {
+            throw new RuntimeException('Page type provisioner received an unexpected context.');
+        }
+
+        return [
+            'limit' => $context->requestedConfiguration['limit'] ?? '12',
+        ];
+    }
+};
 $definition = new PageTypeDefinition(
     code: 'SMOKE.PAGE',
     name: 'Smoke page',
@@ -49,6 +66,7 @@ $definition = new PageTypeDefinition(
         'additionalProperties' => false,
     ],
     configurationValidator: $validator,
+    provisioner: $provisioner,
     isDefault: true,
     sorting: 20,
     description: 'Smoke page type.',
@@ -70,6 +88,21 @@ if ($pages->default() !== $definition) {
 $normalized = $pages->validateConfiguration('smoke.page', ['limit' => '25']);
 if ($normalized !== ['limit' => 25]) {
     throw new RuntimeException('Page type configuration validator did not normalize configuration.');
+}
+
+$provisioned = $pages->provisionConfiguration(
+    'smoke.page',
+    new PageTypeProvisioningContext(
+        siteId: 1,
+        nodeId: 10,
+        nodeName: 'Demo',
+        nodeTitle: 'Demo title',
+        nodePath: '/demo/',
+        requestedConfiguration: ['limit' => '30'],
+    ),
+);
+if ($provisioned !== ['limit' => 30]) {
+    throw new RuntimeException('Page type provisioner result was not validated and normalized.');
 }
 
 $renderContext = new RenderContext();

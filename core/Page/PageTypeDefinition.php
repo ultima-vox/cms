@@ -21,6 +21,7 @@ final readonly class PageTypeDefinition
         public PageExecutorInterface $executor,
         array $configurationSchema = [],
         public ?PageConfigurationValidatorInterface $configurationValidator = null,
+        public ?PageTypeProvisionerInterface $provisioner = null,
         public bool $isDefault = false,
         public int $sorting = 0,
         string $description = '',
@@ -52,5 +53,15 @@ final readonly class PageTypeDefinition
     public function validateConfiguration(array $configuration): array
     {
         return $this->configurationValidator?->validate($configuration) ?? $configuration;
+    }
+
+    /** @return array<string, mixed> */
+    public function provisionConfiguration(PageTypeProvisioningContext $context): array
+    {
+        $configuration = $this->provisioner !== null
+            ? $this->provisioner->provision($context)
+            : $context->requestedConfiguration;
+
+        return $this->validateConfiguration($configuration);
     }
 }

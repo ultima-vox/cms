@@ -6,6 +6,7 @@ namespace Core\Extension\Api;
 
 use Core\Page\PageExecutorInterface;
 use Core\Page\PageTypeDefinition;
+use Core\Page\PageTypeProvisioningContext;
 use LogicException;
 use RuntimeException;
 
@@ -97,6 +98,12 @@ final class PagesApi
     public function validateConfiguration(string $code, array $configuration): array
     {
         return $this->definition($code)->validateConfiguration($configuration);
+    }
+
+    /** @return array<string, mixed> */
+    public function provisionConfiguration(string $code, PageTypeProvisioningContext $context): array
+    {
+        return $this->definition($code)->provisionConfiguration($context);
     }
 
     public function freeze(): void
