@@ -8,7 +8,7 @@ use Core\Extension\Api\AdminApi;
 use Core\Extension\Api\SitesApi;
 use Core\Security\AuthService;
 
-final readonly class AdminTwigRendererFactory
+final readonly class AdminPhpRendererFactory
 {
     public function __construct(
         private string $rootPath,
@@ -19,9 +19,9 @@ final readonly class AdminTwigRendererFactory
     }
 
     /** @param list<string> $additionalPaths */
-    public function create(array $additionalPaths = []): TwigRenderer
+    public function create(array $additionalPaths = []): AdminPhpRenderer
     {
-        $renderer = new TwigRenderer($this->rootPath, $additionalPaths);
+        $renderer = new AdminPhpRenderer($this->rootPath, $additionalPaths);
         $renderer->addGlobal(
             'admin_shell',
             new AdminShellContext($this->auth, $this->admin, $this->sites),

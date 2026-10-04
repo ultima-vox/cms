@@ -36,7 +36,7 @@ use Core\Security\SecurityHeaders;
 use Core\Site\AdminSiteSelector;
 use Core\Site\SiteContext;
 use Core\Site\SiteResolver;
-use Core\View\AdminTwigRendererFactory;
+use Core\View\AdminPhpRendererFactory;
 use Core\View\PhpRenderer;
 
 final class Application
@@ -64,7 +64,7 @@ final class Application
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
-        $twig = (new AdminTwigRendererFactory(
+        $adminView = (new AdminPhpRendererFactory(
             $this->rootPath,
             $auth,
             $core->admin(),
@@ -81,24 +81,24 @@ final class Application
         );
 
         $builtinRoutes = new BuiltinRoutes(
-            new AuthController($auth, $twig),
-            new AdminController($auth, $twig, $core->admin(), $core->sites(), $audit),
+            new AuthController($auth, $adminView),
+            new AdminController($auth, $adminView, $core->admin(), $core->sites(), $audit),
             new StructureController(
                 $auth,
                 new StructureRepository($db, $core->sites()->adminId()),
                 $audit,
-                $twig,
+                $adminView,
             ),
             new LayoutController(
                 $auth,
                 $layoutRepository,
                 new LayoutTemplateService($this->rootPath),
                 $audit,
-                $twig,
+                $adminView,
             ),
             new ModuleManagerController(
                 $auth,
-                $twig,
+                $adminView,
                 $audit,
                 $db,
                 $this->rootPath,

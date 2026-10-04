@@ -4,28 +4,19 @@ declare(strict_types=1);
 
 namespace Core\Layout;
 
-use FilesystemIterator;
 use ParseError;
 use PhpToken;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use RuntimeException;
-use Twig\Environment;
-use Twig\Error\SyntaxError;
-use Twig\Loader\ArrayLoader;
-use Twig\Source;
 
 final class LayoutTemplateService
 {
     private string $runtimeLayoutsPath;
     private string $packagedLayoutsPath;
-    private string $twigCachePath;
 
     public function __construct(private readonly string $rootPath)
     {
         $this->runtimeLayoutsPath = $rootPath . '/storage/templates/layouts';
         $this->packagedLayoutsPath = $rootPath . '/templates/layouts';
-        $this->twigCachePath = $rootPath . '/storage/cache/twig';
     }
 
     public function templatePathForCode(string $code): string
@@ -45,13 +36,8 @@ final class LayoutTemplateService
             throw new RuntimeException('Шаблон макета не может быть пустым.');
         }
 
-        if (str_ends_with($templateName, '.twig')) {
-            $this->validateTwig($source, $templateName);
-            return;
-        }
-
         if (!str_ends_with($templateName, '.html.php')) {
-            throw new RuntimeException('Поддерживаются только .html.php и legacy .twig макеты.');
+            throw new RuntimeException('Поддерживаются только .html.php макеты.');
         }
 
         try {
@@ -95,7 +81,7 @@ final class LayoutTemplateService
 
         $this->validate($source, $templatePath);
         $this->writeAtomically($runtimeFile, $source);
-        $this->refreshRuntimeCache($templatePath, $runtimeFile);
+        $this->refreshRuntimeCache($runtimeFile);
     }
 
     public function update(string $templatePath, string $source): void
@@ -108,7 +94,7 @@ final class LayoutTemplateService
 
         $this->validate($source, $templatePath);
         $this->writeAtomically($runtimeFile, $source);
-        $this->refreshRuntimeCache($templatePath, $runtimeFile);
+        $this->refreshRuntimeCache($runtimeFile);
     }
 
     public function resetOverride(string $templatePath): void
@@ -123,7 +109,7 @@ final class LayoutTemplateService
             throw new RuntimeException('Не удалось удалить runtime-override макета.');
         }
 
-        $this->refreshRuntimeCache($templatePath, $runtimeFile);
+        $this->refreshRuntimeCache($runtimeFile);
     }
 
     public function delete(string $templatePath): void
@@ -134,7 +120,7 @@ final class LayoutTemplateService
             throw new RuntimeException('Не удалось удалить runtime-файл макета.');
         }
 
-        $this->refreshRuntimeCache($templatePath, $runtimeFile);
+        $this->refreshRuntimeCache($runtimeFile);
     }
 
     private function runtimeFile(string $templatePath): string
@@ -153,23 +139,8 @@ final class LayoutTemplateService
 
     private function assertTemplatePath(string $templatePath): void
     {
-        if (!preg_match('#^layouts/[a-z0-9][a-z0-9_-]{0,79}\.(?:html\.php|twig)$#', $templatePath)) {
+        if (!preg_match('#^layouts/[a-z0-9][a-z0-9_-]{0,79}\.html\.php$#', $templatePath)) {
             throw new RuntimeException('Некорректный путь файла макета.');
-        }
-    }
-
-    private function validateTwig(string $source, string $templateName): void
-    {
-        $twig = new Environment(new ArrayLoader());
-
-        try {
-            $twig->parse($twig->tokenize(new Source($source, $templateName)));
-        } catch (SyntaxError $exception) {
-            throw new RuntimeException(
-                sprintf('Ошибка Twig: %s (строка %d).', $exception->getRawMessage(), $exception->getTemplateLine()),
-                0,
-                $exception,
-            );
         }
     }
 
@@ -207,39 +178,10 @@ final class LayoutTemplateService
         }
     }
 
-    private function refreshRuntimeCache(string $templatePath, string $runtimeFile): void
+    private function refreshRuntimeCache(string $runtimeFile): void
     {
-        if (str_ends_with($templatePath, '.twig')) {
-            $this->clearTwigCache();
-            return;
-        }
-
         if (function_exists('opcache_invalidate')) {
             @opcache_invalidate($runtimeFile, true);
-        }
-    }
-
-    private function clearTwigCache(): void
-    {
-        if (!is_dir($this->twigCachePath)) {
-            return;
-        }
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($this->twigCachePath, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST,
-        );
-
-        foreach ($iterator as $item) {
-            $path = $item->getPathname();
-
-            if ($item->isDir()) {
-                if (!rmdir($path)) {
-                    throw new RuntimeException('Макет сохранён, но не удалось очистить каталог Twig-кеша.');
-                }
-            } elseif (!unlink($path)) {
-                throw new RuntimeException('Макет сохранён, но не удалось очистить Twig-кеш.');
-            }
         }
     }
 }

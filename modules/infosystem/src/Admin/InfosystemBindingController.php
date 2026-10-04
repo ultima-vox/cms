@@ -10,7 +10,7 @@ use Core\Repository\NodeModuleBindingRepository;
 use Core\Repository\StructureRepository;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
-use Core\View\TwigRenderer;
+use Core\View\AdminPhpRenderer;
 use RuntimeException;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
 
@@ -22,7 +22,7 @@ final readonly class InfosystemBindingController
         private StructureRepository $structure,
         private NodeModuleBindingRepository $bindings,
         private int $siteId,
-        private TwigRenderer $view,
+        private AdminPhpRenderer $view,
     ) {
         if ($this->siteId < 1) {
             throw new RuntimeException('Site id must be positive.');
@@ -94,7 +94,7 @@ final readonly class InfosystemBindingController
             (string) $infosystem['code'],
         );
 
-        return Response::html($this->view->render('admin/infosystems/bindings.twig', [
+        return Response::html($this->view->render('admin/infosystems/bindings.php', [
             'infosystem' => $infosystem,
             'nodes' => $nodes,
             'bound_node_ids' => array_fill_keys($bound, true),

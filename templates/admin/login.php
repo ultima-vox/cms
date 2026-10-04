@@ -1,3 +1,10 @@
+<?php
+
+declare(strict_types=1);
+
+$error = isset($error) && is_string($error) ? $error : null;
+$email = isset($email) && is_string($email) ? $email : '';
+?>
 <!doctype html>
 <html lang="ru">
 <head>
@@ -11,16 +18,16 @@
         <div class="admin-brand">ULTIMA VOX</div>
         <h1 class="admin-login__title">Вход в CMS</h1>
 
-        {% if error %}
-            <div class="admin-alert" role="alert">{{ error }}</div>
-        {% endif %}
+        <?php if ($error !== null && $error !== ''): ?>
+            <div class="admin-alert" role="alert"><?= text($error) ?></div>
+        <?php endif; ?>
 
         <form class="admin-form" action="/admin/login" method="post">
-            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+            <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
 
             <label class="admin-field">
                 <span class="admin-field__label">Email</span>
-                <input class="admin-field__input" type="email" name="email" value="{{ email|default('') }}" autocomplete="username" required>
+                <input class="admin-field__input" type="email" name="email" value="<?= text($email) ?>" autocomplete="username" required>
             </label>
 
             <label class="admin-field">
