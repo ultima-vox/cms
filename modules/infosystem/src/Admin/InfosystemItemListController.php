@@ -7,7 +7,7 @@ namespace UltimaVox\Modules\Infosystem\Admin;
 use Core\Http\Request;
 use Core\Http\Response;
 use Core\Security\AuthService;
-use Core\View\TwigRenderer;
+use Core\View\AdminPhpRenderer;
 use RuntimeException;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemItemSearchRepository;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
@@ -18,7 +18,7 @@ final class InfosystemItemListController
         private readonly AuthService $auth,
         private readonly InfosystemManagementRepository $infosystems,
         private readonly InfosystemItemSearchRepository $search,
-        private readonly TwigRenderer $view,
+        private readonly AdminPhpRenderer $view,
     ) {
     }
 
@@ -37,7 +37,7 @@ final class InfosystemItemListController
 
         $items = $this->search->search($infosystemId, 1, 25);
 
-        return Response::html($this->view->render('admin/infosystems/manage.twig', [
+        return Response::html($this->view->render('admin/infosystems/manage.php', [
             'infosystem' => $system,
             'groups' => $this->flattenGroups($this->infosystems->groups($infosystemId)),
             'items' => $items['items'],
@@ -95,7 +95,7 @@ final class InfosystemItemListController
             'properties' => $propertyFilters,
         ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []));
 
-        return Response::html($this->view->render('admin/infosystems/items.twig', [
+        return Response::html($this->view->render('admin/infosystems/items.php', [
             'infosystem' => $system,
             'groups' => $this->infosystems->groups($infosystemId),
             'items' => $result['items'],

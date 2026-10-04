@@ -11,7 +11,7 @@ use Core\Repository\AuditLogRepository;
 use Core\Repository\LayoutRepository;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
-use Core\View\TwigRenderer;
+use Core\View\AdminPhpRenderer;
 use RuntimeException;
 use Throwable;
 
@@ -22,7 +22,7 @@ final class LayoutController
         private readonly LayoutRepository $layouts,
         private readonly LayoutTemplateService $templates,
         private readonly AuditLogRepository $audit,
-        private readonly TwigRenderer $view,
+        private readonly AdminPhpRenderer $view,
     ) {
     }
 
@@ -35,7 +35,7 @@ final class LayoutController
             return $denied;
         }
 
-        return Response::html($this->view->render('admin/layouts/index.twig', [
+        return Response::html($this->view->render('admin/layouts/index.php', [
             'layouts' => $this->layouts->all(),
             'deleted' => isset($request->query['deleted']),
         ]));
@@ -251,7 +251,7 @@ final class LayoutController
         int $status = 200,
         bool $saved = false,
     ): Response {
-        return Response::html($this->view->render('admin/layouts/form.twig', [
+        return Response::html($this->view->render('admin/layouts/form.php', [
             'layout' => $this->normalizeFormModel($model),
             'csrf_token' => Csrf::token(),
             'error' => $error,

@@ -10,7 +10,7 @@ use Core\Security\AuthService;
 use Core\Security\Csrf;
 use Core\Site\AdminSiteSelector;
 use Core\Site\SiteResolver;
-use Core\View\TwigRenderer;
+use Core\View\AdminPhpRenderer;
 use PDOException;
 use RuntimeException;
 use Throwable;
@@ -22,7 +22,7 @@ final class SitesController
         private readonly SitesManagementRepository $sites,
         private readonly AdminSiteSelector $selector,
         private readonly SiteResolver $hostPolicy,
-        private readonly TwigRenderer $view,
+        private readonly AdminPhpRenderer $view,
     ) {
     }
 
@@ -34,7 +34,7 @@ final class SitesController
             return $denied;
         }
 
-        return Response::html($this->view->render('admin/sites/index.twig', [
+        return Response::html($this->view->render('admin/sites/index.php', [
             'sites' => $this->sites->all(),
             'admin_site' => $this->selector->current(),
             'csrf_token' => Csrf::token(),
@@ -227,7 +227,7 @@ final class SitesController
             ? $this->sites->domains((int) $form['id'])
             : [];
 
-        return Response::html($this->view->render('admin/sites/form.twig', [
+        return Response::html($this->view->render('admin/sites/form.php', [
             'site' => $form,
             'domains' => $domains,
             'admin_site' => $this->selector->current(),
