@@ -7,6 +7,7 @@ use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
 use Core\Extension\ModuleLoader;
 use Core\Extension\ModuleMigrationRunner;
+use Core\Extension\ModuleStateRepository;
 use Core\Site\SiteContext;
 use Core\View\Render\RenderEngine;
 use Core\View\Render\TemplateFacadeContext;
@@ -20,6 +21,12 @@ $db = Database::connection();
 $migrations = new ModuleMigrationRunner($db, $rootPath);
 $migrations->migrate('menu');
 $migrations->migrate('infosystem');
+
+$loader = new ModuleLoader($rootPath);
+$state = new ModuleStateRepository($db);
+$state->sync($loader->discover());
+$state->setEnabled('menu-infosystem', true);
+$bridgeEnabled = true;
 
 $siteStatement = $db->query(
     "INSERT INTO sites (code, name) VALUES ('menu-infosystem-smoke', 'Menu Infosystem Smoke') RETURNING id"
@@ -168,9 +175,9 @@ try {
     $sourceItemId = (int) $sourceStatement->fetchColumn();
 
     $core = new ExtensionCore(new RuntimeApi($db, $rootPath));
-    $loaded = (new ModuleLoader($rootPath))->load($core);
+    $loaded = $loader->load($core);
     if (!in_array('menu-infosystem', $loaded, true)) {
-        throw new RuntimeException('Menu Infosystem bridge module was not loaded.');
+        throw new RuntimeException('Menu Infosystem bridge module was not loaded after explicit enable.');
     }
     $core->freeze();
 
@@ -227,6 +234,10 @@ try {
         }
     }
 } finally {
+    if ($bridgeEnabled) {
+        $state->setEnabled('menu-infosystem', false);
+    }
+
     $deleteInfosystem = $db->prepare('DELETE FROM infosystems WHERE id = :id');
     $deleteInfosystem->execute(['id' => $infosystemId ?? 0]);
 
