@@ -115,10 +115,7 @@ final readonly class DocumentManagementRepository
             SELECT id, document_id, version, content, status, created_at, published_at
             FROM document_versions
             WHERE document_id = :document_id
-            ORDER BY
-                CASE status WHEN 'draft' THEN 0 WHEN 'published' THEN 1 ELSE 2 END,
-                version DESC,
-                id DESC
+            ORDER BY version DESC, id DESC
             LIMIT 1
             SQL
         );
