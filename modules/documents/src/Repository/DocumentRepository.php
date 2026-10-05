@@ -153,10 +153,14 @@ final class DocumentRepository
                 UPDATE document_versions
                 SET status = 'archived'
                 WHERE document_id = :document_id
-                  AND status = 'published'
+                  AND id <> :target_id
+                  AND status IN ('published', 'draft')
                 SQL
             );
-            $archive->execute(['document_id' => $documentId]);
+            $archive->execute([
+                'document_id' => $documentId,
+                'target_id' => $versionId,
+            ]);
 
             $publish = $this->db->prepare(
                 <<<'SQL'
