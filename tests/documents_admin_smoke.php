@@ -63,6 +63,20 @@ try {
         throw new RuntimeException('Documents admin service did not publish the second version.');
     }
 
+    $versions = $management->versions($documentId);
+    if (count($versions) !== 2
+        || ($versions[0]['status'] ?? null) !== 'published'
+        || ($versions[1]['status'] ?? null) !== 'archived') {
+        throw new RuntimeException('Publishing did not archive stale draft versions.');
+    }
+
+    $editable = $management->editableVersion($documentId);
+    if (!is_array($editable)
+        || (int) ($editable['id'] ?? 0) !== $publishedVersionId
+        || ($editable['content'] ?? null) !== '<p>Published two</p>') {
+        throw new RuntimeException('Documents editor did not use the newest published version after publish.');
+    }
+
     $document = $management->find($documentId);
     if (!is_array($document)
         || ($document['code'] ?? null) !== 'company-requisites'
@@ -82,7 +96,7 @@ try {
         || (int) ($editable['version'] ?? 0) !== 3
         || ($editable['status'] ?? null) !== 'draft'
         || ($editable['content'] ?? null) !== '<p>Draft three</p>') {
-        throw new RuntimeException('Documents admin editor did not prefer the newest draft.');
+        throw new RuntimeException('Documents admin editor did not prefer the newest version.');
     }
 
     $versions = $management->versions($documentId);
