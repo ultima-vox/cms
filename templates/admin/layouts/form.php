@@ -5,7 +5,6 @@ declare(strict_types=1);
 $adminActive = 'layouts';
 $layoutId = $layout['id'] ?? null;
 $templatePath = (string) ($layout['template_path'] ?? '');
-$isLegacyTwig = $templatePath !== '' && str_ends_with($templatePath, '.twig');
 $title = $layoutId ? 'Редактирование макета' : 'Новый макет';
 echo $view->render('admin/_header.php', [
     'admin_active' => $adminActive,
@@ -40,12 +39,8 @@ echo $view->render('admin/_header.php', [
         <section class="admin-panel">
             <div class="layout-editor__header">
                 <div>
-                    <h2 class="admin-panel__title"><?= $isLegacyTwig ? 'Legacy Twig-шаблон' : 'HTML + PHP шаблон' ?></h2>
-                    <?php if ($isLegacyTwig): ?>
-                        <p class="admin-field__hint">Старый Twig-макет продолжает поддерживаться на период миграции публичного runtime.</p>
-                    <?php else: ?>
-                        <p class="admin-field__hint">Обычный HTML с точечными PHP-вставками. Доступны <code>$page</code>, <code>$items</code> и зарегистрированные facade-переменные модулей. Для текста используйте <code>text()</code>, для разрешённого HTML — <code>html()</code>.</p>
-                    <?php endif; ?>
+                    <h2 class="admin-panel__title">HTML + PHP шаблон</h2>
+                    <p class="admin-field__hint">Обычный HTML с точечными PHP-вставками. Доступны <code>$page</code>, <code>$items</code> и зарегистрированные facade-переменные модулей. Для текста используйте <code>text()</code>, для разрешённого HTML — <code>html()</code>.</p>
                 </div>
                 <?php if (!empty($layout['is_system'])): ?><span class="admin-badge"><?= !empty($layout['has_override']) ? 'runtime override' : 'штатная версия' ?></span><?php endif; ?>
             </div>

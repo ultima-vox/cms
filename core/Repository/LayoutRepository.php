@@ -238,7 +238,7 @@ final class LayoutRepository
     private function codeFromTemplatePath(string $templatePath): string
     {
         if (!preg_match(
-            '#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.(?:html\.php|php|twig)$#',
+            '#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.(?:html\.php|php)$#',
             trim($templatePath),
             $matches,
         )) {

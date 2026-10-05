@@ -310,7 +310,7 @@ final class LayoutController
 
     private function codeFromTemplatePath(string $templatePath): string
     {
-        return preg_match('#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.(?:html\.php|twig)$#', $templatePath, $matches)
+        return preg_match('#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.(?:html\.php|php)$#', $templatePath, $matches)
             ? $matches[1]
             : '';
     }

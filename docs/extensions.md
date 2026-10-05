@@ -90,7 +90,7 @@ Queries are immutable. Every modifier returns a clone:
     ->show() ?>
 ```
 
-Content is loaded lazily. PHP layouts do not fetch infosystem items unless a render source is actually shown. Legacy Twig layouts retain the old eager `items` array during the migration period.
+Content is loaded lazily. PHP layouts do not fetch infosystem items unless a render source is actually shown.
 
 ## View Templates
 

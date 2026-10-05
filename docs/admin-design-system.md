@@ -24,7 +24,7 @@ Core semantic tokens include:
 
 ## Shared admin shell
 
-Authenticated admin screens extend `templates/admin/_shell.twig`. The shell owns global application chrome and behavior:
+Authenticated admin screens render `templates/admin/_header.php` and `templates/admin/_footer.php` through `$view`. The shell owns global application chrome and behavior:
 
 - registry-driven sidebar navigation;
 - active SiteContext selector;
@@ -33,11 +33,11 @@ Authenticated admin screens extend `templates/admin/_shell.twig`. The shell owns
 - shared admin CSS/JS;
 - responsive shell behavior.
 
-Page and module templates should contain only their working-area markup and use the `styles` / `scripts` blocks for domain-specific assets. Do not copy sidebar/topbar markup into a module template.
+Page and module templates place their working-area markup between the shared header and footer, passing `admin_styles` / `admin_scripts` arrays for domain-specific assets. Do not copy sidebar/topbar markup into a module template.
 
-Admin renderers must be created through `AdminTwigRendererFactory`. It injects the lazy `AdminShellContext`, so changes to shell globals do not require patches across modules.
+Admin renderers must be created through `AdminPhpRendererFactory`. It injects the lazy `AdminShellContext`, so changes to shell globals do not require patches across modules.
 
-Twig remains an internal admin/legacy renderer. Public site templates continue to use native HTML/PHP templates and do not inherit this contract.
+Admin views use `AdminPhpRenderer` and native PHP. Public site templates use their own native PHP rendering contract.
 
 ## Component contract
 

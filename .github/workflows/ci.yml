@@ -61,7 +61,7 @@ jobs:
       - name: Twig-free architecture check
         run: |
           test -z "$(find core modules templates -type f -name '*.twig' -print -quit)"
-          ! grep -R -n --include='*.php' 'Twig\\' core modules
+          ! grep -R -n -i --include='*.php' 'twig' core modules templates
           ! grep -R -n 'TwigRenderer\|TwigTemplateLinter\|AdminTwigRendererFactory' core modules tests bin
           ! grep -n '"twig/twig"' composer.json composer.lock
           ! grep -R -n 'name: Legacy/admin T[w]ig syntax check' .github/workflows bin

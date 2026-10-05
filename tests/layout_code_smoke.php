@@ -36,12 +36,21 @@ try {
     try {
         $repository->create(
             'Duplicate layout code smoke',
-            'layouts/layout-code-smoke.twig',
+            'layouts/layout-code-smoke.html.php',
             null,
         );
         throw new RuntimeException('Duplicate layout code was accepted.');
     } catch (Throwable $exception) {
         if ($exception->getMessage() === 'Duplicate layout code was accepted.') {
+            throw $exception;
+        }
+    }
+
+    try {
+        $repository->create('Unsupported layout', 'layouts/unsupported.twig', null);
+        throw new RuntimeException('Unsupported template engine was accepted.');
+    } catch (RuntimeException $exception) {
+        if ($exception->getMessage() !== 'Layout template path cannot be converted to a stable code.') {
             throw $exception;
         }
     }

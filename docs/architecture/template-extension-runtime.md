@@ -8,7 +8,7 @@ The core exposes a stable extension surface so first-party and third-party modul
 
 ## Template rules
 
-New frontend layouts use `*.html.php`. Twig remains temporarily available only for admin and legacy frontend templates during migration.
+Frontend layouts and admin views use native PHP templates. No legacy template engine or fallback is supported.
 
 Core helpers are intentionally small:
 
@@ -76,6 +76,6 @@ Module PHP is trusted code. The runtime API controls architecture and compatibil
 
 ## Migration
 
-The system layout moves from `layouts/main.twig` to `layouts/main.html.php`. Existing custom Twig layouts continue to render during the transition. New layouts are created as `*.html.php` and validated with the PHP parser before an atomic write.
+The packaged system layout is `layouts/main.php`. The layout editor creates `*.html.php` layouts and validates them with the PHP parser before an atomic write. Custom layouts from a removed template engine must be rewritten as native PHP before use; changing a filename alone does not convert template syntax.
 
 Stored HTML is currently wrapped as trusted legacy content. Sanitizer-on-write remains required before low-trust editors receive broad HTML editing access.
