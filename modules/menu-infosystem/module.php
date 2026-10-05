@@ -9,7 +9,7 @@ return [
     'name' => 'Menu / Infosystem bridge',
     'version' => '1.0.0',
     'extension_api' => '^1.0',
-    'default_enabled' => true,
+    'default_enabled' => false,
     'requires' => [
         'core' => '>=0.1.0',
         'menu' => '^1.0',
