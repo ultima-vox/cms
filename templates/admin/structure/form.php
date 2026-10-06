@@ -6,6 +6,8 @@ $adminActive = 'structure';
 $nodeId = $node['id'] ?? null;
 $isRoot = $nodeId && ($node['parent_id'] ?? null) === null;
 $title = $nodeId ? 'Редактирование узла' : 'Новый узел';
+$pageTypes = is_array($page_types ?? null) ? $page_types : [];
+$selectedPageType = (string) ($node['page_type'] ?? '');
 $publishValue = '';
 if (!empty($node['publish_at'])) {
     $timestamp = strtotime((string) $node['publish_at']);
@@ -37,7 +39,12 @@ echo $view->render('admin/_header.php', [
 
         <section class="admin-panel"><h2 class="admin-panel__title">Представление</h2><div class="admin-form__grid">
             <label class="admin-field"><span class="admin-field__label">Макет</span><select class="admin-select" name="layout_id"><option value="">Без макета</option><?php foreach ($layouts as $layout): ?><option value="<?= text($layout['id'] ?? '') ?>"<?= (int) ($node['layout_id'] ?? 0) === (int) ($layout['id'] ?? 0) ? ' selected' : '' ?>><?= text($layout['name'] ?? '') ?></option><?php endforeach; ?></select></label>
-            <label class="admin-field admin-field--wide"><span class="admin-field__label">Контент</span><textarea class="admin-textarea" name="content"><?= text($node['content'] ?? '') ?></textarea><span class="admin-field__hint">HTML хранится как редакционный контент и выводится макетом. Привязки к прикладным модулям настраиваются в самих модулях.</span></label>
+            <?php if (!$nodeId): ?>
+                <label class="admin-field admin-field--wide"><span class="admin-field__label">Тип страницы</span><select class="admin-select" name="page_type" required><?php foreach ($pageTypes as $pageType): ?><option value="<?= text($pageType->code) ?>"<?= $selectedPageType === $pageType->code ? ' selected' : '' ?>><?= text($pageType->name) ?> — <?= text($pageType->code) ?></option><?php endforeach; ?></select><span class="admin-field__hint">Доступны только типы, которые умеют самостоятельно создать и настроить свой ресурс. Бизнес-логика остаётся внутри соответствующего модуля.</span></label>
+            <?php else: ?>
+                <div class="admin-field admin-field--wide"><span class="admin-field__label">Тип страницы</span><code><?= text($selectedPageType) ?></code><span class="admin-field__hint">Смена типа страницы будет отдельной безопасной операцией; обычное сохранение узла не меняет владельца контента.</span></div>
+                <label class="admin-field admin-field--wide"><span class="admin-field__label">Встроенный контент узла</span><textarea class="admin-textarea" name="content"><?= text($node['content'] ?? '') ?></textarea><span class="admin-field__hint">Поле совместимости для существующих типов страниц. Новые типы должны хранить свой контент в принадлежащем им модуле.</span></label>
+            <?php endif; ?>
         </div></section>
 
         <section class="admin-panel"><h2 class="admin-panel__title">Публикация</h2><div class="admin-form__grid">
