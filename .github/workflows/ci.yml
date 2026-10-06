@@ -68,7 +68,7 @@ jobs:
 
       - name: Infosystem legacy content architecture check
         run: |
-          ! grep -R -n "include_content\|node:.*:content\|\['content'\]" modules/infosystem/src
+          ! grep -R -n "include_content\|node:.*:content\|context->node.*content" modules/infosystem/src
 
       - name: Extension and render runtime smoke test
         run: php tests/runtime_smoke.php
