@@ -329,6 +329,9 @@ try {
     $deleteNodes = $db->prepare('DELETE FROM nodes WHERE site_id = :site_id');
     $deleteNodes->execute(['site_id' => $siteId]);
 
+    $deleteInfosystems = $db->prepare('DELETE FROM infosystems WHERE site_id = :site_id');
+    $deleteInfosystems->execute(['site_id' => $siteId]);
+
     $deleteSite = $db->prepare('DELETE FROM sites WHERE id = :site_id');
     $deleteSite->execute(['site_id' => $siteId]);
 }
