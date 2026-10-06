@@ -218,6 +218,23 @@ try {
     }
 }
 
+try {
+    $pages->stageProvider(
+        'late.stage',
+        new class implements PageExecutionStageProviderInterface {
+            public function stages(PageExecutionContext $context): array
+            {
+                return [];
+            }
+        },
+    );
+    throw new RuntimeException('Frozen page stage provider registry accepted late registration.');
+} catch (LogicException $exception) {
+    if ($exception->getMessage() === 'Frozen page stage provider registry accepted late registration.') {
+        throw $exception;
+    }
+}
+
 require __DIR__ . '/page_type_selection_smoke.php';
 require __DIR__ . '/page_runtime_continuation_smoke.php';
 
