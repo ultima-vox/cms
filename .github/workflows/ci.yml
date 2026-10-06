@@ -66,6 +66,10 @@ jobs:
           ! grep -n '"twig/twig"' composer.json composer.lock
           ! grep -R -n 'name: Legacy/admin T[w]ig syntax check' .github/workflows bin
 
+      - name: Infosystem legacy content architecture check
+        run: |
+          ! grep -R -n "include_content\|node:.*:content\|\['content'\]" modules/infosystem/src
+
       - name: Extension and render runtime smoke test
         run: php tests/runtime_smoke.php
 
@@ -154,7 +158,7 @@ jobs:
           VALUES (
             1, 'Home', '', '/', 'Ultima Vox CMS', '<p>Production Core</p>',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'published', 'infosystem.list', '{"include_content":true}'::jsonb
+            'published', 'infosystem.list', '{}'::jsonb
           );
           INSERT INTO nodes (site_id, parent_id, name, slug, path, title, layout_id, status, page_type, page_config)
           VALUES (
@@ -209,11 +213,29 @@ jobs:
           FROM nodes
           WHERE site_id = 1 AND path = '/';
 
+          INSERT INTO node_module_bindings (node_id, module_code, binding_code, target_key)
+          SELECT id, 'documents', 'intro', 'ci-home'
+          FROM nodes
+          WHERE site_id = 1 AND path = '/';
+
           INSERT INTO sites (code, name)
           VALUES ('second', 'Second Site');
 
           INSERT INTO site_domains (site_id, host, is_primary)
           VALUES ((SELECT id FROM sites WHERE code = 'second'), 'second.test', TRUE);
+
+          INSERT INTO documents (site_id, code, name)
+          VALUES (
+            (SELECT id FROM sites WHERE code = 'second'),
+            'ci-second-home',
+            'Second Site'
+          );
+
+          INSERT INTO document_versions (document_id, version, content, status, published_at)
+          SELECT id, 1, '<p>Second Site Content</p>', 'published', CURRENT_TIMESTAMP
+          FROM documents
+          WHERE site_id = (SELECT id FROM sites WHERE code = 'second')
+            AND code = 'ci-second-home';
 
           INSERT INTO infosystems (site_id, name, code, description, field_schema)
           VALUES (
@@ -241,11 +263,17 @@ jobs:
             (SELECT id FROM sites WHERE code = 'second'),
             'Home', '', '/', 'Second Site', '<p>Second Site Content</p>',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'published', 'infosystem.list', '{"include_content":true}'::jsonb
+            'published', 'infosystem.list', '{}'::jsonb
           );
 
           INSERT INTO node_module_bindings (node_id, module_code, binding_code, target_key)
           SELECT n.id, 'infosystem', 'primary', 'catalog'
+          FROM nodes n
+          JOIN sites s ON s.id = n.site_id
+          WHERE s.code = 'second' AND n.path = '/';
+
+          INSERT INTO node_module_bindings (node_id, module_code, binding_code, target_key)
+          SELECT n.id, 'documents', 'intro', 'ci-second-home'
           FROM nodes n
           JOIN sites s ON s.id = n.site_id
           WHERE s.code = 'second' AND n.path = '/';
