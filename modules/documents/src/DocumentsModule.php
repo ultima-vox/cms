@@ -13,6 +13,7 @@ use Core\Http\Request;
 use Core\Page\PageTypeDefinition;
 use Core\Repository\AuditLogRepository;
 use Core\Repository\LoginAttemptRepository;
+use Core\Repository\NodeModuleBindingRepository;
 use Core\Repository\UserRepository;
 use Core\Security\AuthService;
 use Core\Security\PermissionGate;
@@ -53,6 +54,16 @@ final readonly class DocumentsModule implements ModuleInterface
                 $repository,
                 $renderer,
             ),
+        );
+
+        $core->pages()->stageProvider(
+            'documents.intro',
+            new DocumentsIntroStageProvider(
+                new NodeModuleBindingRepository($db),
+                $repository,
+                $renderer,
+            ),
+            100,
         );
 
         $core->pages()->type(new PageTypeDefinition(
