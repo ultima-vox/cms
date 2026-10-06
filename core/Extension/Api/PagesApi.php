@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Core\Extension\Api;
 
+use Core\Page\PageExecutionContext;
+use Core\Page\PageExecutionStageInterface;
+use Core\Page\PageExecutionStageProviderInterface;
 use Core\Page\PageExecutorInterface;
 use Core\Page\PageTypeDefinition;
 use Core\Page\PageTypeProvisioningContext;
@@ -14,6 +17,9 @@ final class PagesApi
 {
     /** @var array<string, PageTypeDefinition> */
     private array $definitions = [];
+
+    /** @var array<string, array{provider: PageExecutionStageProviderInterface, sorting: int}> */
+    private array $stageProviders = [];
 
     private ?string $defaultCode = null;
     private bool $frozen = false;
@@ -113,6 +119,50 @@ final class PagesApi
     public function provisionConfiguration(string $code, PageTypeProvisioningContext $context): array
     {
         return $this->definition($code)->provisionConfiguration($context);
+    }
+
+    public function stageProvider(
+        string $code,
+        PageExecutionStageProviderInterface $provider,
+        int $sorting = 0,
+    ): void {
+        $this->assertMutable();
+
+        $code = strtolower(trim($code));
+        if (!preg_match('/^[a-z][a-z0-9._-]{0,127}$/', $code)) {
+            throw new RuntimeException('Page stage provider code is invalid.');
+        }
+        if (isset($this->stageProviders[$code])) {
+            throw new RuntimeException(sprintf('Page stage provider "%s" is already registered.', $code));
+        }
+
+        $this->stageProviders[$code] = [
+            'provider' => $provider,
+            'sorting' => $sorting,
+        ];
+    }
+
+    /** @return list<PageExecutionStageInterface> */
+    public function stages(PageExecutionContext $context): array
+    {
+        $definitions = $this->stageProviders;
+        uasort(
+            $definitions,
+            static fn (array $left, array $right): int =>
+                [$left['sorting']] <=> [$right['sorting']],
+        );
+
+        $stages = [];
+        foreach ($definitions as $definition) {
+            foreach ($definition['provider']->stages($context) as $stage) {
+                if (!$stage instanceof PageExecutionStageInterface) {
+                    throw new RuntimeException('Page stage provider returned an invalid stage.');
+                }
+                $stages[] = $stage;
+            }
+        }
+
+        return $stages;
     }
 
     public function freeze(): void
