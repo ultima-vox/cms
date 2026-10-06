@@ -95,8 +95,9 @@ try {
     $binding->execute(['node_id' => $boundNodeId]);
 
     $applied = $runner->migrate('documents');
-    if (!in_array('002_migrate_node_content.sql', $applied, true)) {
-        throw new RuntimeException('Legacy node content migration was not applied.');
+    if (!in_array('002_migrate_node_content.sql', $applied, true)
+        || !in_array('003_migrate_remaining_core_content.sql', $applied, true)) {
+        throw new RuntimeException('Legacy node content migrations were not applied.');
     }
 
     $documentCode = 'node-' . $legacyNodeId;
@@ -156,10 +157,15 @@ try {
 
     $node->execute(['id' => $boundNodeId]);
     $boundRow = $node->fetch(PDO::FETCH_ASSOC);
+    $boundPageConfig = is_array($boundRow)
+        ? json_decode((string) ($boundRow['page_config'] ?? '{}'), true, 512, JSON_THROW_ON_ERROR)
+        : null;
     if (!is_array($boundRow)
-        || ($boundRow['page_type'] ?? null) !== 'core.content'
+        || ($boundRow['page_type'] ?? null) !== 'documents.page'
+        || !is_array($boundPageConfig)
+        || ($boundPageConfig['document'] ?? null) !== 'node-' . $boundNodeId
         || ($boundRow['content'] ?? null) !== '<section>Bound body</section>') {
-        throw new RuntimeException('Primary module-bound node was incorrectly migrated to Documents.');
+        throw new RuntimeException('Primary module-bound legacy node was not migrated to Documents.');
     }
 
     $boundDocumentCount = $db->prepare(
@@ -169,8 +175,8 @@ try {
         'site_id' => $siteId,
         'code' => 'node-' . $boundNodeId,
     ]);
-    if ((int) $boundDocumentCount->fetchColumn() !== 0) {
-        throw new RuntimeException('Documents migration created a document for a primary module-bound node.');
+    if ((int) $boundDocumentCount->fetchColumn() !== 1) {
+        throw new RuntimeException('Documents migration did not create the bound legacy document.');
     }
 
     if ($runner->migrate('documents') !== []) {
