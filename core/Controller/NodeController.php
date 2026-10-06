@@ -104,6 +104,9 @@ final class NodeController
         foreach ($layoutDefinitions as $layout) {
             $stages[] = new LayoutExecutionStage($layout, $this->view);
         }
+        foreach ($this->pages->stages($context) as $stage) {
+            $stages[] = $stage;
+        }
         $stages[] = new PageExecutorStage($definition->executor);
 
         $page = new PageRuntime(
