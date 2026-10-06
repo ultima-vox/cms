@@ -105,7 +105,7 @@ final class StructureRepository
             }
 
             $pageConfigJson = json_encode(
-                $pageConfig,
+                (object) $pageConfig,
                 JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
             );
 
