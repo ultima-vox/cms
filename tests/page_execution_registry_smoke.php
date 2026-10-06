@@ -6,7 +6,10 @@ use Core\Extension\Api\PagesApi;
 use Core\Http\Request;
 use Core\Page\PageConfigurationValidatorInterface;
 use Core\Page\PageExecutionContext;
+use Core\Page\PageExecutionStageInterface;
+use Core\Page\PageExecutionStageProviderInterface;
 use Core\Page\PageExecutorInterface;
+use Core\Page\PageRuntime;
 use Core\Page\PageTypeDefinition;
 use Core\Page\PageTypeProvisionerInterface;
 use Core\Page\PageTypeProvisioningContext;
@@ -73,6 +76,26 @@ $definition = new PageTypeDefinition(
 );
 $pages->type($definition);
 
+$pages->stageProvider(
+    'smoke.wrapper',
+    new class implements PageExecutionStageProviderInterface {
+        public function stages(PageExecutionContext $context): array
+        {
+            return [
+                new class implements PageExecutionStageInterface {
+                    public function execute(PageRuntime $page): SafeHtml
+                    {
+                        return SafeHtml::fromTrustedStorage(
+                            '<aside>before</aside>' . $page->execute()->value(),
+                        );
+                    }
+                },
+            ];
+        }
+    },
+    10,
+);
+
 if (!$pages->has('SMOKE.PAGE')) {
     throw new RuntimeException('Page type registry did not normalize type codes.');
 }
@@ -125,6 +148,19 @@ $context = new PageExecutionContext(
 $html = $pages->resolve('smoke.page')->execute($context);
 if ($html->value() !== '<p>page-executor-ok</p>') {
     throw new RuntimeException('Page executor returned unexpected HTML.');
+}
+
+$providerStages = $pages->stages($context);
+if (count($providerStages) !== 1) {
+    throw new RuntimeException('Page stage provider registry returned an unexpected stage count.');
+}
+$providerChain = new \Core\Page\PageExecutionChain([
+    ...$providerStages,
+    new \Core\Page\PageExecutorStage($executor),
+]);
+$providerRuntime = new PageRuntime($context, $providerChain);
+if ($providerRuntime->start()->value() !== '<aside>before</aside><p>page-executor-ok</p>') {
+    throw new RuntimeException('Page stage provider did not compose around the page executor.');
 }
 
 if (!in_array('page-executor:smoke', $renderContext->dependencies(), true)) {
