@@ -13,7 +13,6 @@ use Core\Page\PageExecutorInterface;
 use Core\Page\PageExecutorStage;
 use Core\Page\PageRuntime;
 use Core\Page\PageTypeProvisioningContext;
-use Core\Repository\NodeModuleBindingRepository;
 use Core\Site\SiteContext;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderEngine;
@@ -136,14 +135,20 @@ try {
         throw new RuntimeException('Documents intro stage fixture node was not created.');
     }
 
-    $bindings = new NodeModuleBindingRepository($db);
-    $bindings->replaceTargetNodes(
-        $secondSiteId,
-        'documents',
-        'intro',
-        'intro-doc',
-        [$stageNodeId],
+    $bindingStatement = $db->prepare(
+        <<<'SQL'
+        INSERT INTO node_module_bindings (node_id, module_code, binding_code, target_key)
+        VALUES (:node_id, 'documents', 'intro', :target_key)
+        ON CONFLICT (node_id, module_code, binding_code)
+        DO UPDATE SET
+            target_key = EXCLUDED.target_key,
+            updated_at = CURRENT_TIMESTAMP
+        SQL
     );
+    $bindingStatement->execute([
+        'node_id' => $stageNodeId,
+        'target_key' => 'intro-doc',
+    ]);
 
     $stageContext = new PageExecutionContext(
         new Request('GET', '/', '/', [], [], [], []),
@@ -200,13 +205,10 @@ try {
         throw new RuntimeException('Documents intro stage provider returned a stage without a binding.');
     }
 
-    $bindings->replaceTargetNodes(
-        $secondSiteId,
-        'documents',
-        'intro',
-        'default-only-intro',
-        [$stageNodeId],
-    );
+    $bindingStatement->execute([
+        'node_id' => $stageNodeId,
+        'target_key' => 'default-only-intro',
+    ]);
     try {
         $core->pages()->stages(new PageExecutionContext(
             new Request('GET', '/', '/', [], [], [], []),
@@ -222,13 +224,10 @@ try {
         }
     }
 
-    $bindings->replaceTargetNodes(
-        $secondSiteId,
-        'documents',
-        'intro',
-        'intro-doc',
-        [$stageNodeId],
-    );
+    $bindingStatement->execute([
+        'node_id' => $stageNodeId,
+        'target_key' => 'intro-doc',
+    ]);
 
     $engine = new RenderEngine();
     $templateContext = new TemplateFacadeContext(
