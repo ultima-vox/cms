@@ -84,6 +84,15 @@ final class PagesApi
         return $definitions;
     }
 
+    /** @return list<PageTypeDefinition> */
+    public function provisionableDefinitions(): array
+    {
+        return array_values(array_filter(
+            $this->definitions(),
+            static fn (PageTypeDefinition $definition): bool => $definition->provisioner !== null,
+        ));
+    }
+
     public function default(): ?PageTypeDefinition
     {
         return $this->defaultCode !== null
