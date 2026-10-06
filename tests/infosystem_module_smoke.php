@@ -26,6 +26,21 @@ if (!$core->pages()->has('infosystem.list')) {
     throw new RuntimeException('Infosystem page executor was not registered.');
 }
 
+$definition = $core->pages()->definition('infosystem.list');
+$properties = $definition->configurationSchema['properties'] ?? null;
+if (!is_array($properties) || array_key_exists('include_content', $properties)) {
+    throw new RuntimeException('Infosystem page schema still exposes legacy include_content.');
+}
+
+try {
+    $core->pages()->validateConfiguration('infosystem.list', ['include_content' => true]);
+    throw new RuntimeException('Infosystem page validator still accepts legacy include_content.');
+} catch (RuntimeException $exception) {
+    if ($exception->getMessage() === 'Infosystem page validator still accepts legacy include_content.') {
+        throw $exception;
+    }
+}
+
 $renderedEvent = null;
 $core->events()->listen(
     InfosystemItemsRendered::class,
