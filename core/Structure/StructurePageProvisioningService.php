@@ -39,6 +39,13 @@ final readonly class StructurePageProvisioningService
             throw new RuntimeException('No default page type is registered. Select a page type explicitly.');
         }
 
+        if ($definition->provisioner === null) {
+            throw new RuntimeException(sprintf(
+                'Page type "%s" cannot be provisioned from Structure.',
+                $definition->code,
+            ));
+        }
+
         $ownsTransaction = !$this->db->inTransaction();
         if ($ownsTransaction) {
             $this->db->beginTransaction();
