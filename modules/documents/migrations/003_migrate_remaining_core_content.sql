@@ -31,7 +31,22 @@ inserted_documents AS (
     ON CONFLICT (site_id, code) DO NOTHING
     RETURNING id, site_id, code
 ),
-candidate_documents AS (
+resolved_documents AS (
+    SELECT
+        d.id,
+        d.site_id,
+        d.code,
+        c.node_id,
+        c.content,
+        c.created_at,
+        c.updated_at
+    FROM inserted_documents d
+    JOIN candidates c
+      ON c.site_id = d.site_id
+     AND c.document_code = d.code
+
+    UNION ALL
+
     SELECT
         d.id,
         d.site_id,
@@ -44,6 +59,12 @@ candidate_documents AS (
     JOIN candidates c
       ON c.site_id = d.site_id
      AND c.document_code = d.code
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM inserted_documents inserted
+        WHERE inserted.site_id = d.site_id
+          AND inserted.code = d.code
+    )
 ),
 inserted_versions AS (
     INSERT INTO document_versions (
@@ -61,7 +82,7 @@ inserted_versions AS (
         'published',
         d.created_at,
         d.updated_at
-    FROM candidate_documents d
+    FROM resolved_documents d
     WHERE NOT EXISTS (
         SELECT 1
         FROM document_versions v
@@ -76,6 +97,20 @@ SET page_type = 'documents.page',
 WHERE n.page_type = 'core.content'
   AND EXISTS (
       SELECT 1
-      FROM candidate_documents d
+      FROM resolved_documents d
       WHERE d.node_id = n.id
+  )
+  AND (
+      EXISTS (
+          SELECT 1
+          FROM document_versions v
+          JOIN resolved_documents d ON d.id = v.document_id
+          WHERE d.node_id = n.id
+      )
+      OR EXISTS (
+          SELECT 1
+          FROM inserted_versions v
+          JOIN resolved_documents d ON d.id = v.document_id
+          WHERE d.node_id = n.id
+      )
   );
