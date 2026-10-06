@@ -145,11 +145,18 @@ final class PagesApi
     /** @return list<PageExecutionStageInterface> */
     public function stages(PageExecutionContext $context): array
     {
-        $definitions = $this->stageProviders;
-        uasort(
+        $definitions = [];
+        foreach ($this->stageProviders as $code => $definition) {
+            $definitions[] = [
+                'code' => $code,
+                'provider' => $definition['provider'],
+                'sorting' => $definition['sorting'],
+            ];
+        }
+        usort(
             $definitions,
             static fn (array $left, array $right): int =>
-                [$left['sorting']] <=> [$right['sorting']],
+                [$left['sorting'], $left['code']] <=> [$right['sorting'], $right['code']],
         );
 
         $stages = [];
