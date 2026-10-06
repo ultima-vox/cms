@@ -9,8 +9,6 @@ use RuntimeException;
 
 final readonly class PageTypeSelection
 {
-    public const DEFAULT_CODE = 'core.content';
-
     /** @param array<string, mixed> $configuration */
     public function __construct(
         public string $code,
@@ -24,12 +22,13 @@ final readonly class PageTypeSelection
     /** @param array<string, mixed> $node */
     public static function fromNode(array $node): self
     {
-        $code = isset($node['page_type']) && is_string($node['page_type'])
-            ? strtolower(trim($node['page_type']))
-            : self::DEFAULT_CODE;
+        if (!isset($node['page_type']) || !is_string($node['page_type'])) {
+            throw new RuntimeException('Page type is required.');
+        }
 
+        $code = strtolower(trim($node['page_type']));
         if ($code === '') {
-            $code = self::DEFAULT_CODE;
+            throw new RuntimeException('Page type is required.');
         }
 
         return new self(
