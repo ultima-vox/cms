@@ -99,11 +99,11 @@ final class StructureRepository
             <<<'SQL'
             INSERT INTO nodes (
                 site_id, parent_id, layout_id, name, slug, path, title,
-                content, meta_description, status, is_active, sorting, publish_at,
+                meta_description, status, is_active, sorting, publish_at,
                 page_type, page_config
             ) VALUES (
                 :site_id, :parent_id, :layout_id, :name, :slug, :path, :title,
-                :content, :meta_description, :status, CAST(:is_active AS BOOLEAN), :sorting, :publish_at,
+                :meta_description, :status, CAST(:is_active AS BOOLEAN), :sorting, :publish_at,
                 :page_type, CAST(:page_config AS jsonb)
             )
             RETURNING id
@@ -118,7 +118,6 @@ final class StructureRepository
             'slug' => $data['slug'],
             'path' => $path,
             'title' => $data['title'],
-            'content' => $data['content'],
             'meta_description' => $data['meta_description'],
             'status' => $data['status'],
             'is_active' => (bool) $data['is_active'] ? 'true' : 'false',
@@ -161,7 +160,6 @@ final class StructureRepository
                     slug = :slug,
                     path = :path,
                     title = :title,
-                    content = :content,
                     meta_description = :meta_description,
                     status = :status,
                     is_active = CAST(:is_active AS BOOLEAN),
@@ -181,7 +179,6 @@ final class StructureRepository
                 'slug' => $data['slug'],
                 'path' => $newPath,
                 'title' => $data['title'],
-                'content' => $data['content'],
                 'meta_description' => $data['meta_description'],
                 'status' => $data['status'],
                 'is_active' => (bool) $data['is_active'] ? 'true' : 'false',
