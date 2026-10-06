@@ -2,7 +2,7 @@
 
 Public site layouts are ordinary HTML files with small PHP insertions (`*.html.php`). There is no XML/XSLT layer and no CMS-specific template language.
 
-Twig is not part of the public frontend contract. It is currently retained only for the internal administration UI and backwards compatibility with early development layouts.
+Both public layouts and administration views use native PHP. No legacy template engine or compatibility fallback is supported.
 
 ## Runtime model
 

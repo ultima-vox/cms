@@ -2,7 +2,7 @@
 
 Lightweight CMS built around a simple HostCMS-inspired content model: nodes, layouts and independently installable content modules, without XML/XSLT or EAV queries.
 
-The public frontend uses ordinary HTML + PHP layouts. Twig is currently retained only for the internal administration UI and legacy compatibility; site developers do not need a separate template language.
+The public frontend and administration UI use native HTML + PHP templates; no separate template language or legacy renderer is supported.
 
 ## Requirements
 
@@ -106,7 +106,7 @@ Layout resolution checks `storage/templates` first and falls back to packaged `t
 
 The frontend helpers are deliberately small and explicit: `text()` for escaped text, `html()` for trusted `SafeHtml`, `asset()` for assets and `url()` for internal URLs.
 
-Twig remains an implementation detail of the current administration UI and a temporary compatibility path for early development layouts. New public layouts must use `*.html.php`.
+The administration UI uses `AdminPhpRenderer`, created through `AdminPhpRendererFactory`. Public and admin templates use native PHP; no legacy template engine is available.
 
 ## Infosystem model
 
@@ -146,7 +146,7 @@ php bin/console extensions:list
 php bin/console user:create <email> <display-name>
 ```
 
-`templates:lint` validates both public PHP/HTML templates and internal/legacy Twig templates.
+`templates:lint` validates native PHP templates in Core and enabled modules.
 
 ## Runtime
 
