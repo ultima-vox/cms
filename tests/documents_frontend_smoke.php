@@ -7,13 +7,19 @@ use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
 use Core\Extension\ModuleLoader;
 use Core\Http\Request;
+use Core\Page\PageExecutionChain;
 use Core\Page\PageExecutionContext;
+use Core\Page\PageExecutorInterface;
+use Core\Page\PageExecutorStage;
+use Core\Page\PageRuntime;
 use Core\Page\PageTypeProvisioningContext;
+use Core\Repository\NodeModuleBindingRepository;
 use Core\Site\SiteContext;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderEngine;
 use Core\View\Render\TemplateFacadeContext;
 use Core\View\Render\ViewTemplateRenderer;
+use Core\View\SafeHtml;
 use UltimaVox\Modules\Documents\DocumentsFacade;
 use UltimaVox\Modules\Documents\Repository\DocumentRepository;
 
@@ -103,6 +109,126 @@ try {
     $secondDocumentId = $repository->create($secondSiteId, 'footer-contacts', 'Second footer');
     $secondVersionId = $repository->createDraftVersion($secondDocumentId, '<p>Second footer</p>');
     $repository->publishVersion($secondDocumentId, $secondVersionId);
+
+    $introDocumentId = $repository->create($secondSiteId, 'intro-doc', 'Intro document');
+    $introVersionId = $repository->createDraftVersion($introDocumentId, '<section>Intro</section>');
+    $repository->publishVersion($introDocumentId, $introVersionId);
+
+    $defaultOnlyDocumentId = $repository->create(1, 'default-only-intro', 'Default-only intro');
+    $defaultOnlyVersionId = $repository->createDraftVersion($defaultOnlyDocumentId, '<section>Wrong site</section>');
+    $repository->publishVersion($defaultOnlyDocumentId, $defaultOnlyVersionId);
+
+    $nodeStatement = $db->prepare(
+        <<<'SQL'
+        INSERT INTO nodes (
+            site_id, parent_id, name, slug, path, title, status, page_type, page_config
+        )
+        VALUES (
+            :site_id, NULL, 'Documents Stage Root', '', '/', 'Documents Stage Root',
+            'published', 'documents.page', '{"document":"footer-contacts"}'::jsonb
+        )
+        RETURNING id
+        SQL
+    );
+    $nodeStatement->execute(['site_id' => $secondSiteId]);
+    $stageNodeId = (int) $nodeStatement->fetchColumn();
+    if ($stageNodeId < 1) {
+        throw new RuntimeException('Documents intro stage fixture node was not created.');
+    }
+
+    $bindings = new NodeModuleBindingRepository($db);
+    $bindings->replaceTargetNodes(
+        $secondSiteId,
+        'documents',
+        'intro',
+        'intro-doc',
+        [$stageNodeId],
+    );
+
+    $stageContext = new PageExecutionContext(
+        new Request('GET', '/', '/', [], [], [], []),
+        new SiteContext($secondSiteId, 'documents-smoke', 'Documents Smoke', 'documents-smoke.test'),
+        ['id' => $stageNodeId, 'site_id' => $secondSiteId, 'path' => '/'],
+        [],
+        new RenderContext(),
+    );
+
+    $providerStages = $core->pages()->stages($stageContext);
+    if (count($providerStages) !== 1) {
+        throw new RuntimeException('Documents intro stage provider returned an unexpected stage count.');
+    }
+
+    $terminal = new class implements PageExecutorInterface {
+        public function execute(PageExecutionContext $context): SafeHtml
+        {
+            $context->renderContext->dependency('terminal:documents-intro-smoke');
+
+            return SafeHtml::fromTrustedStorage('<main>Body</main>');
+        }
+    };
+    $stageRuntime = new PageRuntime(
+        $stageContext,
+        new PageExecutionChain([
+            ...$providerStages,
+            new PageExecutorStage($terminal),
+        ]),
+    );
+    if ($stageRuntime->start()->value() !== '<section>Intro</section><main>Body</main>') {
+        throw new RuntimeException('Documents intro stage did not render before the terminal page executor.');
+    }
+
+    foreach ([
+        'document:' . $introDocumentId,
+        'site:' . $secondSiteId . ':document:' . $introDocumentId,
+        'site:' . $secondSiteId . ':document:intro-doc',
+        'document_version:' . $introVersionId,
+        'terminal:documents-intro-smoke',
+    ] as $dependency) {
+        if (!in_array($dependency, $stageContext->renderContext->dependencies(), true)) {
+            throw new RuntimeException('Documents intro stage dependency is missing: ' . $dependency);
+        }
+    }
+
+    $withoutBinding = $core->pages()->stages(new PageExecutionContext(
+        new Request('GET', '/unbound', '/unbound', [], [], [], []),
+        new SiteContext($secondSiteId, 'documents-smoke', 'Documents Smoke', 'documents-smoke.test'),
+        ['id' => 987654321, 'site_id' => $secondSiteId],
+        [],
+        new RenderContext(),
+    ));
+    if ($withoutBinding !== []) {
+        throw new RuntimeException('Documents intro stage provider returned a stage without a binding.');
+    }
+
+    $bindings->replaceTargetNodes(
+        $secondSiteId,
+        'documents',
+        'intro',
+        'default-only-intro',
+        [$stageNodeId],
+    );
+    try {
+        $core->pages()->stages(new PageExecutionContext(
+            new Request('GET', '/', '/', [], [], [], []),
+            new SiteContext($secondSiteId, 'documents-smoke', 'Documents Smoke', 'documents-smoke.test'),
+            ['id' => $stageNodeId, 'site_id' => $secondSiteId],
+            [],
+            new RenderContext(),
+        ));
+        throw new RuntimeException('Documents intro stage accepted a document from another site.');
+    } catch (RuntimeException $exception) {
+        if ($exception->getMessage() === 'Documents intro stage accepted a document from another site.') {
+            throw $exception;
+        }
+    }
+
+    $bindings->replaceTargetNodes(
+        $secondSiteId,
+        'documents',
+        'intro',
+        'intro-doc',
+        [$stageNodeId],
+    );
 
     $engine = new RenderEngine();
     $templateContext = new TemplateFacadeContext(
