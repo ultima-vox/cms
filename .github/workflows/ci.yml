@@ -133,19 +133,36 @@ jobs:
       - name: Seed smoke-test content
         run: |
           psql -h 127.0.0.1 -U cms -d cms_db <<'SQL'
-          INSERT INTO nodes (site_id, name, slug, path, title, content, layout_id, status, page_type)
+          INSERT INTO documents (site_id, code, name)
+          VALUES
+            (1, 'ci-home', 'Ultima Vox CMS'),
+            (1, 'ci-about', 'About');
+
+          INSERT INTO document_versions (document_id, version, content, status, published_at)
+          SELECT id, 1,
+            CASE code
+              WHEN 'ci-home' THEN '<p>Production Core</p>'
+              WHEN 'ci-about' THEN '<p>About</p>'
+            END,
+            'published',
+            CURRENT_TIMESTAMP
+          FROM documents
+          WHERE site_id = 1
+            AND code IN ('ci-home', 'ci-about');
+
+          INSERT INTO nodes (site_id, name, slug, path, title, content, layout_id, status, page_type, page_config)
           VALUES (
             1, 'Home', '', '/', 'Ultima Vox CMS', '<p>Production Core</p>',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'published', 'core.content'
+            'published', 'documents.page', '{"document":"ci-home"}'::jsonb
           );
-          INSERT INTO nodes (site_id, parent_id, name, slug, path, title, layout_id, status, page_type)
+          INSERT INTO nodes (site_id, parent_id, name, slug, path, title, layout_id, status, page_type, page_config)
           VALUES (
             1,
             (SELECT id FROM nodes WHERE site_id = 1 AND path = '/'),
             'About', 'about', '/about', 'About',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'published', 'core.content'
+            'published', 'documents.page', '{"document":"ci-about"}'::jsonb
           );
 
           INSERT INTO infosystems (site_id, name, code, description, field_schema)
@@ -217,14 +234,28 @@ jobs:
             '<p>Second tank content</p>'
           );
 
+          INSERT INTO documents (site_id, code, name)
+          VALUES (
+            (SELECT id FROM sites WHERE code = 'second'),
+            'ci-home',
+            'Second Site'
+          );
+
+          INSERT INTO document_versions (document_id, version, content, status, published_at)
+          SELECT d.id, 1, '<p>Second Site Content</p>', 'published', CURRENT_TIMESTAMP
+          FROM documents d
+          JOIN sites s ON s.id = d.site_id
+          WHERE s.code = 'second'
+            AND d.code = 'ci-home';
+
           INSERT INTO nodes (
-            site_id, name, slug, path, title, content, layout_id, status, page_type
+            site_id, name, slug, path, title, content, layout_id, status, page_type, page_config
           )
           VALUES (
             (SELECT id FROM sites WHERE code = 'second'),
-            'Home', '', '/', 'Second Site', '<p>Second Site Content</p>',
+            'Home', '', '/', 'Second Site', '',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'published', 'core.content'
+            'published', 'documents.page', '{"document":"ci-home"}'::jsonb
           );
 
           INSERT INTO node_module_bindings (node_id, module_code, binding_code, target_key)
