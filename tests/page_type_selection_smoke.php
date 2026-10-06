@@ -6,9 +6,30 @@ use Core\Page\PageTypeSelection;
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 
-$default = PageTypeSelection::fromNode([]);
-if ($default->code !== PageTypeSelection::DEFAULT_CODE || $default->configuration !== []) {
-    throw new RuntimeException('Default page type selection is invalid.');
+try {
+    PageTypeSelection::fromNode([]);
+    throw new RuntimeException('Missing page type was accepted.');
+} catch (RuntimeException $exception) {
+    if ($exception->getMessage() === 'Missing page type was accepted.') {
+        throw $exception;
+    }
+}
+
+try {
+    PageTypeSelection::fromNode(['page_type' => '']);
+    throw new RuntimeException('Empty page type was accepted.');
+} catch (RuntimeException $exception) {
+    if ($exception->getMessage() === 'Empty page type was accepted.') {
+        throw $exception;
+    }
+}
+
+$legacy = PageTypeSelection::fromNode([
+    'page_type' => 'core.content',
+    'page_config' => '{}',
+]);
+if ($legacy->code !== 'core.content' || $legacy->configuration !== []) {
+    throw new RuntimeException('Explicit legacy page type selection is invalid.');
 }
 
 $configured = PageTypeSelection::fromNode([
