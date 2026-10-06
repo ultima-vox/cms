@@ -48,6 +48,16 @@ $core = new ExtensionCore(new RuntimeApi($db, $rootPath));
 (new ModuleLoader($rootPath))->load($core);
 $core->freeze();
 
+$provisionableCodes = array_map(
+    static fn ($definition): string => $definition->code,
+    $core->pages()->provisionableDefinitions(),
+);
+if (!in_array('documents.page', $provisionableCodes, true)
+    || in_array('core.content', $provisionableCodes, true)
+    || in_array('infosystem.list', $provisionableCodes, true)) {
+    throw new RuntimeException('Provisionable page type registry exposed an unsafe Structure choice.');
+}
+
 $structure = new StructureRepository($db, $siteId);
 $service = new StructurePageProvisioningService(
     $db,
@@ -104,6 +114,30 @@ try {
         if ($db->inTransaction()) {
             $db->rollBack();
         }
+    }
+
+    $legacySlug = 'legacy-core-content-rejected';
+    try {
+        $service->create(
+            $nodeData($legacySlug, 'Legacy page'),
+            'core.content',
+        );
+        throw new RuntimeException('Structure provisioning accepted a page type without a provisioner.');
+    } catch (RuntimeException $exception) {
+        if ($exception->getMessage() === 'Structure provisioning accepted a page type without a provisioner.') {
+            throw $exception;
+        }
+    }
+
+    $legacyNode = $db->prepare(
+        'SELECT COUNT(*) FROM nodes WHERE site_id = :site_id AND slug = :slug'
+    );
+    $legacyNode->execute([
+        'site_id' => $siteId,
+        'slug' => $legacySlug,
+    ]);
+    if ((int) $legacyNode->fetchColumn() !== 0) {
+        throw new RuntimeException('Rejected legacy page type still created a Structure node.');
     }
 
     $failedSlug = 'page-provisioning-rollback';

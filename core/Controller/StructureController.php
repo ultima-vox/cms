@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Core\Controller;
 
+use Core\Extension\Api\PagesApi;
 use Core\Http\Request;
 use Core\Http\Response;
 use Core\Repository\AuditLogRepository;
 use Core\Repository\StructureRepository;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
+use Core\Structure\StructurePageProvisioningService;
 use Core\View\AdminPhpRenderer;
 use RuntimeException;
 use Throwable;
@@ -19,6 +21,8 @@ final class StructureController
     public function __construct(
         private readonly AuthService $auth,
         private readonly StructureRepository $structure,
+        private readonly StructurePageProvisioningService $pageProvisioning,
+        private readonly PagesApi $pages,
         private readonly AuditLogRepository $audit,
         private readonly AdminPhpRenderer $view,
     ) {
@@ -72,9 +76,15 @@ final class StructureController
         }
 
         try {
-            $id = $this->structure->create($this->validateNodeData($request->post, null));
+            $id = $this->pageProvisioning->create(
+                $this->validateNodeData($request->post, null),
+                $this->stringOrNull($request->post['page_type'] ?? null),
+            );
             $created = $this->structure->find($id);
-            $this->audit($request, 'node.create', $id, ['path' => $created['path'] ?? null]);
+            $this->audit($request, 'node.create', $id, [
+                'path' => $created['path'] ?? null,
+                'page_type' => $created['page_type'] ?? null,
+            ]);
             return Response::redirect('/admin/structure/' . $id . '/edit?saved=1');
         } catch (Throwable $exception) {
             return $this->formResponse($request->post, $exception->getMessage(), 422);
@@ -163,6 +173,7 @@ final class StructureController
     /** @param array<string, mixed>|null $node */
     private function formResponse(?array $node, ?string $error = null, int $status = 200): Response
     {
+        $defaultPageType = $this->pages->default();
         $form = array_merge([
             'id' => null,
             'parent_id' => null,
@@ -172,6 +183,7 @@ final class StructureController
             'path' => null,
             'title' => '',
             'content' => '',
+            'page_type' => $defaultPageType?->code ?? '',
             'meta_description' => '',
             'status' => 'draft',
             'is_active' => true,
@@ -183,6 +195,7 @@ final class StructureController
             'node' => $form,
             'nodes' => $this->flattenTree($this->structure->all()),
             'layouts' => $this->structure->layouts(),
+            'page_types' => $this->pages->provisionableDefinitions(),
             'csrf_token' => Csrf::token(),
             'error' => $error,
         ]), $status);
