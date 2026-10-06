@@ -79,51 +79,36 @@ final class StructureRepository
      */
     public function create(
         array $data,
-        ?string $pageType = null,
+        string $pageType,
         array $pageConfig = [],
     ): int {
         $parentId = $data['parent_id'];
         $path = $this->buildPath($parentId, (string) $data['slug']);
 
-        if ($pageType === null) {
-            $statement = $this->db->prepare(
-                <<<'SQL'
-                INSERT INTO nodes (
-                    site_id, parent_id, layout_id, name, slug, path, title,
-                    content, meta_description, status, is_active, sorting, publish_at
-                ) VALUES (
-                    :site_id, :parent_id, :layout_id, :name, :slug, :path, :title,
-                    :content, :meta_description, :status, CAST(:is_active AS BOOLEAN), :sorting, :publish_at
-                )
-                RETURNING id
-                SQL
-            );
-        } else {
-            $pageType = strtolower(trim($pageType));
-            if (!preg_match('/^[a-z][a-z0-9._-]{0,127}$/', $pageType)) {
-                throw new RuntimeException('Page type code is invalid.');
-            }
-
-            $pageConfigJson = json_encode(
-                (object) $pageConfig,
-                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
-            );
-
-            $statement = $this->db->prepare(
-                <<<'SQL'
-                INSERT INTO nodes (
-                    site_id, parent_id, layout_id, name, slug, path, title,
-                    content, meta_description, status, is_active, sorting, publish_at,
-                    page_type, page_config
-                ) VALUES (
-                    :site_id, :parent_id, :layout_id, :name, :slug, :path, :title,
-                    :content, :meta_description, :status, CAST(:is_active AS BOOLEAN), :sorting, :publish_at,
-                    :page_type, CAST(:page_config AS jsonb)
-                )
-                RETURNING id
-                SQL
-            );
+        $pageType = strtolower(trim($pageType));
+        if (!preg_match('/^[a-z][a-z0-9._-]{0,127}$/', $pageType)) {
+            throw new RuntimeException('Page type code is invalid.');
         }
+
+        $pageConfigJson = json_encode(
+            (object) $pageConfig,
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        );
+
+        $statement = $this->db->prepare(
+            <<<'SQL'
+            INSERT INTO nodes (
+                site_id, parent_id, layout_id, name, slug, path, title,
+                content, meta_description, status, is_active, sorting, publish_at,
+                page_type, page_config
+            ) VALUES (
+                :site_id, :parent_id, :layout_id, :name, :slug, :path, :title,
+                :content, :meta_description, :status, CAST(:is_active AS BOOLEAN), :sorting, :publish_at,
+                :page_type, CAST(:page_config AS jsonb)
+            )
+            RETURNING id
+            SQL
+        );
 
         $parameters = [
             'site_id' => $this->siteId,
@@ -141,10 +126,8 @@ final class StructureRepository
             'publish_at' => $data['publish_at'],
         ];
 
-        if ($pageType !== null) {
-            $parameters['page_type'] = $pageType;
-            $parameters['page_config'] = $pageConfigJson;
-        }
+        $parameters['page_type'] = $pageType;
+        $parameters['page_config'] = $pageConfigJson;
 
         $statement->execute($parameters);
 

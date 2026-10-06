@@ -133,19 +133,19 @@ jobs:
       - name: Seed smoke-test content
         run: |
           psql -h 127.0.0.1 -U cms -d cms_db <<'SQL'
-          INSERT INTO nodes (site_id, name, slug, path, title, content, layout_id, status)
+          INSERT INTO nodes (site_id, name, slug, path, title, content, layout_id, status, page_type)
           VALUES (
             1, 'Home', '', '/', 'Ultima Vox CMS', '<p>Production Core</p>',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'published'
+            'published', 'core.content'
           );
-          INSERT INTO nodes (site_id, parent_id, name, slug, path, title, layout_id, status)
+          INSERT INTO nodes (site_id, parent_id, name, slug, path, title, layout_id, status, page_type)
           VALUES (
             1,
             (SELECT id FROM nodes WHERE site_id = 1 AND path = '/'),
             'About', 'about', '/about', 'About',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'published'
+            'published', 'core.content'
           );
 
           INSERT INTO infosystems (site_id, name, code, description, field_schema)
@@ -218,13 +218,13 @@ jobs:
           );
 
           INSERT INTO nodes (
-            site_id, name, slug, path, title, content, layout_id, status
+            site_id, name, slug, path, title, content, layout_id, status, page_type
           )
           VALUES (
             (SELECT id FROM sites WHERE code = 'second'),
             'Home', '', '/', 'Second Site', '<p>Second Site Content</p>',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'published'
+            'published', 'core.content'
           );
 
           INSERT INTO node_module_bindings (node_id, module_code, binding_code, target_key)

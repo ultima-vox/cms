@@ -1,0 +1,2 @@
+ALTER TABLE nodes
+    ALTER COLUMN page_type DROP DEFAULT;

@@ -31,8 +31,8 @@ foreach ($columns as $column) {
 $pageType = $byName['page_type'] ?? null;
 if (!is_array($pageType)
     || ($pageType['is_nullable'] ?? null) !== 'NO'
-    || !str_contains((string) ($pageType['column_default'] ?? ''), 'core.content')) {
-    throw new RuntimeException('nodes.page_type schema/default is invalid.');
+    || ($pageType['column_default'] ?? null) !== null) {
+    throw new RuntimeException('nodes.page_type must be required without a database default.');
 }
 
 $pageConfig = $byName['page_config'] ?? null;
