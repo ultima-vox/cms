@@ -224,8 +224,6 @@ jobs:
             (SELECT id FROM sites WHERE code = 'second'),
             'Home', '', '/', 'Second Site', '<p>Second Site Content</p>',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'Home', '', '/', 'Second Site', '<p>Second Site Content</p>',
-            (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
             'published', 'core.content'
           );
 
