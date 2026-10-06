@@ -52,7 +52,10 @@ final readonly class StructurePageProvisioningService
         }
 
         try {
-            $nodeId = $this->structure->create($nodeData);
+            $nodeId = $this->structure->create(
+                $nodeData,
+                $definition->code,
+            );
             $node = $this->structure->find($nodeId);
             if ($node === null) {
                 throw new RuntimeException('Created Structure node could not be reloaded.');

@@ -32,7 +32,7 @@ final readonly class PageSelectionRepository
 
         try {
             $encoded = json_encode(
-                $configuration,
+                (object) $configuration,
                 JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
             );
         } catch (JsonException $exception) {
