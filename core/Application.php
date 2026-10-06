@@ -27,6 +27,7 @@ use Core\Repository\AuditLogRepository;
 use Core\Repository\LayoutRepository;
 use Core\Repository\LoginAttemptRepository;
 use Core\Repository\NodeRepository;
+use Core\Repository\PageSelectionRepository;
 use Core\Repository\SiteRepository;
 use Core\Repository\StructureRepository;
 use Core\Repository\UserRepository;
@@ -36,6 +37,7 @@ use Core\Security\SecurityHeaders;
 use Core\Site\AdminSiteSelector;
 use Core\Site\SiteContext;
 use Core\Site\SiteResolver;
+use Core\Structure\StructurePageProvisioningService;
 use Core\View\AdminPhpRendererFactory;
 use Core\View\PhpRenderer;
 
@@ -79,13 +81,22 @@ final class Application
             $siteRepository,
             Config::string('APP_URL', 'http://localhost'),
         );
+        $structureRepository = new StructureRepository($db, $core->sites()->adminId());
+        $structureProvisioning = new StructurePageProvisioningService(
+            $db,
+            $structureRepository,
+            new PageSelectionRepository($db),
+            $core->pages(),
+        );
 
         $builtinRoutes = new BuiltinRoutes(
             new AuthController($auth, $adminView),
             new AdminController($auth, $adminView, $core->admin(), $core->sites(), $audit),
             new StructureController(
                 $auth,
-                new StructureRepository($db, $core->sites()->adminId()),
+                $structureRepository,
+                $structureProvisioning,
+                $core->pages(),
                 $audit,
                 $adminView,
             ),
