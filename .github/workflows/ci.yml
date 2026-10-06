@@ -154,7 +154,7 @@ jobs:
           VALUES (
             1, 'Home', '', '/', 'Ultima Vox CMS', '<p>Production Core</p>',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'published', 'documents.page', '{"document":"ci-home"}'::jsonb
+            'published', 'infosystem.list', '{"include_content":true}'::jsonb
           );
           INSERT INTO nodes (site_id, parent_id, name, slug, path, title, layout_id, status, page_type, page_config)
           VALUES (
@@ -234,28 +234,14 @@ jobs:
             '<p>Second tank content</p>'
           );
 
-          INSERT INTO documents (site_id, code, name)
-          VALUES (
-            (SELECT id FROM sites WHERE code = 'second'),
-            'ci-home',
-            'Second Site'
-          );
-
-          INSERT INTO document_versions (document_id, version, content, status, published_at)
-          SELECT d.id, 1, '<p>Second Site Content</p>', 'published', CURRENT_TIMESTAMP
-          FROM documents d
-          JOIN sites s ON s.id = d.site_id
-          WHERE s.code = 'second'
-            AND d.code = 'ci-home';
-
           INSERT INTO nodes (
             site_id, name, slug, path, title, content, layout_id, status, page_type, page_config
           )
           VALUES (
             (SELECT id FROM sites WHERE code = 'second'),
-            'Home', '', '/', 'Second Site', '',
+            'Home', '', '/', 'Second Site', '<p>Second Site Content</p>',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
-            'published', 'documents.page', '{"document":"ci-home"}'::jsonb
+            'published', 'infosystem.list', '{"include_content":true}'::jsonb
           );
 
           INSERT INTO node_module_bindings (node_id, module_code, binding_code, target_key)
