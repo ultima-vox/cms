@@ -29,10 +29,10 @@ if ($siteId < 1) {
 $rootStatement = $db->prepare(
     <<<'SQL'
     INSERT INTO nodes (
-        site_id, parent_id, name, slug, path, title, content, status, page_type, page_config
+        site_id, parent_id, name, slug, path, title, status, page_type, page_config
     )
     VALUES (
-        :site_id, NULL, 'Provisioning Root', '', '/', 'Provisioning Root', '', 'draft', 'fixture.root', '{}'::jsonb
+        :site_id, NULL, 'Provisioning Root', '', '/', 'Provisioning Root', 'draft', 'fixture.root', '{}'::jsonb
     )
     RETURNING id
     SQL
@@ -73,7 +73,6 @@ $nodeData = static fn (string $slug, string $name): array => [
     'name' => $name,
     'slug' => $slug,
     'title' => $name . ' title',
-    'content' => '',
     'meta_description' => null,
     'status' => 'draft',
     'is_active' => false,
