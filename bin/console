@@ -6,6 +6,7 @@ declare(strict_types=1);
 use Core\Database;
 use Core\Extension\ModuleLoader;
 use Core\Extension\ModuleManager;
+use Core\Extension\ModuleMigrationCoordinator;
 use Core\Extension\ModuleMigrationRunner;
 use Core\Extension\ModulePackageLifecycle;
 use Core\Extension\ModulePackagePurger;
@@ -135,8 +136,23 @@ switch ($command) {
 
     case 'modules:migrate':
         $code = trim((string) ($argv[2] ?? ''));
+        if ($code === '--all') {
+            $result = (new ModuleMigrationCoordinator(Database::connection(), $rootPath))->migrateEnabled();
+            if ($result === []) {
+                fwrite(STDOUT, "No pending migrations for enabled modules.\n");
+                exit(0);
+            }
+
+            foreach ($result as $moduleCode => $migrations) {
+                foreach ($migrations as $migration) {
+                    fwrite(STDOUT, sprintf("Applied %s: %s\n", $moduleCode, $migration));
+                }
+            }
+            exit(0);
+        }
+
         if ($code === '') {
-            fwrite(STDERR, "Usage: php bin/console modules:migrate <module-code>\n");
+            fwrite(STDERR, "Usage: php bin/console modules:migrate <module-code|--all>\n");
             exit(1);
         }
 
@@ -296,6 +312,7 @@ switch ($command) {
             "  modules:purge <code>       Destructively remove package and declared module data; requires --confirm=<code>\n" .
             "  modules:inventory          List installer-managed module packages\n" .
             "  modules:migrate <code>     Apply pending migrations owned by one module\n" .
+            "  modules:migrate --all      Apply pending migrations for enabled modules in dependency order\n" .
             "  extensions:sync            Sync module metadata and enabled extension permissions\n" .
             "  extensions:list            List module lifecycle state\n" .
             "  extensions:enable <code>   Enable a synchronized module\n" .
