@@ -168,7 +168,8 @@ try {
     $applied = $runner->migrate('documents');
     if (!in_array('002_migrate_node_content.sql', $applied, true)
         || !in_array('003_migrate_remaining_core_content.sql', $applied, true)
-        || !in_array('004_migrate_infosystem_intro_content.sql', $applied, true)) {
+        || !in_array('004_migrate_infosystem_intro_content.sql', $applied, true)
+        || !in_array('005_drop_legacy_node_content.sql', $applied, true)) {
         throw new RuntimeException('Legacy node content migrations were not applied.');
     }
 
@@ -212,7 +213,7 @@ try {
     }
 
     $node = $db->prepare(
-        'SELECT page_type, page_config, content FROM nodes WHERE id = :id'
+        'SELECT page_type, page_config FROM nodes WHERE id = :id'
     );
     $node->execute(['id' => $legacyNodeId]);
     $nodeRow = $node->fetch(PDO::FETCH_ASSOC);
@@ -222,8 +223,7 @@ try {
     if (!is_array($nodeRow)
         || ($nodeRow['page_type'] ?? null) !== 'documents.page'
         || !is_array($pageConfig)
-        || ($pageConfig['document'] ?? null) !== $documentCode
-        || ($nodeRow['content'] ?? null) !== '<section>Legacy body</section>') {
+        || ($pageConfig['document'] ?? null) !== $documentCode) {
         throw new RuntimeException('Migrated node page selection or rollback content bridge is invalid.');
     }
 
@@ -235,8 +235,7 @@ try {
     if (!is_array($boundRow)
         || ($boundRow['page_type'] ?? null) !== 'documents.page'
         || !is_array($boundPageConfig)
-        || ($boundPageConfig['document'] ?? null) !== 'node-' . $boundNodeId
-        || ($boundRow['content'] ?? null) !== '<section>Bound body</section>') {
+        || ($boundPageConfig['document'] ?? null) !== 'node-' . $boundNodeId) {
         throw new RuntimeException('Primary module-bound legacy node was not migrated to Documents.');
     }
 
@@ -252,7 +251,7 @@ try {
     }
 
     $introNode = $db->prepare(
-        'SELECT page_type, page_config, content FROM nodes WHERE id = :id'
+        'SELECT page_type, page_config FROM nodes WHERE id = :id'
     );
     $introNode->execute(['id' => $introNodeId]);
     $introNodeRow = $introNode->fetch(PDO::FETCH_ASSOC);
@@ -263,8 +262,7 @@ try {
         || ($introNodeRow['page_type'] ?? null) !== 'infosystem.list'
         || !is_array($introPageConfig)
         || ($introPageConfig['limit'] ?? null) !== 10
-        || ($introPageConfig['include_content'] ?? null) !== false
-        || ($introNodeRow['content'] ?? null) !== '<section>Intro body</section>') {
+        || ($introPageConfig['include_content'] ?? null) !== false) {
         throw new RuntimeException('Infosystem intro node configuration was not migrated safely.');
     }
 
@@ -320,6 +318,18 @@ try {
     );
     if (($disabledConfig['include_content'] ?? null) !== false) {
         throw new RuntimeException('Disabled Infosystem intro configuration changed unexpectedly.');
+    }
+
+    $legacyColumn = $db->query(
+        "SELECT 1
+         FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name = 'nodes'
+           AND column_name = 'content'
+         LIMIT 1"
+    )->fetchColumn();
+    if ($legacyColumn !== false) {
+        throw new RuntimeException('Legacy nodes.content column still exists after Documents migration.');
     }
 
     if ($runner->migrate('documents') !== []) {
