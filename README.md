@@ -25,6 +25,8 @@ Configure `.env`, then run:
 
 ```bash
 php bin/console migrate
+php bin/console modules:migrate --all
+php bin/console extensions:sync
 php bin/console health
 php bin/console templates:lint
 ```
@@ -141,6 +143,7 @@ php bin/console migrate
 php bin/console health
 php bin/console templates:lint
 php bin/console modules:list
+php bin/console modules:migrate --all
 php bin/console extensions:sync
 php bin/console extensions:list
 php bin/console user:create <email> <display-name>
