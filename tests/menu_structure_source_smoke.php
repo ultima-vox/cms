@@ -32,11 +32,11 @@ if ($siteId < 1) {
 $insertNode = $db->prepare(
     <<<'SQL'
     INSERT INTO nodes (
-        site_id, parent_id, name, slug, path, title, content, status,
+        site_id, parent_id, name, slug, path, title, status,
         is_active, sorting, page_type, page_config
     )
     VALUES (
-        :site_id, :parent_id, :name, :slug, :path, :title, '', :status,
+        :site_id, :parent_id, :name, :slug, :path, :title, :status,
         CAST(:is_active AS BOOLEAN), :sorting, 'fixture.page', '{}'::jsonb
     )
     RETURNING id
