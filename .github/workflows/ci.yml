@@ -97,6 +97,9 @@ jobs:
       - name: Migration checksum smoke test
         run: php tests/migration_checksum_smoke.php
 
+      - name: Enabled module migration pipeline check
+        run: php bin/console modules:migrate --all | grep 'No pending migrations for enabled modules.'
+
       - name: Reserved system path smoke test
         run: php tests/system_path_smoke.php
 
