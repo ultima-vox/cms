@@ -32,7 +32,6 @@ final class NodeRepository
                 n.layout_id,
                 n.page_type,
                 n.page_config,
-                n.content,
                 n.meta_description,
                 l.template_path
             FROM nodes n
