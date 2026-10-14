@@ -44,6 +44,11 @@ jobs:
           extensions: pdo_pgsql, dom, mbstring
           coverage: none
 
+      - name: Repository hygiene check
+        run: |
+          test -z "$(git ls-files vendor)"
+          test -z "$(git ls-files '*.twig')"
+
       - name: Validate Composer metadata
         run: composer validate --strict
 
