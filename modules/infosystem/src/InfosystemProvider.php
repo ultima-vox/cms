@@ -42,10 +42,6 @@ final readonly class InfosystemProvider implements ModuleInterface
                         'minimum' => 1,
                         'maximum' => 500,
                     ],
-                    'include_content' => [
-                        'type' => 'boolean',
-                        'title' => 'Выводить содержимое узла перед списком',
-                    ],
                 ],
                 'additionalProperties' => false,
             ],

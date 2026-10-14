@@ -11,7 +11,7 @@ final readonly class InfosystemPageConfigurationValidator implements PageConfigu
 {
     public function validate(array $configuration): array
     {
-        $allowed = ['view', 'limit', 'include_content'];
+        $allowed = ['view', 'limit'];
         foreach (array_keys($configuration) as $key) {
             if (!is_string($key) || !in_array($key, $allowed, true)) {
                 throw new RuntimeException(sprintf('Unknown Infosystem page configuration key: %s.', (string) $key));
@@ -41,13 +41,6 @@ final readonly class InfosystemPageConfigurationValidator implements PageConfigu
                 throw new RuntimeException('Infosystem page limit must be in the range 1..500.');
             }
             $normalized['limit'] = $limit;
-        }
-
-        if (array_key_exists('include_content', $configuration)) {
-            if (!is_bool($configuration['include_content'])) {
-                throw new RuntimeException('Infosystem include_content must be boolean.');
-            }
-            $normalized['include_content'] = $configuration['include_content'];
         }
 
         return $normalized;
