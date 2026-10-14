@@ -70,6 +70,11 @@ jobs:
         run: |
           ! grep -R -n "include_content\|node:.*:content\|context->node.*content" modules/infosystem/src
 
+      - name: Node content runtime architecture check
+        run: |
+          ! grep -n "n\.content\|node.*content" core/Repository/NodeRepository.php
+          ! grep -R -n "node:.*:content\|context->node.*content" core modules --include='*.php'
+
       - name: Extension and render runtime smoke test
         run: php tests/runtime_smoke.php
 
@@ -154,9 +159,9 @@ jobs:
           WHERE site_id = 1
             AND code IN ('ci-home', 'ci-about');
 
-          INSERT INTO nodes (site_id, name, slug, path, title, content, layout_id, status, page_type, page_config)
+          INSERT INTO nodes (site_id, name, slug, path, title, layout_id, status, page_type, page_config)
           VALUES (
-            1, 'Home', '', '/', 'Ultima Vox CMS', '<p>Production Core</p>',
+            1, 'Home', '', '/', 'Ultima Vox CMS',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
             'published', 'infosystem.list', '{}'::jsonb
           );
@@ -257,11 +262,11 @@ jobs:
           );
 
           INSERT INTO nodes (
-            site_id, name, slug, path, title, content, layout_id, status, page_type, page_config
+            site_id, name, slug, path, title, layout_id, status, page_type, page_config
           )
           VALUES (
             (SELECT id FROM sites WHERE code = 'second'),
-            'Home', '', '/', 'Second Site', '<p>Second Site Content</p>',
+            'Home', '', '/', 'Second Site',
             (SELECT id FROM layouts WHERE template_path = 'layouts/main.html.php'),
             'published', 'infosystem.list', '{}'::jsonb
           );
