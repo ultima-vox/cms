@@ -19,7 +19,7 @@ $html = '<section>Legacy Infosystem introduction</section>';
 $statement = $db->prepare(
     <<<'SQL'
     INSERT INTO nodes (site_id, name, slug, path, title, content, status, page_type, page_config)
-    VALUES (1, 'Legacy Catalog', 'legacy-catalog', '/legacy-catalog', 'Legacy Catalog', :content,
+    VALUES (1, 'Legacy Catalog', '', '/', 'Legacy Catalog', :content,
         'published', 'core.content', '{}'::jsonb)
     RETURNING id
     SQL
