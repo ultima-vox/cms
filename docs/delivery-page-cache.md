@@ -12,7 +12,7 @@ Public requests currently use the native PHP page runtime and dependency-aware p
 | `/about` | clean | `/about/` | `about/index.html` |
 | `/about` | html | `/about.html` | `about.html` |
 
-The publisher adds `sites/<siteId>/` under its configured output root. The existing default remains `clean`; pass `permalinkStyle: 'html'` explicitly to `publishStatic()`, `staticPath()` and `deleteStatic()` for HTML output. Inputs are internal node paths, not already formatted public URLs. The root HTML mapping reserves `index.html`, so `/index` in HTML style is rejected.
+The publisher adds `sites/<siteId>/` under its configured output root. The low-level API default remains `clean`; pass `permalinkStyle: 'html'` explicitly to `publishStatic()`, `staticPath()` and `deleteStatic()` for HTML output. Inputs are internal node paths, not already formatted public URLs. The root HTML mapping reserves `index.html`, so `/index` in HTML style is rejected.
 
 All published artifacts receive `site:<siteId>` automatically, in addition to caller-supplied resource dependencies. Invalidation covers either style and remains isolated by site. The output writer rejects reserved system paths, traversal, ambiguous/encoded paths and symbolic links within the output tree. Failed deletion retains dependency metadata for retry. Output directories must remain writable only by trusted application/deployment users; filesystem checks do not provide isolation from concurrent privileged filesystem changes.
 
@@ -23,6 +23,10 @@ php bin/console static:publish <site-code> <node-path> [clean|html]
 # For example, once the site has a primary domain:
 php bin/console static:publish default /about html
 ```
+
+The site editor exposes the default static publication format and an example URL/file mapping. It persists `settings.permalink_style` in the existing `sites.settings` JSONB object without replacing other settings. Missing values retain `clean`; the typed `SiteContext::staticPermalinkStyle()` rejects unsupported or non-string values. This setting controls CLI generation when its optional style argument is omitted. An explicit CLI argument overrides the default for that invocation without changing the site setting.
+
+Site updates retain the existing `sites.manage` and CSRF checks. Successful changes invalidate the site's cache/static variants and fence pending generators; failed validation does not evict output. Older update callers that omit `permalink_style` preserve its stored value. This editor does not activate static serving or change HTTP canonical URLs, redirects, menu links or render mode. URL examples show the publication target rather than an already active canonical route.
 
 The command requires an active site with a resolvable primary domain and a published, active node whose publication time has arrived. It boots enabled modules, resolves the page type and layout hierarchy, runs registered execution stages and publishes the resulting HTML with its render dependencies. It deliberately renders afresh rather than copying an HTTP page-cache entry. Module request-policy vetoes and render `doNotCache()` vetoes reject generation. Generation requires a session-free process. A missing page, render failure or policy veto after boot removes the selected older output variant only while its generation token is still current. Cleanup from a stale generator cannot delete a newer publication. Failures resolving the site or booting modules leave existing files alone.
 

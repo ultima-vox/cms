@@ -50,6 +50,10 @@ if ($resolver->normalizeHost('SECOND.TEST:443') !== 'second.test'
     throw new RuntimeException('Host normalization policy failed.');
 }
 
+if ($default->staticPermalinkStyle() !== 'clean' || $second->staticPermalinkStyle() !== 'clean') {
+    throw new RuntimeException('Sites without an explicit publication setting must retain the clean default.');
+}
+
 $nodes = new NodeRepository($db);
 $defaultNode = $nodes->findPublishedByPath($default->id, '/');
 $secondNode = $nodes->findPublishedByPath($second->id, '/');

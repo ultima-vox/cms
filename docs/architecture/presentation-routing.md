@@ -86,7 +86,7 @@ Static publishing must therefore be an optimization/deployment mode, not a separ
 
 ## Static permalink modes
 
-The target architecture requires both static permalink styles. The current output writer supports the mappings below; explicit CLI generation uses the shared page pipeline; automatic regeneration, admin settings and routing integration remain separate work:
+The target architecture requires both static permalink styles. The current output writer supports the mappings below; explicit CLI generation uses the shared page pipeline; the site editor supplies the default output format; automatic regeneration and public routing integration remain separate work:
 
 ### Clean directory permalink
 
@@ -116,7 +116,7 @@ Generated target:
 /about.html
 ```
 
-Both modes must be first-class and selectable from the administration UI. That UI and its routing policy are not implemented yet.
+The site editor exposes both output formats as the default for explicit CLI publication. This does not activate static serving or canonical routing; render-mode selection and public URL policy remain separate work.
 
 The chosen permalink style must not change the PHP template used to render the page.
 

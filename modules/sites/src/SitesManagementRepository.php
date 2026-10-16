@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace UltimaVox\Modules\Sites;
 
+use Core\Routing\Permalink;
+
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -62,18 +64,26 @@ final class SitesManagementRepository
         return is_array($rows) ? $rows : [];
     }
 
-    public function create(string $name, string $code): int
+    public function create(string $name, string $code, string $permalinkStyle = 'clean'): int
     {
+        new Permalink('/', $permalinkStyle);
         $statement = $this->db->prepare(
-            'INSERT INTO sites (name, code) VALUES (:name, :code) RETURNING id'
+            'INSERT INTO sites (name, code, settings) VALUES (:name, :code, CAST(:settings AS jsonb)) RETURNING id'
         );
-        $statement->execute(['name' => $name, 'code' => $code]);
+        $statement->execute([
+            'name' => $name,
+            'code' => $code,
+            'settings' => json_encode(['permalink_style' => $permalinkStyle], JSON_THROW_ON_ERROR),
+        ]);
 
         return (int) $statement->fetchColumn();
     }
 
-    public function update(int $id, string $name, bool $isActive): void
+    public function update(int $id, string $name, bool $isActive, ?string $permalinkStyle = null): void
     {
+        if ($permalinkStyle !== null) {
+            new Permalink('/', $permalinkStyle);
+        }
         $site = $this->find($id);
         if ($site === null) {
             throw new RuntimeException('Сайт не найден.');
@@ -83,12 +93,15 @@ final class SitesManagementRepository
         }
 
         $statement = $this->db->prepare(
-            'UPDATE sites SET name = :name, is_active = :is_active, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+            'UPDATE sites SET name = :name, is_active = :is_active, settings = settings || CAST(:settings_delta AS jsonb), updated_at = CURRENT_TIMESTAMP WHERE id = :id'
         );
         $statement->execute([
             'id' => $id,
             'name' => $name,
             'is_active' => $isActive,
+            'settings_delta' => $permalinkStyle === null
+                ? '{}'
+                : json_encode(['permalink_style' => $permalinkStyle], JSON_THROW_ON_ERROR),
         ]);
     }
 

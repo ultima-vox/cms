@@ -30,6 +30,25 @@ echo $view->render('admin/_header.php', [
                 <label class="admin-field"><span class="admin-field__label">Код</span><input class="admin-input" name="code" value="<?= text($site['code'] ?? '') ?>" maxlength="120" pattern="[a-z][a-z0-9_-]*" required><span class="admin-field__hint">a-z, 0-9, дефис и подчёркивание. После создания не меняется.</span></label>
             <?php endif; ?>
         </div></section>
+        <section class="admin-panel">
+            <h2 class="admin-panel__title">Статическая публикация</h2>
+            <label class="admin-field">
+                <span class="admin-field__label">Формат файлов по умолчанию</span>
+                <select class="admin-input" name="permalink_style" required>
+                    <?php if (!in_array($site['permalink_style'] ?? '', ['clean', 'html'], true)): ?>
+                        <option value="" selected disabled>Некорректное значение — выберите формат</option>
+                    <?php endif; ?>
+                    <option value="clean"<?= ($site['permalink_style'] ?? '') === 'clean' ? ' selected' : '' ?>>clean: /example/ → example/index.html</option>
+                    <option value="html"<?= ($site['permalink_style'] ?? '') === 'html' ? ' selected' : '' ?>>html: /example.html → example.html</option>
+                </select>
+                <span class="admin-field__hint">Используется CLI-командой публикации, если формат не указан явно. Публичные адреса сайта и режим раздачи не переключаются.</span>
+            </label>
+            <?php if ($publication_preview !== null): ?>
+                <p class="admin-panel__text">Пример формата:
+                    <code><?= text($publication_preview->url()) ?></code> → <code><?= text($publication_preview->relativeFile()) ?></code>.
+                </p>
+            <?php endif; ?>
+        </section>
         <div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Сохранить</button></div>
     </form>
 

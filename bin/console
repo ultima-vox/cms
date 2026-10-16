@@ -43,7 +43,7 @@ switch ($command) {
             exit(1);
         }
         try {
-            $target = (new Application($rootPath))->publishStatic($argv[2], $argv[3], $argv[4] ?? 'clean');
+            $target = (new Application($rootPath))->publishStatic($argv[2], $argv[3], $argv[4] ?? null);
             fwrite(STDOUT, "Published: " . $target . "\n");
             exit(0);
         } catch (Throwable $exception) {
