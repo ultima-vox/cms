@@ -326,6 +326,16 @@ jobs:
       - name: Site resolution and isolation smoke test
         run: php tests/site_resolution_smoke.php
 
+      - name: URL migration audit CLI
+        run: |
+          php bin/console urls:plan default html > /tmp/cms-url-plan.json
+          php -r '$p = json_decode(file_get_contents("/tmp/cms-url-plan.json"), true, flags: JSON_THROW_ON_ERROR); if (!$p["valid"] || $p["public_route_activation"] !== false || $p["nodes_checked"] !== 2 || $p["candidate_redirects"][0]["to"] !== "/about.html") { exit(1); }'
+          php bin/console urls:plan second > /tmp/cms-second-url-plan.json
+          php -r '$p = json_decode(file_get_contents("/tmp/cms-second-url-plan.json"), true, flags: JSON_THROW_ON_ERROR); if ($p["site_code"] !== "second" || $p["nodes_checked"] !== 1 || $p["style"] !== "clean") { exit(1); }'
+          if php bin/console urls:plan unknown-site; then exit 1; fi
+          if php bin/console urls:plan default invalid; then exit 1; fi
+          if php bin/console urls:plan default clean unexpected; then exit 1; fi
+
       - name: Static page generation integration test
         run: |
           php tests/static_page_generation_smoke.php

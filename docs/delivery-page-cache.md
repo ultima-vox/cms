@@ -44,6 +44,20 @@ The same cleanup is available as `DeliveryApi::pruneExpiredStatic()`. Schedule t
 
 The lower-level `publishStatic()` remains a trusted explicit-snapshot API with no generation token or TTL. These unmanaged/legacy snapshots are not eligible for `readStatic()` and are skipped by expiry pruning; regenerate them through the managed API before using them as cache entries. HTTP resource-hint headers are not represented in the HTML file. Direct web-server serving bypasses expiry checks and is not enabled by this change.
 
+## Audit a URL migration without applying it
+
+```sh
+php bin/console urls:plan <site-code> [clean|html]
+```
+
+The command reads the active site's Structure nodes and emits JSON. Omit the style to use the site's saved default. It includes inactive, draft and future nodes so they cannot silently acquire a conflicting URL later. Each valid entry records its current stored path, proposed URL and relative output file.
+
+The planner reports duplicate target URLs, file/directory conflicts, unsupported/reserved paths and proposed redirect sources that overlap another node's target. For example, migrating `/a` and `/a.html` to HTML URLs would make the latter's old address overlap the former's target. Root `index.html` and intermediate output-file names are included in filesystem conflict detection.
+
+Exit codes: `0` means no conflicts within this node audit, `2` means conflicts were reported, and `1` means invalid arguments/site or an execution error. `candidate_redirects` is empty whenever conflicts exist. The command writes no database data, static files or redirects. `public_route_activation` is always `false`.
+
+This is a Structure-node audit, not deployment approval: custom/module routes, web-server rules, existing unrelated files, host aliases, query handling and module-generated links still require coordinated validation. Redirect candidates include unpublished nodes and must not be installed blindly. Recompute the plan against the current database before any future migration; this command does not reserve paths or protect a later apply step from concurrent edits.
+
 ## Remaining integration
 
 This path/output contract does not activate static delivery or alter current public routing. Automatic regeneration, distributed coordination, admin render-mode/permalink settings, cross-page collision detection, canonical redirects, menu/sitemap adoption and expiry-aware HTTP/static serving remain separate work. Switching policy requires an explicit migration that removes or redirects old output variants; writing both variants is not a canonical-URL policy.

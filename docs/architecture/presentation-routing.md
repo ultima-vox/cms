@@ -164,7 +164,7 @@ The static publisher must prevent path traversal and may only publish inside an 
 
 A page has one canonical public URL at a time.
 
-Changing permalink style must provide a migration path for existing URLs, including redirects where required. The CMS must not serve `/about/` and `/about.html` as duplicate canonical pages unless explicitly configured for a migration period.
+Changing permalink style must provide a migration path for existing URLs, including redirects where required. `urls:plan` currently provides a read-only Structure-node audit and redirect candidates; no migration apply or live routing switch is implemented. The CMS must not serve `/about/` and `/about.html` as duplicate canonical pages unless explicitly configured for a migration period.
 
 URL generation used by menus, sitemap, canonical tags and internal links must consume the same resolved permalink contract.
 
