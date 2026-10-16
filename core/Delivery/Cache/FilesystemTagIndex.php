@@ -110,6 +110,7 @@ final class FilesystemTagIndex
                 return;
             }
             $this->advanceGeneration();
+            $this->markExpired($key);
             $remove();
             foreach ($this->readKeyTags($key) as $tag) {
                 $this->removeKeyFromTag($tag, $key);
@@ -140,6 +141,9 @@ final class FilesystemTagIndex
             }
 
             foreach (array_keys($keys) as $key) {
+                $this->markExpired($key);
+            }
+            foreach (array_keys($keys) as $key) {
                 $remove($key);
                 foreach ($this->readKeyTags($key) as $tag) {
                     $this->removeKeyFromTag($tag, $key);
@@ -149,6 +153,15 @@ final class FilesystemTagIndex
 
             return count($keys);
         });
+    }
+
+    private function markExpired(string $key): void
+    {
+        $data = $this->readJson($this->keyPath($key));
+        if (($data['key'] ?? null) === $key && is_int($data['expires_at'] ?? null)) {
+            $data['expires_at'] = 0;
+            $this->writeJson($this->keyPath($key), $data);
+        }
     }
 
     private function currentGeneration(): string

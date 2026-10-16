@@ -278,6 +278,29 @@ if ($delivery->readStatic(77, '/race') !== 'winner') {
     throw new RuntimeException('Stale publication or cleanup replaced a newer valid output.');
 }
 
+// Failed invalidation must make managed output unreadable before unlink succeeds.
+$blockedRemoval = $delivery->publishRenderedStatic(
+    77, '/blocked-removal', new RenderResult('do not serve after invalidation', $raceContext),
+    $delivery->beginStaticGeneration(),
+);
+$blockedDirectory = dirname($blockedRemoval);
+$movedBlocked = $root . '/blocked-output';
+rename($blockedDirectory, $movedBlocked);
+symlink($movedBlocked, $blockedDirectory);
+try {
+    $assertStaticRejected(fn () => $delivery->invalidate(['site:77']));
+} finally {
+    unlink($blockedDirectory);
+    rename($movedBlocked, $blockedDirectory);
+}
+if ($delivery->readStatic(77, '/blocked-removal') !== null || is_file($blockedRemoval)) {
+    throw new RuntimeException('Failed physical deletion left invalid managed output readable.');
+}
+// The same site invalidation removed the earlier winner; republish it for expiry isolation checks.
+$winner = $delivery->publishRenderedStatic(
+    77, '/race', new RenderResult('winner', $raceContext), $delivery->beginStaticGeneration(),
+);
+
 // TTL starts before rendering; checked reads and pruning must remove expired managed output.
 $shortContext = new RenderContext();
 $shortContext->cacheFor(1);

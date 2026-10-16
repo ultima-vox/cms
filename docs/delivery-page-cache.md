@@ -36,7 +36,7 @@ Use `DeliveryApi::readStatic()` for checked reads: expired managed output return
 php bin/console static:prune
 ```
 
-The same cleanup is available as `DeliveryApi::pruneExpiredStatic()`. Schedule the command in deployment when static output is used; no scheduler is installed automatically. Deletion failures retain metadata for retry. Failed atomic replacement restores the previous value's tag and expiry metadata.
+The same cleanup is available as `DeliveryApi::pruneExpiredStatic()`. Schedule the command in deployment when static output is used; no scheduler is installed automatically. Invalidation marks managed entries expired before attempting physical deletion. Deletion failures retain expired metadata for retry, so checked reads cannot return invalidated HTML. Failed atomic replacement restores the previous value's tag and expiry metadata.
 
 The lower-level `publishStatic()` remains a trusted explicit-snapshot API with no generation token or TTL. These unmanaged/legacy snapshots are not eligible for `readStatic()` and are skipped by expiry pruning; regenerate them through the managed API before using them as cache entries. HTTP resource-hint headers are not represented in the HTML file. Direct web-server serving bypasses expiry checks and is not enabled by this change.
 
