@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Core\Database;
 use Core\Extension\ModuleMigrationCoordinator;
+use Core\Extension\ModuleStateRepository;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -58,16 +59,16 @@ $removeTree = static function (string $path) use (&$removeTree): void {
 try {
     $writeModule(
         $modulesRoot,
-        'fixture-base',
+        'fixture-z-base',
         true,
         ['core' => '>=0.1.0'],
         "CREATE TABLE fixture_migration_base (id INTEGER PRIMARY KEY);",
     );
     $writeModule(
         $modulesRoot,
-        'fixture-dependent',
+        'fixture-a-dependent',
         true,
-        ['core' => '>=0.1.0', 'fixture-base' => '^1.0'],
+        ['core' => '>=0.1.0', 'fixture-z-base' => '^1.0'],
         "CREATE TABLE fixture_migration_dependent (
             id INTEGER PRIMARY KEY,
             base_id INTEGER REFERENCES fixture_migration_base(id)
@@ -84,11 +85,11 @@ try {
     $coordinator = new ModuleMigrationCoordinator($db, $fixtureRoot);
     $result = $coordinator->migrateEnabled();
 
-    if (array_keys($result) !== ['fixture-base', 'fixture-dependent']) {
+    if (array_keys($result) !== ['fixture-z-base', 'fixture-a-dependent']) {
         throw new RuntimeException('Enabled module migrations were not applied in dependency order.');
     }
-    if ($result['fixture-base'] !== ['001_fixture.sql']
-        || $result['fixture-dependent'] !== ['001_fixture.sql']) {
+    if ($result['fixture-z-base'] !== ['001_fixture.sql']
+        || $result['fixture-a-dependent'] !== ['001_fixture.sql']) {
         throw new RuntimeException('Coordinator returned unexpected migration results.');
     }
 
@@ -105,12 +106,33 @@ try {
     if ($coordinator->migrateEnabled() !== []) {
         throw new RuntimeException('Enabled module migration coordinator is not idempotent.');
     }
+
+    // Persisted lifecycle state must override manifest defaults on subsequent runs.
+    $state = new ModuleStateRepository($db);
+    $state->setEnabled('fixture-disabled', true);
+    $state->setEnabled('fixture-a-dependent', false);
+    file_put_contents(
+        $modulesRoot . '/fixture-a-dependent/migrations/002_disabled.sql',
+        'CREATE TABLE fixture_migration_should_not_run (id INTEGER PRIMARY KEY);',
+    );
+    $result = $coordinator->migrateEnabled();
+    if ($result !== ['fixture-disabled' => ['001_fixture.sql']]) {
+        throw new RuntimeException('Coordinator did not honor persisted module lifecycle state.');
+    }
+    if ($db->query("SELECT to_regclass('public.fixture_migration_should_not_run')")->fetchColumn() !== null) {
+        throw new RuntimeException('Persistently disabled module migration was executed.');
+    }
+    if ($coordinator->migrateEnabled() !== []) {
+        throw new RuntimeException('Coordinator is not idempotent after lifecycle state changes.');
+    }
+
 } finally {
     $db->exec('DROP TABLE IF EXISTS fixture_migration_dependent');
     $db->exec('DROP TABLE IF EXISTS fixture_migration_base');
     $db->exec('DROP TABLE IF EXISTS fixture_migration_disabled');
-    $db->exec("DELETE FROM module_schema_migrations WHERE module_code LIKE 'fixture-%'");
-    $db->exec("DELETE FROM installed_modules WHERE code LIKE 'fixture-%'");
+    $db->exec('DROP TABLE IF EXISTS fixture_migration_should_not_run');
+    $db->exec("DELETE FROM module_schema_migrations WHERE module_code IN ('fixture-z-base', 'fixture-a-dependent', 'fixture-disabled')");
+    $db->exec("DELETE FROM installed_modules WHERE code IN ('fixture-z-base', 'fixture-a-dependent', 'fixture-disabled')");
     $removeTree($fixtureRoot);
 }
 
