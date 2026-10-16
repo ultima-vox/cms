@@ -106,6 +106,17 @@ jobs:
           php bin/console modules:migrate --all | grep 'No pending migrations for enabled modules.'
           psql -h 127.0.0.1 -U cms -d cms_pipeline -Atc "SELECT COUNT(*) FROM module_schema_migrations WHERE module_code = 'documents' AND migration = '005_drop_legacy_node_content.sql';" | grep -x '1'
 
+      - name: Legacy database module migration pipeline
+        env:
+          PGPASSWORD: cms
+        run: |
+          psql -h 127.0.0.1 -U cms -d postgres -c 'CREATE DATABASE cms_upgrade;'
+          trap 'psql -h 127.0.0.1 -U cms -d postgres -c "DROP DATABASE IF EXISTS cms_upgrade;"' EXIT
+          export DB_NAME=cms_upgrade
+          php bin/console migrate
+          php tests/module_migration_upgrade_smoke.php
+          php bin/console modules:migrate --all | grep 'No pending migrations for enabled modules.'
+
       - name: Migration checksum smoke test
         run: php tests/migration_checksum_smoke.php
 

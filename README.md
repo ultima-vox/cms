@@ -168,3 +168,9 @@ Back up PostgreSQL and the `storage/` directory. Runtime layout overrides are ap
 ## Security baseline
 
 The core enables CSRF tokens for state-changing admin requests, strict cookie sessions, login throttling, RBAC checks, HTML sanitization at write boundaries and standard browser security headers. Editing executable PHP layouts requires a separate trusted permission (`templates.code.edit`). Production deployments should terminate TLS and keep `APP_DEBUG=false`.
+
+### Module migration ordering
+
+`modules:migrate --all` validates enabled runtime dependencies before applying SQL. A module may also declare `"migration_after": ["other-module"]` in its manifest to order data migrations after another enabled module without introducing a runtime dependency. Absent or disabled optional predecessors are skipped; they are never automatically enabled. Cycles involving runtime and migration ordering edges are rejected before any module SQL is applied.
+
+Documents declares `migration_after: ["infosystem"]` so legacy Infosystem page types are assigned before Documents migrates remaining Core pages and removes the legacy content column. Use the aggregate command for upgrades involving multiple modules. The explicit `modules:migrate <code>` command remains a low-level single-module operation and does not resolve cross-module ordering.
