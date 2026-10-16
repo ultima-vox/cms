@@ -147,6 +147,10 @@ try {
 } finally {
     foreach ($siteIds as $id) {
         if ($core !== null) $core->delivery()->invalidate(['site:' . $id]);
+        $delete = $db->prepare('DELETE FROM nodes WHERE site_id = :id');
+        $delete->execute(['id' => $id]);
+        $delete = $db->prepare('DELETE FROM infosystems WHERE site_id = :id');
+        $delete->execute(['id' => $id]);
         $delete = $db->prepare('DELETE FROM sites WHERE id = :id');
         $delete->execute(['id' => $id]);
     }
