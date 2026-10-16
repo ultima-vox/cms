@@ -9,33 +9,22 @@ use Core\Delivery\Page\PageCacheEntry;
 use Core\Delivery\ResourceHint;
 use Core\Delivery\ResourceHintHeader;
 use Core\Extension\Api\DeliveryApi;
-use Core\Extension\Api\PagesApi;
 use Core\Http\Request;
 use Core\Http\Response;
-use Core\Layout\LayoutExecutionStage;
-use Core\Layout\LayoutHierarchyResolver;
-use Core\Page\PageExecutionChain;
-use Core\Page\PageExecutionContext;
-use Core\Page\PageExecutorStage;
-use Core\Page\PageRuntime;
-use Core\Page\PageTypeSelection;
-use Core\Repository\NodeRepository;
+use Core\Page\PageRenderer;
 use Core\Routing\SystemPathPolicy;
 use Core\Security\AuthService;
 use Core\Site\SiteContext;
 use Core\Site\SiteResolver;
 use Core\View\PhpRenderer;
 use Core\View\Render\RenderContext;
-use Core\View\Render\RenderResult;
 
 final class NodeController
 {
     public function __construct(
-        private readonly NodeRepository $nodes,
         private readonly SiteResolver $sites,
         private readonly PhpRenderer $view,
-        private readonly PagesApi $pages,
-        private readonly LayoutHierarchyResolver $layouts,
+        private readonly PageRenderer $renderer,
         private readonly PageCache $pageCache,
         private readonly DeliveryApi $delivery,
         private readonly AuthService $auth,
@@ -70,50 +59,10 @@ final class NodeController
             }
         }
 
-        $node = $this->nodes->findPublishedByPath($site->id, $request->path);
-        if ($node === null) {
+        $result = $this->renderer->render($request, $site);
+        if ($result === null) {
             return $this->notFound($request->path);
         }
-
-        $selection = PageTypeSelection::fromNode($node);
-        $definition = $this->pages->definition($selection->code);
-        $configuration = $definition->validateConfiguration($selection->configuration);
-
-        $renderContext = new RenderContext();
-        $renderContext->dependency('site:' . $site->id);
-        $renderContext->dependency('node:' . (int) $node['id']);
-        $renderContext->dependency('site:' . $site->id . ':node:' . (int) $node['id']);
-        $renderContext->dependency('page_type:' . $definition->code);
-
-        $context = new PageExecutionContext(
-            $request,
-            $site,
-            $node,
-            $configuration,
-            $renderContext,
-        );
-
-        $layoutId = isset($node['layout_id']) && is_numeric($node['layout_id'])
-            ? (int) $node['layout_id']
-            : 0;
-        $layoutDefinitions = $layoutId > 0
-            ? $this->layouts->resolve($layoutId)
-            : $this->layouts->resolveDefault();
-
-        $stages = [];
-        foreach ($layoutDefinitions as $layout) {
-            $stages[] = new LayoutExecutionStage($layout, $this->view);
-        }
-        foreach ($this->pages->stages($context) as $stage) {
-            $stages[] = $stage;
-        }
-        $stages[] = new PageExecutorStage($definition->executor);
-
-        $page = new PageRuntime(
-            $context,
-            new PageExecutionChain($stages),
-        );
-        $result = new RenderResult($page->start()->value(), $renderContext);
 
         if ($cacheEligible) {
             $entry = $this->pageCache->put($site->id, $request->path, $variant, $result);

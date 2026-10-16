@@ -86,7 +86,7 @@ Static publishing must therefore be an optimization/deployment mode, not a separ
 
 ## Static permalink modes
 
-The target architecture requires both static permalink styles. The current output writer supports the mappings below; automatic publication, admin settings and routing integration remain separate work:
+The target architecture requires both static permalink styles. The current output writer supports the mappings below; explicit CLI generation uses the shared page pipeline; automatic regeneration, admin settings and routing integration remain separate work:
 
 ### Clean directory permalink
 

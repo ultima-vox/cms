@@ -8,7 +8,9 @@ use Core\Delivery\Page\PageCachePolicy;
 use Core\Delivery\StaticPage\StaticPagePublisher;
 use Core\Http\Request;
 use Core\Site\SiteContext;
+use Core\View\Render\RenderResult;
 use LogicException;
+use RuntimeException;
 
 final class DeliveryApi
 {
@@ -41,6 +43,26 @@ final class DeliveryApi
         string $permalinkStyle = 'clean',
     ): string {
         return $this->staticPages->publish($siteId, $path, $html, $dependencies, $permalinkStyle);
+    }
+
+    public function publishRenderedStatic(
+        int $siteId,
+        string $path,
+        RenderResult $result,
+        string $permalinkStyle = 'clean',
+    ): string {
+        if (!$result->context->isCacheable()) {
+            $this->deleteStatic($siteId, $path, $permalinkStyle);
+            throw new RuntimeException('Static generation was vetoed by the render cache policy.');
+        }
+
+        return $this->publishStatic(
+            $siteId,
+            $path,
+            $result->html,
+            $result->context->dependencies(),
+            $permalinkStyle,
+        );
     }
 
     public function deleteStatic(int $siteId, string $path, string $permalinkStyle = 'clean'): void

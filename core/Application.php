@@ -23,6 +23,7 @@ use Core\Extension\ModuleLoader;
 use Core\Http\Request;
 use Core\Layout\LayoutHierarchyResolver;
 use Core\Layout\LayoutTemplateService;
+use Core\Page\PageRenderer;
 use Core\Repository\AuditLogRepository;
 use Core\Repository\LayoutRepository;
 use Core\Repository\LoginAttemptRepository;
@@ -31,6 +32,7 @@ use Core\Repository\PageSelectionRepository;
 use Core\Repository\SiteRepository;
 use Core\Repository\StructureRepository;
 use Core\Repository\UserRepository;
+use Core\Routing\Permalink;
 use Core\Security\AuthService;
 use Core\Security\PermissionGate;
 use Core\Security\SecurityHeaders;
@@ -40,6 +42,8 @@ use Core\Site\SiteResolver;
 use Core\Structure\StructurePageProvisioningService;
 use Core\View\AdminPhpRendererFactory;
 use Core\View\PhpRenderer;
+use RuntimeException;
+use Throwable;
 
 final class Application
 {
@@ -116,11 +120,14 @@ final class Application
             ),
             new HealthController($db),
             new NodeController(
-                new NodeRepository($db),
                 $siteResolver,
                 $php,
-                $core->pages(),
-                new LayoutHierarchyResolver($layoutRepository),
+                new PageRenderer(
+                    new NodeRepository($db),
+                    $php,
+                    $core->pages(),
+                    new LayoutHierarchyResolver($layoutRepository),
+                ),
                 new PageCache($core->cache()),
                 $core->delivery(),
                 $auth,
@@ -147,6 +154,64 @@ final class Application
         }
 
         $response->send();
+    }
+
+    /** Generate one anonymous snapshot; this does not enable HTTP static serving. */
+    public function publishStatic(string $siteCode, string $path, string $style = 'clean'): string
+    {
+        $permalink = new Permalink($path, $style);
+        $db = Database::connection();
+        $sites = new SiteRepository($db);
+        $record = $sites->findActiveByCode($siteCode);
+        if ($record === null) {
+            throw new RuntimeException('Unknown or inactive site.');
+        }
+        $resolver = new SiteResolver($sites, Config::string('APP_URL', 'http://localhost'));
+        $host = is_string($record['host'] ?? null) ? $resolver->normalizeHost($record['host']) : null;
+        if ($host === null) {
+            throw new RuntimeException('Static generation requires a primary domain for the site.');
+        }
+        $request = new Request(
+            'GET',
+            $permalink->nodePath,
+            $permalink->nodePath,
+            [],
+            [],
+            ['HTTP_HOST' => $host],
+            [],
+        );
+        $site = $resolver->resolve($request);
+        if ($site === null || $site->id !== (int) $record['id']) {
+            throw new RuntimeException('Primary domain does not resolve to the requested site.');
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            throw new RuntimeException('Static generation requires a session-free CLI process.');
+        }
+
+        $core = new ExtensionCore(new RuntimeApi($db, $this->rootPath, $site));
+        (new BuiltinExtensions())->register($core);
+        (new ModuleLoader($this->rootPath))->load($core);
+        $core->freeze();
+
+        try {
+            if (!$core->delivery()->pageCacheAllowed($request, $site, false)) {
+                throw new RuntimeException('Static generation was vetoed by the request cache policy.');
+            }
+            $renderer = new PageRenderer(
+                new NodeRepository($db),
+                new PhpRenderer($this->rootPath, $core),
+                $core->pages(),
+                new LayoutHierarchyResolver(new LayoutRepository($db)),
+            );
+            $result = $renderer->render($request, $site);
+            if ($result === null) {
+                throw new RuntimeException('Published page was not found.');
+            }
+            return $core->delivery()->publishRenderedStatic($site->id, $permalink->nodePath, $result, $style);
+        } catch (Throwable $exception) {
+            $core->delivery()->deleteStatic($site->id, $permalink->nodePath, $style);
+            throw $exception;
+        }
     }
 
     private function startSessionForRequest(Request $request): void
