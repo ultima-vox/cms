@@ -86,7 +86,7 @@ Static publishing must therefore be an optimization/deployment mode, not a separ
 
 ## Static permalink modes
 
-Ultima Vox supports both static permalink styles:
+The target architecture requires both static permalink styles. The current output writer supports the mappings below; automatic publication, admin settings and routing integration remain separate work:
 
 ### Clean directory permalink
 
@@ -116,7 +116,7 @@ Generated target:
 /about.html
 ```
 
-Both modes are first-class and are selectable from the administration UI.
+Both modes must be first-class and selectable from the administration UI. That UI and its routing policy are not implemented yet.
 
 The chosen permalink style must not change the PHP template used to render the page.
 

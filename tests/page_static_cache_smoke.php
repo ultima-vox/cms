@@ -14,6 +14,7 @@ use Core\Extension\Api\CacheApi;
 use Core\Extension\Api\DeliveryApi;
 use Core\Http\Request;
 use Core\Http\Response;
+use Core\Routing\Permalink;
 use Core\Site\SiteContext;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderResult;
@@ -144,6 +145,95 @@ $encoded = (new PageCacheEntry(
 ))->encode();
 if (!PageCacheEntry::decode($encoded) instanceof PageCacheEntry) {
     throw new RuntimeException('Page cache entry serialization failed.');
+}
+
+$assertStaticRejected = static function (callable $operation): void {
+    try {
+        $operation();
+    } catch (RuntimeException) {
+        return;
+    }
+    throw new RuntimeException('Unsafe static publication operation was accepted.');
+};
+foreach ([
+    ['/', 'clean', '/', 'index.html'],
+    ['/', 'html', '/', 'index.html'],
+    ['/about', 'clean', '/about/', 'about/index.html'],
+    ['/about/', 'html', '/about.html', 'about.html'],
+    ['/catalog/model-5', 'html', '/catalog/model-5.html', 'catalog/model-5.html'],
+] as [$nodePath, $style, $expectedUrl, $expectedFile]) {
+    $permalink = new Permalink($nodePath, $style);
+    if ($permalink->url() !== $expectedUrl || $permalink->relativeFile() !== $expectedFile) {
+        throw new RuntimeException('Permalink URL and output file mapping disagree.');
+    }
+}
+foreach ([
+    '/../escape', '/a/./b', '/a//b', '/a%2fb', '/a?x=1', '/a#fragment', '/a\\b',
+    '/admin', '/api/x', '/health', '/assets/x', '/storage/x', '/media/x',
+] as $unsafePath) {
+    $assertStaticRejected(fn () => $delivery->publishStatic(1, $unsafePath, 'unsafe', []));
+}
+$assertStaticRejected(fn () => $delivery->publishStatic(1, '/about', 'unsafe', [], 'unknown'));
+$assertStaticRejected(fn () => $delivery->publishStatic(1, '/index', 'unsafe', [], 'html'));
+$assertStaticRejected(fn () => $delivery->publishStatic(1, '/' . str_repeat('a', 251), 'unsafe', [], 'html'));
+
+// Both styles must receive the site dependency even if a caller supplies no tags.
+$cleanFile = $delivery->publishStatic(1, '/article', 'Clean', []);
+$htmlFile = $delivery->publishStatic(1, '/article', 'HTML', [], 'html');
+$otherFile = $delivery->publishStatic(2, '/article', 'Other site', [], 'html');
+if (
+    !str_ends_with($cleanFile, '/sites/1/article/index.html')
+    || !str_ends_with($htmlFile, '/sites/1/article.html')
+    || $delivery->staticPath(1, '/article', 'html') !== $htmlFile
+    || file_get_contents($cleanFile) !== 'Clean' || file_get_contents($htmlFile) !== 'HTML'
+) {
+    throw new RuntimeException('Static publisher did not honor the explicit permalink style.');
+}
+$delivery->invalidate(['site:1']);
+if (is_file($cleanFile) || is_file($htmlFile) || !is_file($otherFile)) {
+    throw new RuntimeException('Automatic static site dependencies failed to isolate invalidation.');
+}
+$otherClean = $delivery->publishStatic(2, '/article', 'Other clean', []);
+$delivery->deleteStatic(2, '/article', 'html');
+if (is_file($otherFile) || !is_file($otherClean)) {
+    throw new RuntimeException('Deleting an HTML permalink removed the wrong output variant.');
+}
+$dotted = $delivery->publishStatic(1, '/name..with-dots', 'Dotted slug', []);
+$delivery->invalidate(['site:1']);
+if (is_file($dotted)) {
+    throw new RuntimeException('A harmless dotted slug escaped static invalidation.');
+}
+
+// A path inside the output root must never traverse an existing symbolic link.
+$outside = $root . '/outside';
+mkdir($outside, 0775, true);
+$escapeLink = $root . '/static/sites/1/escape';
+symlink($outside, $escapeLink);
+try {
+    $assertStaticRejected(fn () => $delivery->publishStatic(1, '/escape/file', 'unsafe', []));
+    if (file_exists($outside . '/file/index.html')) {
+        throw new RuntimeException('Static publisher wrote through a symbolic link.');
+    }
+} finally {
+    unlink($escapeLink);
+}
+$guarded = $delivery->publishStatic(1, '/guard/item', 'Retain until safely deleted', []);
+$guardDirectory = dirname($guarded);
+$movedDirectory = $root . '/moved-output';
+rename($guardDirectory, $movedDirectory);
+symlink($movedDirectory, $guardDirectory);
+try {
+    $assertStaticRejected(fn () => $delivery->invalidate(['site:1']));
+    if (!is_file($movedDirectory . '/index.html')) {
+        throw new RuntimeException('Static invalidation deleted a file through a symbolic link.');
+    }
+} finally {
+    unlink($guardDirectory);
+    rename($movedDirectory, $guardDirectory);
+}
+$retried = $delivery->invalidate(['site:1']);
+if ($retried['static'] !== 1 || is_file($guarded)) {
+    throw new RuntimeException('Failed static deletion discarded dependency metadata needed for retry.');
 }
 
 $remove = static function (string $path) use (&$remove): void {
