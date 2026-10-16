@@ -116,6 +116,7 @@ try {
         new AuthService(new UserRepository($db), new LoginAttemptRepository($db)),
     );
     $request = $requestFor($sites[0]);
+    $generation = $core->delivery()->beginStaticGeneration();
     $rendered = $renderer->render($request, $site);
     if ($rendered === null || !str_contains($rendered->html, 'shared-stage')) {
         throw new RuntimeException('Shared renderer skipped registered execution stages.');
@@ -125,7 +126,7 @@ try {
             throw new RuntimeException('Shared renderer lost render dependencies.');
         }
     }
-    $static = $core->delivery()->publishRenderedStatic($site->id, '/about', $rendered, 'html');
+    $static = $core->delivery()->publishRenderedStatic($site->id, '/about', $rendered, $generation, 'html');
     $createdFiles[] = $static;
     ob_start();
     $controller->resolve($request)->send();
@@ -134,8 +135,9 @@ try {
         throw new RuntimeException('HTTP and static output used different page composition.');
     }
     $provider->block = true;
+    $generation = $core->delivery()->beginStaticGeneration();
     $private = $renderer->render($request, $site);
-    $assertRejected(fn () => $core->delivery()->publishRenderedStatic($site->id, '/about', $private, 'html'));
+    $assertRejected(fn () => $core->delivery()->publishRenderedStatic($site->id, '/about', $private, $generation, 'html'));
     if (is_file($static)) {
         throw new RuntimeException('A render veto left an older static snapshot behind.');
     }
