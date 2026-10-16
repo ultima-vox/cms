@@ -76,6 +76,7 @@ final class MenuSource extends RenderSource
         $navigation = $this->buildNavigationTree($rows, $sourceContext);
         $items = $this->decorateNodes($navigation, $currentPath);
 
+        $context->dependency('site:' . $siteId);
         $context->dependency('menu:' . $menuId);
         $context->dependency('site:' . $siteId . ':menu:' . $menuId);
         $context->dependency('site:' . $siteId . ':menu:' . $code);

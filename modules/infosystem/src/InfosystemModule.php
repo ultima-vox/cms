@@ -200,7 +200,7 @@ final class InfosystemModule implements ModuleInterface
             'infosystem.bindings.update',
             $gate->require(
                 'infosystems.manage',
-                $invalidate->wrap([$bindingController, 'update'], $systemTags),
+                $invalidate->wrap([$bindingController, 'update'], $siteTags),
             ),
         );
 

@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 use Core\Database;
+use Core\Delivery\DeliveryInvalidatingHandler;
+use Core\Http\Request;
+use Core\Http\Response;
+use Core\Repository\StructureRepository;
 use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
 use Core\Extension\ModuleLoader;
@@ -148,7 +152,35 @@ try {
             throw new RuntimeException('Structure navigation dependency is missing: ' . $dependency);
         }
     }
+
+    $fragmentKey = $core->cache()->fragmentKey($siteId, 'menu', 'structure-invalidation');
+    $otherKey = $core->cache()->fragmentKey(1, 'menu', 'unrelated-' . $siteId);
+    $core->cache()->put($fragmentKey, $html, $dependencies, 60);
+    $core->cache()->put($otherKey, 'Other site menu', ['site:1'], 60);
+    $staticPath = $core->delivery()->publishStatic($siteId, '/menu-cache-smoke', $html, $dependencies);
+
+    $structure = new StructureRepository($db, $siteId);
+    $nodeData = $structure->find($phonesId);
+    $nodeData['name'] = 'Updated phones';
+    $mutation = (new DeliveryInvalidatingHandler($core->delivery()))->wrap(
+        static function (Request $request, array $variables) use ($structure, $phonesId, $nodeData): Response {
+            $structure->update($phonesId, $nodeData);
+            return Response::redirect('/admin/structure');
+        },
+        static fn (Request $request, array $variables): array => ['site:' . $siteId],
+    );
+    $mutation(new Request('POST', '/admin/structure', '/admin/structure', [], [], [], []));
+    if ($core->cache()->get($fragmentKey) !== null || is_file($staticPath)
+        || $core->cache()->get($otherKey) !== 'Other site menu'
+        || !str_contains($menus->get('catalog')->show(), '>Updated phones</a>')) {
+        throw new RuntimeException('Structure mutation left a stale menu fragment/static page or evicted another site.');
+    }
 } finally {
+    if (isset($core, $fragmentKey)) {
+        $core->cache()->forget($fragmentKey);
+        $core->cache()->forget($otherKey);
+        $core->delivery()->deleteStatic($siteId, '/menu-cache-smoke');
+    }
     $deleteNodes = $db->prepare('DELETE FROM nodes WHERE site_id = :site_id');
     $deleteNodes->execute(['site_id' => $siteId]);
 

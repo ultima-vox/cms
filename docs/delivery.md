@@ -102,3 +102,9 @@ The next delivery step can safely add:
 7. asset hashes/minification.
 
 Building those features on this contract avoids global cache clears and keeps future Media/Shop modules dependency-aware from the start.
+
+## Mutation invalidation scope
+
+Public page and Menu render dependencies include `site:<id>`. This lets Structure mutations invalidate navigation fragments as well as full pages and static output, including empty navigation results. Documents publication invalidates document dependencies; unrelated documents and sites stay cached.
+
+Infosystem binding replacement invalidates the current site rather than just the selected Infosystem: the affected nodes may previously have rendered a different source whose cached output carries the old Infosystem dependency. Item/group content edits continue to use the narrower Infosystem dependency. Mutation invalidation runs inside the permission gate and only after a successful response; rejected CSRF or unauthorized requests keep delivery artifacts intact.
