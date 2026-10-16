@@ -45,29 +45,62 @@ final class DeliveryApi
         return $this->staticPages->publish($siteId, $path, $html, $dependencies, $permalinkStyle);
     }
 
+    /** @return array{token:string,started_at:int} */
+    public function beginStaticGeneration(): array
+    {
+        $startedAt = time();
+        return ['token' => $this->staticPages->generation(), 'started_at' => $startedAt];
+    }
+
+    /** @param array{token:string,started_at:int} $generation */
     public function publishRenderedStatic(
         int $siteId,
         string $path,
         RenderResult $result,
+        array $generation,
         string $permalinkStyle = 'clean',
     ): string {
+        if (
+            !is_string($generation['token'] ?? null)
+            || preg_match('/^[a-f0-9]{32}$/D', $generation['token']) !== 1
+            || !is_int($generation['started_at'] ?? null)
+            || $generation['started_at'] < 1 || $generation['started_at'] > time()
+        ) {
+            throw new RuntimeException('Invalid static generation token.');
+        }
         if (!$result->context->isCacheable()) {
-            $this->deleteStatic($siteId, $path, $permalinkStyle);
+            $this->deleteStatic($siteId, $path, $permalinkStyle, $generation['token']);
             throw new RuntimeException('Static generation was vetoed by the render cache policy.');
         }
 
-        return $this->publishStatic(
+        return $this->staticPages->publish(
             $siteId,
             $path,
             $result->html,
             $result->context->dependencies(),
             $permalinkStyle,
+            $generation['token'],
+            $generation['started_at'] + $result->context->maxAge(300),
         );
     }
 
-    public function deleteStatic(int $siteId, string $path, string $permalinkStyle = 'clean'): void
+    public function deleteStatic(
+        int $siteId,
+        string $path,
+        string $permalinkStyle = 'clean',
+        ?string $expectedGeneration = null,
+    ): void {
+        $this->staticPages->delete($siteId, $path, $permalinkStyle, $expectedGeneration);
+    }
+
+    public function readStatic(int $siteId, string $path, string $permalinkStyle = 'clean'): ?string
     {
-        $this->staticPages->delete($siteId, $path, $permalinkStyle);
+        return $this->staticPages->read($siteId, $path, $permalinkStyle);
+    }
+
+    public function pruneExpiredStatic(): int
+    {
+        return $this->staticPages->pruneExpired();
     }
 
     public function staticPath(int $siteId, string $path, string $permalinkStyle = 'clean'): string

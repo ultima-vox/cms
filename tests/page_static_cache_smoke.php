@@ -236,6 +236,115 @@ if ($retried['static'] !== 1 || is_file($guarded)) {
     throw new RuntimeException('Failed static deletion discarded dependency metadata needed for retry.');
 }
 
+// Cross-process invalidation must fence a render even before its first output exists.
+$raceContext = new RenderContext();
+$raceContext->cacheFor(30);
+$raceResult = new RenderResult('stale result', $raceContext);
+$staleGeneration = $delivery->beginStaticGeneration();
+$child = <<<'PHP'
+require $argv[1] . '/vendor/autoload.php';
+$publisher = new \Core\Delivery\StaticPage\StaticPagePublisher($argv[2] . '/static', $argv[2] . '/cache/static-index');
+$publisher->invalidate(['changed-before-first-publication']);
+PHP;
+$process = proc_open(
+    [PHP_BINARY, '-r', $child, dirname(__DIR__), $root],
+    [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+    $pipes,
+);
+if (!is_resource($process)) {
+    throw new RuntimeException('Unable to start independent invalidation process.');
+}
+fclose($pipes[0]);
+$childOutput = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+fclose($pipes[1]);
+fclose($pipes[2]);
+if (proc_close($process) !== 0) {
+    throw new RuntimeException('Independent invalidation failed: ' . $childOutput);
+}
+$assertStaticRejected(fn () => $delivery->publishRenderedStatic(77, '/race', $raceResult, $staleGeneration));
+if (is_file($delivery->staticPath(77, '/race'))) {
+    throw new RuntimeException('Invalidation without existing output failed to fence first publication.');
+}
+$winnerGeneration = $delivery->beginStaticGeneration();
+$winner = $delivery->publishRenderedStatic(77, '/race', new RenderResult('winner', $raceContext), $winnerGeneration);
+$assertStaticRejected(fn () => $delivery->publishRenderedStatic(77, '/race', $raceResult, $staleGeneration));
+$delivery->deleteStatic(77, '/race', 'clean', $staleGeneration['token']);
+$privateRace = new RenderContext();
+$privateRace->doNotCache('private-after-invalidation');
+$assertStaticRejected(fn () => $delivery->publishRenderedStatic(
+    77, '/race', new RenderResult('private', $privateRace), $staleGeneration,
+));
+if ($delivery->readStatic(77, '/race') !== 'winner') {
+    throw new RuntimeException('Stale publication or cleanup replaced a newer valid output.');
+}
+
+// Failed invalidation must make managed output unreadable before unlink succeeds.
+$blockedRemoval = $delivery->publishRenderedStatic(
+    77, '/blocked-removal', new RenderResult('do not serve after invalidation', $raceContext),
+    $delivery->beginStaticGeneration(),
+);
+$blockedDirectory = dirname($blockedRemoval);
+$movedBlocked = $root . '/blocked-output';
+rename($blockedDirectory, $movedBlocked);
+symlink($movedBlocked, $blockedDirectory);
+try {
+    $assertStaticRejected(fn () => $delivery->invalidate(['site:77']));
+} finally {
+    unlink($blockedDirectory);
+    rename($movedBlocked, $blockedDirectory);
+}
+if ($delivery->readStatic(77, '/blocked-removal') !== null || is_file($blockedRemoval)) {
+    throw new RuntimeException('Failed physical deletion left invalid managed output readable.');
+}
+// The same site invalidation removed the earlier winner; republish it for expiry isolation checks.
+$winner = $delivery->publishRenderedStatic(
+    77, '/race', new RenderResult('winner', $raceContext), $delivery->beginStaticGeneration(),
+);
+
+// TTL starts before rendering; checked reads and pruning must remove expired managed output.
+$shortContext = new RenderContext();
+$shortContext->cacheFor(1);
+$short = new RenderResult('short lived', $shortContext);
+$readExpiry = $delivery->publishRenderedStatic(78, '/read-expiry', $short, $delivery->beginStaticGeneration());
+$pruneExpiry = $delivery->publishRenderedStatic(78, '/prune-expiry', $short, $delivery->beginStaticGeneration(), 'html');
+if ($delivery->readStatic(78, '/read-expiry') !== 'short lived') {
+    throw new RuntimeException('Fresh managed static output was not readable.');
+}
+$slowGeneration = $delivery->beginStaticGeneration();
+sleep(2);
+try {
+    $delivery->publishRenderedStatic(78, '/slow', $short, $slowGeneration);
+    throw new RuntimeException('Expired render was published.');
+} catch (RuntimeException $exception) {
+    if (!str_contains($exception->getMessage(), 'expired before publication')) {
+        throw $exception;
+    }
+}
+if ($delivery->readStatic(78, '/read-expiry') !== null || is_file($readExpiry)) {
+    throw new RuntimeException('Checked static read served expired output.');
+}
+if ($delivery->pruneExpiredStatic() !== 1 || is_file($pruneExpiry)
+    || $delivery->readStatic(77, '/race') !== 'winner') {
+    throw new RuntimeException('Expiry pruning removed fresh output or retained expired output.');
+}
+$raw = $delivery->publishStatic(79, '/unmanaged', 'explicit snapshot', []);
+if ($delivery->readStatic(79, '/unmanaged') !== null || !is_file($raw)) {
+    throw new RuntimeException('Unmanaged snapshot was exposed as a TTL-managed cache entry.');
+}
+
+// A failed atomic replacement must retain the previous value's invalidation metadata.
+$failureIndex = new FilesystemTagIndex($root . '/failure-index');
+$failureFile = $root . '/retained-value';
+$failureIndex->publish('retained-key', ['retained-tag'], fn () => file_put_contents($failureFile, 'old'));
+$assertStaticRejected(fn () => $failureIndex->publish('retained-key', ['new-tag'], static function (): void {
+    throw new RuntimeException('Simulated atomic writer failure.');
+}));
+if (file_get_contents($failureFile) !== 'old'
+    || $failureIndex->invalidate(['retained-tag'], fn () => unlink($failureFile)) !== 1
+    || $failureIndex->invalidate(['new-tag'], static function (): void {}) !== 0) {
+    throw new RuntimeException('Failed replacement orphaned the old value or its tag edges.');
+}
+
 $remove = static function (string $path) use (&$remove): void {
     if (!is_dir($path)) {
         if (is_file($path)) {

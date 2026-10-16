@@ -331,6 +331,8 @@ jobs:
           php tests/static_page_generation_smoke.php
           STATIC_OUTPUT="$(php bin/console static:publish second / html)"
           grep 'Second Tank' "${STATIC_OUTPUT#Published: }"
+          php bin/console static:prune
+          if php bin/console static:prune unexpected; then exit 1; fi
           if php bin/console static:publish second /admin html; then exit 1; fi
           if php bin/console static:publish second / html unexpected; then exit 1; fi
 

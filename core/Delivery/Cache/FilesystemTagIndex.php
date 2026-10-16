@@ -18,48 +18,99 @@ final class FilesystemTagIndex
      * @param list<string> $tags
      * @param callable():void $publish
      */
-    public function publish(string $key, array $tags, callable $publish): void
-    {
+    public function publish(
+        string $key,
+        array $tags,
+        callable $publish,
+        ?string $expectedGeneration = null,
+        ?int $expiresAt = null,
+    ): void {
         $key = $this->key($key);
         $tags = $this->tags($tags);
 
-        $this->locked(function () use ($key, $tags, $publish): void {
-            $old = $this->readKeyTags($key);
-
-            foreach (array_diff($old, $tags) as $tag) {
-                $this->removeKeyFromTag($tag, $key);
+        $this->locked(function () use ($key, $tags, $publish, $expectedGeneration, $expiresAt): void {
+            if ($expectedGeneration !== null && $expectedGeneration !== $this->currentGeneration()) {
+                throw new RuntimeException('Delivery generation changed; retry rendering with fresh data.');
             }
-            foreach ($tags as $tag) {
-                $this->addKeyToTag($tag, $key);
+            if ($expiresAt !== null && $expiresAt <= time()) {
+                throw new RuntimeException('Delivery output expired before publication.');
             }
-
-            if ($tags === []) {
-                $this->deleteKeyFile($key);
-            } else {
-                $this->writeJson($this->keyPath($key), [
-                    'key' => $key,
-                    'tags' => $tags,
-                ]);
-            }
-
+            $old = $this->readJson($this->keyPath($key));
+            $this->advanceGeneration();
             try {
+                $this->replaceMetadata($key, $tags, $expiresAt);
                 $publish();
             } catch (\Throwable $exception) {
-                foreach ($this->readKeyTags($key) as $tag) {
-                    $this->removeKeyFromTag($tag, $key);
-                }
-                $this->deleteKeyFile($key);
+                // Atomic writers retain the old value on failure; retain its invalidation edges too.
+                $this->replaceMetadata(
+                    $key,
+                    is_array($old['tags'] ?? null) ? $old['tags'] : [],
+                    is_int($old['expires_at'] ?? null) ? $old['expires_at'] : null,
+                );
                 throw $exception;
             }
         });
     }
 
+    public function generation(): string
+    {
+        return $this->locked(fn (): string => $this->currentGeneration());
+    }
+
+    /** @param callable():?string $read @param callable():void $remove */
+    public function readFresh(string $key, callable $read, callable $remove): ?string
+    {
+        $key = $this->key($key);
+        return $this->locked(function () use ($key, $read, $remove): ?string {
+            $data = $this->readJson($this->keyPath($key));
+            if (($data['key'] ?? null) !== $key || !is_int($data['expires_at'] ?? null)) {
+                return null;
+            }
+            if ($data['expires_at'] <= time()) {
+                $remove();
+                $this->replaceMetadata($key, [], null);
+                return null;
+            }
+            return $read();
+        });
+    }
+
+    /** @param callable(string):void $remove */
+    public function pruneExpired(callable $remove): int
+    {
+        return $this->locked(function () use ($remove): int {
+            $count = 0;
+            foreach (glob(rtrim($this->directory, '/') . '/keys/*/*.json') ?: [] as $path) {
+                $data = $this->readJson($path);
+                if (
+                    !is_int($data['expires_at'] ?? null) || $data['expires_at'] > time()
+                    || !is_string($data['key'] ?? null)
+                ) {
+                    continue;
+                }
+                $key = $this->key($data['key']);
+                if ($this->keyPath($key) !== $path) {
+                    continue;
+                }
+                $remove($key);
+                $this->replaceMetadata($key, [], null);
+                $count++;
+            }
+            return $count;
+        });
+    }
+
     /** @param callable():void $remove */
-    public function remove(string $key, callable $remove): void
+    public function remove(string $key, callable $remove, ?string $expectedGeneration = null): void
     {
         $key = $this->key($key);
 
-        $this->locked(function () use ($key, $remove): void {
+        $this->locked(function () use ($key, $remove, $expectedGeneration): void {
+            if ($expectedGeneration !== null && $expectedGeneration !== $this->currentGeneration()) {
+                return;
+            }
+            $this->advanceGeneration();
+            $this->markExpired($key);
             $remove();
             foreach ($this->readKeyTags($key) as $tag) {
                 $this->removeKeyFromTag($tag, $key);
@@ -80,6 +131,8 @@ final class FilesystemTagIndex
         }
 
         return $this->locked(function () use ($tags, $remove): int {
+            // Advance even with no indexed artifacts: a first publication may still be rendering.
+            $this->advanceGeneration();
             $keys = [];
             foreach ($tags as $tag) {
                 foreach ($this->readTagKeys($tag) as $key) {
@@ -87,6 +140,9 @@ final class FilesystemTagIndex
                 }
             }
 
+            foreach (array_keys($keys) as $key) {
+                $this->markExpired($key);
+            }
             foreach (array_keys($keys) as $key) {
                 $remove($key);
                 foreach ($this->readKeyTags($key) as $tag) {
@@ -97,6 +153,52 @@ final class FilesystemTagIndex
 
             return count($keys);
         });
+    }
+
+    private function markExpired(string $key): void
+    {
+        $data = $this->readJson($this->keyPath($key));
+        if (($data['key'] ?? null) === $key && is_int($data['expires_at'] ?? null)) {
+            $data['expires_at'] = 0;
+            $this->writeJson($this->keyPath($key), $data);
+        }
+    }
+
+    private function currentGeneration(): string
+    {
+        $data = $this->readJson($this->directory . '/generation.json');
+        if (!is_string($data['token'] ?? null) || preg_match('/^[a-f0-9]{32}$/D', $data['token']) !== 1) {
+            return $this->advanceGeneration();
+        }
+        return $data['token'];
+    }
+
+    private function advanceGeneration(): string
+    {
+        $token = bin2hex(random_bytes(16));
+        $this->writeJson($this->directory . '/generation.json', ['token' => $token]);
+        return $token;
+    }
+
+    /** @param list<string> $tags */
+    private function replaceMetadata(string $key, array $tags, ?int $expiresAt): void
+    {
+        $old = $this->readKeyTags($key);
+        foreach (array_diff($old, $tags) as $tag) {
+            $this->removeKeyFromTag($tag, $key);
+        }
+        foreach ($tags as $tag) {
+            $this->addKeyToTag($tag, $key);
+        }
+        if ($tags === []) {
+            $this->deleteKeyFile($key);
+            return;
+        }
+        $this->writeJson($this->keyPath($key), [
+            'key' => $key,
+            'tags' => $tags,
+            'expires_at' => $expiresAt,
+        ]);
     }
 
     /** @template T @param callable():T $callback @return T */

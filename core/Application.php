@@ -161,6 +161,13 @@ final class Application
     {
         $permalink = new Permalink($path, $style);
         $db = Database::connection();
+        // Match public HTTP boot; capture the fence before site/module/content reads.
+        $core = new ExtensionCore(new RuntimeApi(
+            $db,
+            $this->rootPath,
+            new SiteContext(1, 'default', 'Default site', ''),
+        ));
+        $generation = $core->delivery()->beginStaticGeneration();
         $sites = new SiteRepository($db);
         $record = $sites->findActiveByCode($siteCode);
         if ($record === null) {
@@ -188,7 +195,6 @@ final class Application
             throw new RuntimeException('Static generation requires a session-free CLI process.');
         }
 
-        $core = new ExtensionCore(new RuntimeApi($db, $this->rootPath, $site));
         (new BuiltinExtensions())->register($core);
         (new ModuleLoader($this->rootPath))->load($core);
         $core->freeze();
@@ -207,9 +213,9 @@ final class Application
             if ($result === null) {
                 throw new RuntimeException('Published page was not found.');
             }
-            return $core->delivery()->publishRenderedStatic($site->id, $permalink->nodePath, $result, $style);
+            return $core->delivery()->publishRenderedStatic($site->id, $permalink->nodePath, $result, $generation, $style);
         } catch (Throwable $exception) {
-            $core->delivery()->deleteStatic($site->id, $permalink->nodePath, $style);
+            $core->delivery()->deleteStatic($site->id, $permalink->nodePath, $style, $generation['token']);
             throw $exception;
         }
     }

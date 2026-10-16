@@ -26,6 +26,8 @@ final readonly class StaticPagePublisher
         string $html,
         array $dependencies,
         string $permalinkStyle = 'clean',
+        ?string $expectedGeneration = null,
+        ?int $expiresAt = null,
     ): string {
         $relative = $this->relativePath($siteId, $path, $permalinkStyle);
         $key = 'static:' . $relative;
@@ -48,20 +50,26 @@ final readonly class StaticPagePublisher
                     throw new RuntimeException(sprintf('Unable to publish static page: %s.', $target));
                 }
             },
+            $expectedGeneration,
+            $expiresAt,
         );
 
         return $target;
     }
 
-    public function delete(int $siteId, string $path, string $permalinkStyle = 'clean'): void
-    {
+    public function delete(
+        int $siteId,
+        string $path,
+        string $permalinkStyle = 'clean',
+        ?string $expectedGeneration = null,
+    ): void {
         $relative = $this->relativePath($siteId, $path, $permalinkStyle);
         $target = $this->targetPath($relative);
         $key = 'static:' . $relative;
 
         $this->index->remove($key, function () use ($target): void {
             $this->removeFile($target);
-        });
+        }, $expectedGeneration);
     }
 
     /** @param list<string> $dependencies */
@@ -69,22 +77,54 @@ final readonly class StaticPagePublisher
     {
         return $this->index->invalidate(
             $dependencies,
-            function (string $key): void {
-                if (!str_starts_with($key, 'static:')) {
-                    return;
-                }
-                $relative = substr($key, 7);
-                if (
-                    $relative === false
-                    || preg_match('#^sites/[1-9][0-9]*/[A-Za-z0-9._~/-]+$#D', $relative) !== 1
-                    || in_array('..', explode('/', $relative), true)
-                    || in_array('.', explode('/', $relative), true)
-                ) {
-                    return;
-                }
-                $this->removeFile($this->targetPath($relative));
-            },
+            fn (string $key) => $this->removeIndexedFile($key),
         );
+    }
+
+    public function generation(): string
+    {
+        return $this->index->generation();
+    }
+
+    public function read(int $siteId, string $path, string $permalinkStyle = 'clean'): ?string
+    {
+        $relative = $this->relativePath($siteId, $path, $permalinkStyle);
+        return $this->index->readFresh(
+            'static:' . $relative,
+            function () use ($relative): ?string {
+                $target = $this->targetPath($relative);
+                if (!is_file($target)) {
+                    return null;
+                }
+                $html = file_get_contents($target);
+                if ($html === false) {
+                    throw new RuntimeException('Unable to read static output file.');
+                }
+                return $html;
+            },
+            fn () => $this->removeFile($this->targetPath($relative)),
+        );
+    }
+
+    public function pruneExpired(): int
+    {
+        return $this->index->pruneExpired(fn (string $key) => $this->removeIndexedFile($key));
+    }
+
+    private function removeIndexedFile(string $key): void
+    {
+        if (!str_starts_with($key, 'static:')) {
+            throw new RuntimeException('Invalid static index key.');
+        }
+        $relative = substr($key, 7);
+        if (
+            preg_match('#^sites/[1-9][0-9]*/[A-Za-z0-9._~/-]+$#D', $relative) !== 1
+            || in_array('..', explode('/', $relative), true)
+            || in_array('.', explode('/', $relative), true)
+        ) {
+            throw new RuntimeException('Invalid static index path.');
+        }
+        $this->removeFile($this->targetPath($relative));
     }
 
     public function path(int $siteId, string $path, string $permalinkStyle = 'clean'): string
