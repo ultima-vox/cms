@@ -10,6 +10,7 @@ final readonly class ModuleManifest
 {
     /**
      * @param array<string, string> $requires
+     * @param list<string> $migrationAfter
      * @param list<string> $purgeScripts
      */
     public function __construct(
@@ -22,6 +23,7 @@ final readonly class ModuleManifest
         public string $provider,
         public string $directory,
         public array $purgeScripts = [],
+        public array $migrationAfter = [],
     ) {
     }
 
@@ -108,6 +110,23 @@ final readonly class ModuleManifest
             $purgeScripts[$script] = $script;
         }
 
+        $migrationAfter = $data['migration_after'] ?? [];
+        if (!is_array($migrationAfter) || !array_is_list($migrationAfter)) {
+            throw new RuntimeException(sprintf('Module %s migration_after must be a list.', $code));
+        }
+        $normalizedMigrationAfter = [];
+        foreach ($migrationAfter as $dependency) {
+            if (!is_string($dependency)
+                || !preg_match('/^[a-z][a-z0-9._-]{0,79}$/', $dependency)
+                || $dependency === $code
+                || $dependency === 'core'
+                || isset($normalizedMigrationAfter[$dependency])) {
+                throw new RuntimeException(sprintf('Invalid migration_after declaration in module %s.', $code));
+            }
+            $normalizedMigrationAfter[$dependency] = $dependency;
+        }
+        ksort($normalizedMigrationAfter, SORT_STRING);
+
         return new self(
             $code,
             $name,
@@ -118,6 +137,7 @@ final readonly class ModuleManifest
             $provider,
             $directory,
             array_values($purgeScripts),
+            array_values($normalizedMigrationAfter),
         );
     }
 }

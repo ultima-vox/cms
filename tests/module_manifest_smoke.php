@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Core\Extension\ExtensionApiVersion;
 use Core\Extension\ModuleLoader;
+use Core\Extension\ModuleManifest;
 use Core\Extension\ModuleManifestReader;
 use Core\Extension\VersionConstraint;
 
@@ -35,6 +36,31 @@ foreach (['documents', 'infosystem', 'sites'] as $code) {
 foreach (['documents', 'infosystem'] as $code) {
     if (!is_file($root . '/modules/' . $code . '/module.json')) {
         throw new RuntimeException(sprintf('%s static module.json manifest is missing.', $code));
+    }
+}
+
+if ($byCode['documents']->migrationAfter !== ['infosystem']
+    || isset($byCode['documents']->requires['infosystem'])) {
+    throw new RuntimeException('Migration ordering leaked into runtime dependencies.');
+}
+foreach (['infosystem', ['bad/path'], ['documents'], ['core'], ['infosystem', 'infosystem'], ['key' => 'infosystem'], [1]] as $invalid) {
+    try {
+        ModuleManifest::fromArray([
+            'code' => 'documents',
+            'name' => 'Documents',
+            'version' => '1.0.0',
+            'extension_api' => '^1.0',
+            'provider' => stdClass::class,
+            'migration_after' => $invalid,
+        ], __DIR__);
+        throw new RuntimeException('Invalid migration_after was accepted.');
+    } catch (RuntimeException $exception) {
+        if (!str_contains($exception->getMessage(), 'migration_after')) {
+            throw $exception;
+        }
+        if ($exception->getMessage() === 'Invalid migration_after was accepted.') {
+            throw $exception;
+        }
     }
 }
 
