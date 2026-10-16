@@ -13,6 +13,17 @@ final class NodeRepository
     {
     }
 
+    /** @return list<array{id:int|string,path:string}> */
+    public function pathsForSite(int $siteId): array
+    {
+        if ($siteId < 1) {
+            throw new RuntimeException('Site id must be positive.');
+        }
+        $statement = $this->db->prepare('SELECT id, path FROM nodes WHERE site_id = :site_id ORDER BY path, id');
+        $statement->execute(['site_id' => $siteId]);
+        return $statement->fetchAll();
+    }
+
     /** @return array<string, mixed>|null */
     public function findPublishedByPath(int $siteId, string $path): ?array
     {

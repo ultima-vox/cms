@@ -15,6 +15,7 @@ use Core\Extension\Api\DeliveryApi;
 use Core\Http\Request;
 use Core\Http\Response;
 use Core\Routing\Permalink;
+use Core\Routing\PermalinkMigrationPlanner;
 use Core\Site\SiteContext;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderResult;
@@ -234,6 +235,34 @@ try {
 $retried = $delivery->invalidate(['site:1']);
 if ($retried['static'] !== 1 || is_file($guarded)) {
     throw new RuntimeException('Failed static deletion discarded dependency metadata needed for retry.');
+}
+
+// Migration planning must reject redirects that shadow another node and unsafe output layouts.
+$planner = new PermalinkMigrationPlanner();
+$normalPlan = $planner->plan([
+    ['id' => 2, 'path' => '/about'], ['id' => 1, 'path' => '/'],
+], 'html');
+if (!$normalPlan['valid'] || $normalPlan['public_route_activation'] !== false
+    || $normalPlan['candidate_redirects'] !== [['node_id' => 2, 'from' => '/about', 'to' => '/about.html']]) {
+    throw new RuntimeException('URL migration audit did not retain a safe, explicit redirect candidate.');
+}
+foreach ([
+    ['clean', [['id' => 1, 'path' => '/a'], ['id' => 2, 'path' => '/a/']], 'target_collision'],
+    ['html', [['id' => 1, 'path' => '/a'], ['id' => 2, 'path' => '/a.html']], 'redirect_shadow'],
+    ['clean', [['id' => 1, 'path' => '/a'], ['id' => 2, 'path' => '/a/index.html/child']], 'file_directory_collision'],
+    ['html', [['id' => 1, 'path' => '/a'], ['id' => 2, 'path' => '/a.html/child']], 'file_directory_collision'],
+    ['html', [['id' => 1, 'path' => '/'], ['id' => 2, 'path' => '/index']], 'invalid_path'],
+    ['html', [['id' => 1, 'path' => '/'], ['id' => 2, 'path' => '/index.html/child']], 'file_directory_collision'],
+    ['clean', [['id' => 1, 'path' => '/admin']], 'invalid_path'],
+] as [$style, $nodes, $conflictType]) {
+    $plan = $planner->plan($nodes, $style);
+    if ($plan['valid'] || $plan['candidate_redirects'] !== []
+        || !in_array($conflictType, array_column($plan['conflicts'], 'type'), true)) {
+        throw new RuntimeException('URL audit missed a collision or emitted redirects despite a conflict.');
+    }
+    if ($plan !== $planner->plan(array_reverse($nodes), $style)) {
+        throw new RuntimeException('URL audit output depends on repository row order.');
+    }
 }
 
 // Cross-process invalidation must fence a render even before its first output exists.
