@@ -6,6 +6,7 @@ namespace UltimaVox\Modules\Sites;
 
 use Core\Http\Request;
 use Core\Http\Response;
+use Core\Routing\Permalink;
 use Core\Security\AuthService;
 use Core\Security\Csrf;
 use Core\Site\AdminSiteSelector;
@@ -71,7 +72,7 @@ final class SitesController
                 throw new RuntimeException('Код сайта: a-z, 0-9, дефис или подчёркивание; первый символ — буква.');
             }
 
-            $id = $this->sites->create($name, $code);
+            $id = $this->sites->create($name, $code, $this->permalinkStyle($request->post['permalink_style'] ?? 'clean'));
             return Response::redirect('/admin/sites/' . $id . '/edit?saved=1');
         } catch (Throwable $exception) {
             return $this->formResponse($request->post, $this->message($exception), 422);
@@ -115,6 +116,9 @@ final class SitesController
                 $id,
                 $this->name($request->post['name'] ?? null),
                 (string) ($request->post['is_active'] ?? '0') === '1',
+                array_key_exists('permalink_style', $request->post)
+                    ? $this->permalinkStyle($request->post['permalink_style'])
+                    : null,
             );
             return Response::redirect('/admin/sites/' . $id . '/edit?saved=1');
         } catch (Throwable $exception) {
@@ -223,12 +227,21 @@ final class SitesController
             'is_active' => true,
         ], $site ?? []);
 
+        $settings = is_array($form['settings'] ?? null) ? $form['settings'] : [];
+        $style = $form['permalink_style'] ?? $settings['permalink_style'] ?? 'clean';
+        $form['permalink_style'] = is_string($style) ? $style : '';
+        $publicationPreview = null;
+        if (in_array($form['permalink_style'], ['clean', 'html'], true)) {
+            $publicationPreview = new Permalink('/example', $form['permalink_style']);
+        }
+
         $domains = isset($form['id']) && is_numeric($form['id'])
             ? $this->sites->domains((int) $form['id'])
             : [];
 
         return Response::html($this->view->render('admin/sites/form.php', [
             'site' => $form,
+            'publication_preview' => $publicationPreview,
             'domains' => $domains,
             'admin_site' => $this->selector->current(),
             'csrf_token' => Csrf::token(),
@@ -254,6 +267,14 @@ final class SitesController
         return Csrf::validate(is_string($token) ? $token : null)
             ? null
             : Response::html('<h1>419 CSRF token mismatch</h1>', 419);
+    }
+
+    private function permalinkStyle(mixed $value): string
+    {
+        if (!is_string($value) || !in_array($value, ['clean', 'html'], true)) {
+            throw new RuntimeException('Формат публикации должен быть clean или html.');
+        }
+        return $value;
     }
 
     private function name(mixed $value): string

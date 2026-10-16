@@ -157,9 +157,9 @@ final class Application
     }
 
     /** Generate one anonymous snapshot; this does not enable HTTP static serving. */
-    public function publishStatic(string $siteCode, string $path, string $style = 'clean'): string
+    public function publishStatic(string $siteCode, string $path, ?string $style = null): string
     {
-        $permalink = new Permalink($path, $style);
+        $permalink = new Permalink($path, $style ?? 'clean');
         $db = Database::connection();
         // Match public HTTP boot; capture the fence before site/module/content reads.
         $core = new ExtensionCore(new RuntimeApi(
@@ -191,6 +191,8 @@ final class Application
         if ($site === null || $site->id !== (int) $record['id']) {
             throw new RuntimeException('Primary domain does not resolve to the requested site.');
         }
+        $style ??= $site->staticPermalinkStyle();
+        $permalink = new Permalink($path, $style);
         if (session_status() === PHP_SESSION_ACTIVE) {
             throw new RuntimeException('Static generation requires a session-free CLI process.');
         }

@@ -26,12 +26,15 @@ use Core\Security\AuthService;
 use Core\Site\SiteResolver;
 use Core\View\PhpRenderer;
 use Core\View\SafeHtml;
+use UltimaVox\Modules\Sites\SitesManagementRepository;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 $root = dirname(__DIR__);
+require_once $root . '/modules/sites/autoload.php';
 $db = Database::connection();
 $application = new Application($root);
+$siteManagement = new SitesManagementRepository($db);
 $createdFiles = [];
 $sites = [];
 $assertRejected = static function (callable $operation): void {
@@ -48,9 +51,7 @@ try {
     foreach (['one', 'two'] as $label) {
         $code = 'static-' . $label . '-' . $suffix;
         $host = $code . '.test';
-        $statement = $db->prepare('INSERT INTO sites (code, name) VALUES (:code, :name) RETURNING id');
-        $statement->execute(['code' => $code, 'name' => $label]);
-        $siteId = (int) $statement->fetchColumn();
+        $siteId = $siteManagement->create($label, $code, $label === 'two' ? 'html' : 'clean');
         $statement = $db->prepare('INSERT INTO site_domains (site_id, host, is_primary) VALUES (:site, :host, TRUE)');
         $statement->execute(['site' => $siteId, 'host' => $host]);
         $statement = $db->prepare('INSERT INTO documents (site_id, code, name) VALUES (:site, :code, :name) RETURNING id');
@@ -143,8 +144,17 @@ try {
     }
 
     // Application boot uses real enabled modules, published Documents and the primary host.
-    $first = $application->publishStatic($sites[0]['code'], '/about', 'clean');
-    $second = $application->publishStatic($sites[1]['code'], '/about', 'html');
+    $first = $application->publishStatic($sites[0]['code'], '/about');
+    $second = $application->publishStatic($sites[1]['code'], '/about');
+    if (!str_ends_with($first, '/about/index.html') || !str_ends_with($second, '/about.html')) {
+        throw new RuntimeException('Static generation ignored independent per-site defaults.');
+    }
+    $override = $application->publishStatic($sites[0]['code'], '/about', 'html');
+    $createdFiles[] = $override;
+    if (!str_ends_with($override, '/about.html')
+        || $siteManagement->find($sites[0]['id'])['settings']['permalink_style'] !== 'clean') {
+        throw new RuntimeException('Explicit publication override changed the persisted site default.');
+    }
     $createdFiles = [...$createdFiles, $first, $second];
     if (!str_contains((string) file_get_contents($first), 'Static fixture one')
         || !str_contains((string) file_get_contents($second), 'Static fixture two')
@@ -161,6 +171,8 @@ try {
     if (is_file($first)) {
         throw new RuntimeException('Unpublished page retained its older output variant.');
     }
+    $assertRejected(fn () => $siteManagement->update($sites[1]['id'], 'two', true, 'invalid'));
+    $assertRejected(fn () => $siteManagement->create('Bad policy', 'bad-policy-' . $suffix, 'invalid'));
     $assertRejected(fn () => $application->publishStatic('unknown-' . $suffix, '/about'));
     $assertRejected(fn () => $application->publishStatic($sites[0]['code'], '/admin'));
     $assertRejected(fn () => $application->publishStatic($sites[0]['code'], '/../escape'));

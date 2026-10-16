@@ -15,6 +15,8 @@ use Core\Repository\NodeModuleBindingRepository;
 use Core\Security\Csrf;
 use Core\Site\SiteContext;
 use Core\View\Render\RenderContext;
+use Core\View\Render\RenderResult;
+use Core\Repository\SiteRepository;
 use UltimaVox\Modules\Documents\DocumentRenderer;
 use UltimaVox\Modules\Documents\Repository\DocumentRepository;
 
@@ -143,6 +145,58 @@ try {
         || $core->cache()->get('old-system-page') !== null || is_file($systemStatic)
         || $core->cache()->get('other-site') !== 'Other site' || !is_file($otherStatic)) {
         throw new RuntimeException('Infosystem rebinding left old-source output stale or evicted another site.');
+    }
+    // Site policy updates use the existing permission/CSRF checks and site-wide invalidation.
+    $setSettings = $db->prepare('UPDATE sites SET settings = CAST(:settings AS jsonb) WHERE id = :id');
+    $setSettings->execute(['id' => $siteId, 'settings' => '{"theme":"keep","render_mode":"dynamic"}']);
+    $policyClean = $core->delivery()->publishStatic($siteId, '/policy', 'old clean', []);
+    $policyHtml = $core->delivery()->publishStatic($siteId, '/policy', 'old HTML', [], 'html');
+    $core->cache()->put('site-policy-output', 'old policy', ['site:' . $siteId], 60);
+    $pendingGeneration = $core->delivery()->beginStaticGeneration();
+    $updateSite = $core->routes()->handler('sites.update');
+    $sitePath = '/admin/sites/' . $siteId;
+    $siteData = ['name' => 'Delivery routes', 'is_active' => '1', 'permalink_style' => 'html', '_csrf' => $csrf];
+    $response = $updateSite($post($sitePath, $siteData), ['id' => (string) $siteId]);
+    if ($response->statusCode() !== 403 || !is_file($policyClean)) {
+        throw new RuntimeException('Editor changed site publication policy or evicted output without permission.');
+    }
+    $grantAdmin = $db->prepare("INSERT INTO user_roles (user_id, role_id) SELECT :id, id FROM roles WHERE code = 'admin'");
+    $grantAdmin->execute(['id' => $userId]);
+    $badCsrf = array_replace($siteData, ['_csrf' => 'invalid']);
+    $response = $updateSite($post($sitePath, $badCsrf), ['id' => (string) $siteId]);
+    if ($response->statusCode() !== 419 || !is_file($policyClean)) {
+        throw new RuntimeException('CSRF rejection changed site publication policy or evicted output.');
+    }
+    $response = $updateSite($post($sitePath, array_replace($siteData, ['permalink_style' => 'invalid'])), ['id' => (string) $siteId]);
+    if ($response->statusCode() !== 422 || !is_file($policyHtml)
+        || $core->cache()->get('site-policy-output') !== 'old policy') {
+        throw new RuntimeException('Invalid site policy was accepted or evicted valid output.');
+    }
+    $response = $updateSite($post($sitePath, $siteData), ['id' => (string) $siteId]);
+    $record = (new SiteRepository($db))->findActiveById($siteId);
+    if ($response->statusCode() !== 302 || ($record['settings']['permalink_style'] ?? null) !== 'html'
+        || ($record['settings']['theme'] ?? null) !== 'keep'
+        || ($record['settings']['render_mode'] ?? null) !== 'dynamic'
+        || is_file($policyClean) || is_file($policyHtml)
+        || $core->cache()->get('site-policy-output') !== null
+        || !is_file($otherStatic) || $core->cache()->get('other-site') !== 'Other site') {
+        throw new RuntimeException('Site policy update lost settings, retained old output or affected another site.');
+    }
+    try {
+        $core->delivery()->publishRenderedStatic($siteId, '/policy', new RenderResult('stale policy', new RenderContext()), $pendingGeneration);
+        throw new RuntimeException('Site policy change did not fence a pending generator.');
+    } catch (RuntimeException $exception) {
+        if (!str_contains($exception->getMessage(), 'generation changed')) {
+            throw $exception;
+        }
+    }
+    // A partial update that omits the new field must preserve the saved default.
+    $partialData = $siteData;
+    unset($partialData['permalink_style']);
+    $response = $updateSite($post($sitePath, $partialData), ['id' => (string) $siteId]);
+    if ($response->statusCode() !== 302
+        || (new SiteRepository($db))->findActiveById($siteId)['settings']['permalink_style'] !== 'html') {
+        throw new RuntimeException('Legacy site update reset the stored publication default.');
     }
 } finally {
     foreach ($siteIds as $id) {
