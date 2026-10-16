@@ -85,6 +85,14 @@ final readonly class BuiltinRoutes
             ),
         );
         $routes->post(
+            '/admin/structure/{id:\\d+}/page-type',
+            'structure.change_type',
+            $this->permissionGate->require(
+                'structure.manage',
+                $this->invalidate->wrap([$this->structureController, 'changePageType'], $siteTags),
+            ),
+        );
+        $routes->post(
             '/admin/structure/{id:\\d+}/delete',
             'structure.delete',
             $this->permissionGate->require(

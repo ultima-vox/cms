@@ -117,6 +117,35 @@ final class StructureController
     }
 
     /** @param array<string, string> $variables */
+    public function changePageType(Request $request, array $variables = []): Response
+    {
+        if (($denied = $this->requirePermission()) !== null) return $denied;
+        if (!Csrf::validate($this->stringOrNull($request->post['_csrf'] ?? null))) {
+            return Response::html('<h1>419 CSRF token mismatch</h1>', 419);
+        }
+
+        $id = $this->routeId($variables);
+        $node = $this->structure->find($id);
+        if ($node === null) return Response::html('<h1>404 Not Found</h1>', 404);
+
+        try {
+            $this->pageProvisioning->changeType(
+                $id,
+                $this->stringOrNull($request->post['page_type'] ?? null) ?? '',
+                $this->stringOrNull($request->post['current_page_type'] ?? null) ?? '',
+            );
+            $updated = $this->structure->find($id);
+            $this->audit($request, 'node.page_type.change', $id, [
+                'old_page_type' => $node['page_type'],
+                'new_page_type' => $updated['page_type'] ?? null,
+            ]);
+            return Response::redirect('/admin/structure/' . $id . '/edit?saved=1');
+        } catch (Throwable $exception) {
+            return $this->formResponse($this->structure->find($id), $exception->getMessage(), 422);
+        }
+    }
+
+    /** @param array<string, string> $variables */
     public function delete(Request $request, array $variables = []): Response
     {
         if (($denied = $this->requirePermission()) !== null) return $denied;
@@ -129,7 +158,11 @@ final class StructureController
         if ($node === null) return Response::html('<h1>404 Not Found</h1>', 404);
         if ($node['parent_id'] === null) return Response::html('<h1>Корневой узел удалить нельзя.</h1>', 409);
 
-        $this->structure->delete($id);
+        try {
+            $this->structure->delete($id);
+        } catch (RuntimeException $exception) {
+            return $this->formResponse($this->structure->find($id), $exception->getMessage(), 409);
+        }
         $this->audit($request, 'node.delete', $id, ['path' => $node['path']]);
         return Response::redirect('/admin/structure?deleted=1');
     }

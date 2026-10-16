@@ -354,6 +354,7 @@ jobs:
           if echo "$SECOND_HTML" | grep -q 'Tank 5'; then exit 1; fi
 
           curl --fail --silent http://127.0.0.1:8080/about | grep 'About'
+          test "$(curl --silent --request POST --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/structure/1/page-type)" = "302"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' --header 'Host: unknown.test' http://127.0.0.1:8080/)" = "404"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/api/not-implemented)" = "404"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/media/not-implemented)" = "404"

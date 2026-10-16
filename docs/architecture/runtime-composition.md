@@ -199,8 +199,16 @@ All nested execution occurs inside one request-scoped `RenderContext`. Every exe
 
 This makes dynamic rendering, page cache and static publishing different delivery modes of the same execution pipeline rather than separate rendering systems.
 
-## Remaining transition work
+## Structure page lifecycle
 
-The next Structure integration must consume `PagesApi::definitions()` and `PagesApi::default()` generically. It must persist the node first, invoke generic provisioning and store the returned `page_config` without knowing which module handled it.
+Structure creates pages through the registered default or an explicit provisionable page type. Normal metadata updates never assign `page_type` or `page_config`.
 
-After Structure no longer relies on the legacy Core content field, `core.content`, `CoreContentPageExecutor` and `nodes.content` can be removed in a separate cleanup migration.
+Changing type is a separate POST operation protected by `structure.manage`, CSRF, the current admin site, a row lock and an expected current type. `StructurePageProvisioningService::changeType()` reuses the target module's provisioner and configuration validator, then assigns the selection in the same transaction. Only types with a provisioner can be selected through this operation; module-specific binding/configuration flows remain separate. Repeating the current type is a no-op, including when configuration is supplied; it does not reconfigure or overwrite a shared resource.
+
+A failed provisioner or validator rolls back the new resource and selection. Within an existing caller transaction, a savepoint isolates that failure without rolling back earlier caller changes. Provisioners must use the shared application database transaction and must not commit it themselves.
+
+Changing type preserves previous module-owned resources and generic bindings. Returning to Documents reuses its active deterministic `node-<id>` document when one exists; arbitrary previous configurations are not a history/undo feature. Resource editing, archiving and purge are explicit module operations, never an implicit result of changing a Structure page type.
+
+Deleting a Structure subtree removes its nodes and their generic bindings through the existing foreign keys. Documents and their versions remain available, including resources shared by surviving nodes. Core does not call module purge logic. Root deletion is rejected by both the controller and Structure repository. Structure mutation routes invalidate the current site's delivery dependencies, including the separate type-change route.
+
+The legacy `core.content` executor and `nodes.content` column have been removed. Module migrations run through the dependency-aware aggregate pipeline; no legacy text storage is recreated by these lifecycle operations.
