@@ -3,6 +3,7 @@
 
 declare(strict_types=1);
 
+use Core\Application;
 use Core\Database;
 use Core\Extension\ModuleLoader;
 use Core\Extension\ModuleManager;
@@ -21,6 +22,20 @@ Dotenv::createImmutable($rootPath)->safeLoad();
 $command = $argv[1] ?? 'help';
 
 switch ($command) {
+    case 'static:publish':
+        if (count($argv) < 4 || count($argv) > 5) {
+            fwrite(STDERR, "Usage: php bin/console static:publish <site-code> <node-path> [clean|html]\n");
+            exit(1);
+        }
+        try {
+            $target = (new Application($rootPath))->publishStatic($argv[2], $argv[3], $argv[4] ?? 'clean');
+            fwrite(STDOUT, "Published: " . $target . "\n");
+            exit(0);
+        } catch (Throwable $exception) {
+            fwrite(STDERR, $exception->getMessage() . "\n");
+            exit(1);
+        }
+
     case 'migrate':
         $runner = new MigrationRunner(Database::connection(), $rootPath . '/database/migrations');
         $applied = $runner->migrate();
@@ -305,6 +320,7 @@ switch ($command) {
         fwrite(
             STDOUT,
             "Ultima Vox CMS\n\nCommands:\n" .
+            "  static:publish <site> <path> [clean|html]  Generate one published page snapshot\n" .
             "  migrate                    Apply pending Core SQL migrations\n" .
             "  modules:install <zip>      Verify, install and inventory a disabled module package\n" .
             "  modules:update <zip>       Replace a disabled installer-managed module with a newer package\n" .

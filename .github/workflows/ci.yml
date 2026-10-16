@@ -326,6 +326,14 @@ jobs:
       - name: Site resolution and isolation smoke test
         run: php tests/site_resolution_smoke.php
 
+      - name: Static page generation integration test
+        run: |
+          php tests/static_page_generation_smoke.php
+          STATIC_OUTPUT="$(php bin/console static:publish second / html)"
+          grep 'Second Tank' "${STATIC_OUTPUT#Published: }"
+          if php bin/console static:publish second /admin html; then exit 1; fi
+          if php bin/console static:publish second / html unexpected; then exit 1; fi
+
       - name: JSONB repository smoke test
         run: php tests/jsonb_repository_smoke.php
 
@@ -354,6 +362,8 @@ jobs:
           SECOND_HTML="$(curl --fail --silent --header 'Host: second.test' http://127.0.0.1:8080/)"
           echo "$SECOND_HTML" | grep 'Second Site'
           echo "$SECOND_HTML" | grep 'Second Tank'
+          STATIC_SECOND_OUTPUT="$(php bin/console static:publish second / html)"
+          test "$SECOND_HTML" = "$(cat "${STATIC_SECOND_OUTPUT#Published: }")"
           if echo "$SECOND_HTML" | grep -q 'Tank 5'; then exit 1; fi
 
           curl --fail --silent http://127.0.0.1:8080/about | grep 'About'
