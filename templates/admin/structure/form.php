@@ -8,6 +8,10 @@ $isRoot = $nodeId && ($node['parent_id'] ?? null) === null;
 $title = $nodeId ? 'Редактирование узла' : 'Новый узел';
 $pageTypes = is_array($page_types ?? null) ? $page_types : [];
 $selectedPageType = (string) ($node['page_type'] ?? '');
+$alternativePageTypes = array_values(array_filter(
+    $pageTypes,
+    static fn ($definition): bool => $definition->code !== $selectedPageType,
+));
 $publishValue = '';
 if (!empty($node['publish_at'])) {
     $timestamp = strtotime((string) $node['publish_at']);
@@ -42,7 +46,7 @@ echo $view->render('admin/_header.php', [
             <?php if (!$nodeId): ?>
                 <label class="admin-field admin-field--wide"><span class="admin-field__label">Тип страницы</span><select class="admin-select" name="page_type" required><?php foreach ($pageTypes as $pageType): ?><option value="<?= text($pageType->code) ?>"<?= $selectedPageType === $pageType->code ? ' selected' : '' ?>><?= text($pageType->name) ?> — <?= text($pageType->code) ?></option><?php endforeach; ?></select><span class="admin-field__hint">Доступны только типы, которые умеют самостоятельно создать и настроить свой ресурс. Бизнес-логика остаётся внутри соответствующего модуля.</span></label>
             <?php else: ?>
-                <div class="admin-field admin-field--wide"><span class="admin-field__label">Тип страницы</span><code><?= text($selectedPageType) ?></code><span class="admin-field__hint">Смена типа страницы будет отдельной безопасной операцией; обычное сохранение узла не меняет владельца контента. Контент редактируется в модуле, которому принадлежит выбранный тип страницы.</span></div>
+                <div class="admin-field admin-field--wide"><span class="admin-field__label">Тип страницы</span><code><?= text($selectedPageType) ?></code><span class="admin-field__hint">Обычное сохранение узла не меняет тип страницы. Контент редактируется в модуле, которому принадлежит выбранный тип страницы.</span></div>
             <?php endif; ?>
         </div></section>
 
@@ -56,8 +60,21 @@ echo $view->render('admin/_header.php', [
         <div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button admin-button--secondary" href="/admin/structure">Отмена</a></div>
     </form>
 
+    <?php if ($nodeId && $alternativePageTypes !== []): ?>
+        <form class="admin-form" method="post" action="/admin/structure/<?= text($nodeId) ?>/page-type" onsubmit="return confirm('Изменить тип страницы? Прежние документы и привязки сохранятся.');">
+            <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+            <input type="hidden" name="current_page_type" value="<?= text($selectedPageType) ?>">
+            <section class="admin-panel">
+                <h2 class="admin-panel__title">Смена типа страницы</h2>
+                <p>Прежние документы и привязки сохранятся. Для нового типа будет настроен его ресурс. Типы, требующие отдельной настройки в модуле, здесь недоступны.</p>
+                <label class="admin-field"><span class="admin-field__label">Новый тип страницы</span><select class="admin-select" name="page_type" required><?php foreach ($alternativePageTypes as $pageType): ?><option value="<?= text($pageType->code) ?>"><?= text($pageType->name) ?></option><?php endforeach; ?></select></label>
+                <div class="admin-actions"><button class="admin-button admin-button--secondary" type="submit">Изменить тип страницы</button></div>
+            </section>
+        </form>
+    <?php endif; ?>
+
     <?php if ($nodeId && !$isRoot): ?>
-        <form class="admin-danger-zone" method="post" action="/admin/structure/<?= text($nodeId) ?>/delete" onsubmit="return confirm('Удалить узел и всё его поддерево?');"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><div><strong>Удаление узла</strong><p>Дочерние узлы будут удалены каскадно.</p></div><button class="admin-button admin-button--danger" type="submit">Удалить</button></form>
+        <form class="admin-danger-zone" method="post" action="/admin/structure/<?= text($nodeId) ?>/delete" onsubmit="return confirm('Удалить узел и всё его поддерево?');"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><div><strong>Удаление узла</strong><p>Дочерние узлы и их привязки будут удалены. Документы и другие ресурсы модулей сохранятся.</p></div><button class="admin-button admin-button--danger" type="submit">Удалить</button></form>
     <?php endif; ?>
 </div>
 <?= $view->render('admin/_footer.php', ['admin_active' => $adminActive]) ?>

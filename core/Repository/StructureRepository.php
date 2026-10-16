@@ -52,10 +52,11 @@ final class StructureRepository
     }
 
     /** @return array<string, mixed>|null */
-    public function find(int $id): ?array
+    public function find(int $id, bool $forUpdate = false): ?array
     {
         $statement = $this->db->prepare(
             'SELECT * FROM nodes WHERE id = :id AND site_id = :site_id LIMIT 1'
+                . ($forUpdate ? ' FOR UPDATE' : '')
         );
         $statement->execute([
             'id' => $id,
@@ -201,11 +202,14 @@ final class StructureRepository
 
     public function delete(int $id): void
     {
-        $statement = $this->db->prepare('DELETE FROM nodes WHERE id = :id AND site_id = :site_id');
+        $statement = $this->db->prepare('DELETE FROM nodes WHERE id = :id AND site_id = :site_id AND parent_id IS NOT NULL');
         $statement->execute([
             'id' => $id,
             'site_id' => $this->siteId,
         ]);
+        if ($statement->rowCount() !== 1) {
+            throw new RuntimeException('Узел не найден или является корневым.');
+        }
     }
 
     /** @param list<array{id:int,parent_id:int|null,sorting:int}> $items */

@@ -7,6 +7,13 @@ use Core\Database;
 use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
 use Core\Extension\ModuleLoader;
+use Core\Page\PageConfigurationValidatorInterface;
+use Core\Page\PageExecutionContext;
+use Core\Page\PageExecutorInterface;
+use Core\Page\PageTypeDefinition;
+use Core\Page\PageTypeProvisionerInterface;
+use Core\Page\PageTypeProvisioningContext;
+use Core\View\SafeHtml;
 use Core\Repository\PageSelectionRepository;
 use Core\Repository\StructureRepository;
 use Core\Structure\StructurePageProvisioningService;
@@ -46,6 +53,49 @@ if ($rootNodeId < 1) {
 $core = new ExtensionCore(new RuntimeApi($db, $rootPath));
 (new BuiltinExtensions())->register($core);
 (new ModuleLoader($rootPath))->load($core);
+$fixtureExecutor = new class implements PageExecutorInterface {
+    public function execute(PageExecutionContext $context): SafeHtml
+    {
+        return SafeHtml::fromTrustedStorage('Fixture page');
+    }
+};
+$core->pages()->type(new PageTypeDefinition(
+    code: 'fixture.page',
+    name: 'Fixture page',
+    executor: $fixtureExecutor,
+    provisioner: new class implements PageTypeProvisionerInterface {
+        public function provision(PageTypeProvisioningContext $context): array
+        {
+            return ['fixture' => 'selected'];
+        }
+    },
+));
+$core->pages()->type(new PageTypeDefinition(
+    code: 'fixture.failure',
+    name: 'Fail after provisioning',
+    executor: $fixtureExecutor,
+    configurationValidator: new class implements PageConfigurationValidatorInterface {
+        public function validate(array $configuration): array
+        {
+            throw new RuntimeException('Fixture configuration rejected after resource creation.');
+        }
+    },
+    provisioner: new class($db) implements PageTypeProvisionerInterface {
+        public function __construct(private readonly PDO $db)
+        {
+        }
+
+        public function provision(PageTypeProvisioningContext $context): array
+        {
+            (new DocumentRepository($this->db))->create(
+                $context->siteId,
+                'failed-change-' . $context->nodeId,
+                'Resource that must roll back',
+            );
+            return [];
+        }
+    },
+));
 $core->freeze();
 
 $provisionableCodes = array_map(
@@ -162,6 +212,139 @@ try {
     ]);
     if ((int) $failedNode->fetchColumn() !== 0) {
         throw new RuntimeException('Failed page provisioning did not roll back the Structure node.');
+    }
+
+    $assertRejected = static function (callable $operation, string $message): void {
+        try {
+            $operation();
+        } catch (RuntimeException $exception) {
+            if (!str_contains($exception->getMessage(), $message)) {
+                throw $exception;
+            }
+            return;
+        }
+        throw new RuntimeException('Expected operation rejection: ' . $message);
+    };
+
+    $nodeId = $service->create($nodeData('lifecycle-parent', 'Lifecycle parent'));
+    $original = $structure->find($nodeId);
+    $originalConfig = json_decode($original['page_config'], true, 512, JSON_THROW_ON_ERROR);
+    $document = $documents->findActiveByCode($siteId, $originalConfig['document']);
+    $documentId = (int) $document['id'];
+    $content = '<p>Preserve this published content</p>';
+    $versionId = $documents->createDraftVersion($documentId, $content);
+    $documents->publishVersion($documentId, $versionId);
+
+    $binding = $db->prepare(
+        "INSERT INTO node_module_bindings (node_id, module_code, binding_code, target_key)
+         VALUES (:node_id, 'documents', 'intro', :target_key)"
+    );
+    $binding->execute(['node_id' => $nodeId, 'target_key' => $originalConfig['document']]);
+
+    $service->changeType($nodeId, 'documents.page', 'documents.page', ['document' => 'missing-document']);
+    $structure->update($nodeId, array_merge($nodeData('lifecycle-parent', 'Renamed node'), [
+        'page_type' => 'fixture.page',
+        'page_config' => ['unexpected' => true],
+    ]));
+    $unchanged = $structure->find($nodeId);
+    if ($unchanged['page_type'] !== 'documents.page' || $unchanged['page_config'] !== $original['page_config']) {
+        throw new RuntimeException('Metadata update or same-type change overwrote page ownership/configuration.');
+    }
+
+    $assertRejected(
+        fn () => $service->changeType($nodeId, 'infosystem.list', 'documents.page'),
+        'не поддерживает автоматическую настройку',
+    );
+    $assertRejected(
+        fn () => $service->changeType($nodeId, 'missing.type', 'documents.page'),
+        'Unknown page type',
+    );
+    $foreignService = new StructurePageProvisioningService(
+        $db, new StructureRepository($db, 1), new PageSelectionRepository($db), $core->pages(),
+    );
+    $assertRejected(
+        fn () => $foreignService->changeType($nodeId, 'fixture.page', 'documents.page'),
+        'текущего сайта',
+    );
+
+    $db->beginTransaction();
+    try {
+        $service->changeType($nodeId, 'fixture.page', 'documents.page');
+        if (!$db->inTransaction() || $structure->find($nodeId)['page_type'] !== 'fixture.page') {
+            throw new RuntimeException('Successful type change committed the caller transaction.');
+        }
+    } finally {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+    }
+    if ($structure->find($nodeId)['page_type'] !== 'documents.page') {
+        throw new RuntimeException('Caller rollback did not restore page selection.');
+    }
+
+    $service->changeType($nodeId, 'fixture.page', 'documents.page');
+    if ($structure->find($nodeId)['page_type'] !== 'fixture.page'
+        || $documents->currentPublishedVersion($documentId)['content'] !== $content) {
+        throw new RuntimeException('Page type change removed the previous module resource.');
+    }
+    $bindingCount = $db->prepare('SELECT COUNT(*) FROM node_module_bindings WHERE node_id = :id');
+    $bindingCount->execute(['id' => $nodeId]);
+    if ((int) $bindingCount->fetchColumn() !== 1) {
+        throw new RuntimeException('Page type change removed module bindings.');
+    }
+    $assertRejected(
+        fn () => $service->changeType($nodeId, 'documents.page', 'documents.page'),
+        'уже изменён',
+    );
+
+    $db->beginTransaction();
+    try {
+        $db->exec('UPDATE nodes SET sorting = 17 WHERE id = ' . $nodeId);
+        $assertRejected(
+            fn () => $service->changeType($nodeId, 'fixture.failure', 'fixture.page'),
+            'Fixture configuration rejected',
+        );
+        $afterFailure = $structure->find($nodeId);
+        if (!$db->inTransaction() || (int) $afterFailure['sorting'] !== 17
+            || $afterFailure['page_type'] !== 'fixture.page'
+            || $documents->findActiveByCode($siteId, 'failed-change-' . $nodeId) !== null) {
+            throw new RuntimeException('Failed page type change did not isolate rollback from caller transaction.');
+        }
+    } finally {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+    }
+    $assertRejected(
+        fn () => $service->changeType($nodeId, 'fixture.failure', 'fixture.page'),
+        'Fixture configuration rejected',
+    );
+    if ($db->inTransaction() || $documents->findActiveByCode($siteId, 'failed-change-' . $nodeId) !== null) {
+        throw new RuntimeException('Failed page type change left a transaction or orphan resource.');
+    }
+
+    $service->changeType($nodeId, 'documents.page', 'fixture.page');
+    $restored = $structure->find($nodeId);
+    if ($restored['page_config'] !== $original['page_config']
+        || $documents->currentPublishedVersion($documentId)['content'] !== $content) {
+        throw new RuntimeException('Returning to Documents did not reuse the existing node document.');
+    }
+
+    $childData = $nodeData('lifecycle-child', 'Lifecycle child');
+    $childData['parent_id'] = $nodeId;
+    $childId = $service->create($childData, 'documents.page', $originalConfig);
+    $binding->execute(['node_id' => $childId, 'target_key' => $originalConfig['document']]);
+    $sharedId = $service->create($nodeData('shared-document', 'Shared document'), 'documents.page', $originalConfig);
+    $assertRejected(fn () => $structure->delete($rootNodeId), 'корневым');
+    $foreignStructure = new StructureRepository($db, 1);
+    $assertRejected(fn () => $foreignStructure->delete($nodeId), 'не найден');
+    $structure->delete($nodeId);
+    $bindingCount->execute(['id' => $childId]);
+    if ($structure->find($nodeId) !== null || $structure->find($childId) !== null
+        || (int) $bindingCount->fetchColumn() !== 0
+        || $structure->find($sharedId) === null
+        || $documents->currentPublishedVersion($documentId)['content'] !== $content) {
+        throw new RuntimeException('Subtree deletion did not detach bindings while preserving shared Documents.');
     }
 } finally {
     $deleteNodes = $db->prepare('DELETE FROM nodes WHERE site_id = :site_id');

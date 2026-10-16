@@ -96,4 +96,67 @@ final readonly class StructurePageProvisioningService
             throw $exception;
         }
     }
+
+    /** @param array<string, mixed> $requestedConfiguration */
+    public function changeType(
+        int $nodeId,
+        string $pageType,
+        string $expectedPageType,
+        array $requestedConfiguration = [],
+    ): void {
+        $ownsTransaction = !$this->db->inTransaction();
+        if ($ownsTransaction) {
+            $this->db->beginTransaction();
+        } else {
+            $this->db->exec('SAVEPOINT structure_page_type_change');
+        }
+
+        try {
+            $node = $this->structure->find($nodeId, true);
+            if ($node === null) {
+                throw new RuntimeException('Узел не найден для текущего сайта.');
+            }
+            if ((string) $node['page_type'] !== $expectedPageType) {
+                throw new RuntimeException('Тип страницы уже изменён. Обновите форму и повторите действие.');
+            }
+
+            $pageType = strtolower(trim($pageType));
+            if ($pageType !== (string) $node['page_type']) {
+                $definition = $this->pages->definition($pageType);
+                if ($definition->provisioner === null) {
+                    throw new RuntimeException('Этот тип страницы не поддерживает автоматическую настройку ресурса.');
+                }
+
+                $siteId = (int) $node['site_id'];
+                $configuration = $this->pages->provisionConfiguration(
+                    $definition->code,
+                    new PageTypeProvisioningContext(
+                        siteId: $siteId,
+                        nodeId: $nodeId,
+                        nodeName: (string) $node['name'],
+                        nodeTitle: (string) ($node['title'] ?? ''),
+                        nodePath: (string) $node['path'],
+                        requestedConfiguration: $requestedConfiguration,
+                    ),
+                );
+                $this->pageSelections->assign($nodeId, $siteId, $definition->code, $configuration);
+            }
+
+            if ($ownsTransaction) {
+                $this->db->commit();
+            } else {
+                $this->db->exec('RELEASE SAVEPOINT structure_page_type_change');
+            }
+        } catch (Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                if ($ownsTransaction) {
+                    $this->db->rollBack();
+                } else {
+                    $this->db->exec('ROLLBACK TO SAVEPOINT structure_page_type_change');
+                    $this->db->exec('RELEASE SAVEPOINT structure_page_type_change');
+                }
+            }
+            throw $exception;
+        }
+    }
 }
