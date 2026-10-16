@@ -38,18 +38,19 @@ final class DeliveryApi
         string $path,
         string $html,
         array $dependencies,
+        string $permalinkStyle = 'clean',
     ): string {
-        return $this->staticPages->publish($siteId, $path, $html, $dependencies);
+        return $this->staticPages->publish($siteId, $path, $html, $dependencies, $permalinkStyle);
     }
 
-    public function deleteStatic(int $siteId, string $path): void
+    public function deleteStatic(int $siteId, string $path, string $permalinkStyle = 'clean'): void
     {
-        $this->staticPages->delete($siteId, $path);
+        $this->staticPages->delete($siteId, $path, $permalinkStyle);
     }
 
-    public function staticPath(int $siteId, string $path): string
+    public function staticPath(int $siteId, string $path, string $permalinkStyle = 'clean'): string
     {
-        return $this->staticPages->path($siteId, $path);
+        return $this->staticPages->path($siteId, $path, $permalinkStyle);
     }
 
     /** @param callable(Request,SiteContext):bool $rule */
