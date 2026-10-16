@@ -15,8 +15,10 @@ final readonly class Permalink
         if (!in_array($style, ['clean', 'html'], true)) {
             throw new RuntimeException('Unsupported permalink style.');
         }
-        if ($nodePath === '' || $nodePath[0] !== '/' || strlen($nodePath) > 2048
-            || str_contains($nodePath, '//') || $nodePath !== trim($nodePath)) {
+        if (
+            $nodePath === '' || $nodePath[0] !== '/' || strlen($nodePath) > 2048
+            || str_contains($nodePath, '//') || $nodePath !== trim($nodePath)
+        ) {
             throw new RuntimeException('Invalid permalink node path.');
         }
         $this->nodePath = rtrim($nodePath, '/') ?: '/';
@@ -24,8 +26,10 @@ final readonly class Permalink
             if ($this->nodePath === '/') {
                 break;
             }
-            if ($segment === '.' || $segment === '..'
-                || preg_match('/^[A-Za-z0-9._~-]{1,255}$/D', $segment) !== 1) {
+            if (
+                $segment === '.' || $segment === '..'
+                || preg_match('/^[A-Za-z0-9._~-]{1,255}$/D', $segment) !== 1
+            ) {
                 throw new RuntimeException('Permalink contains an unsafe path segment.');
             }
         }

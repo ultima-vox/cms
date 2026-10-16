@@ -14,8 +14,8 @@ use Core\Extension\Api\CacheApi;
 use Core\Extension\Api\DeliveryApi;
 use Core\Http\Request;
 use Core\Http\Response;
-use Core\Site\SiteContext;
 use Core\Routing\Permalink;
+use Core\Site\SiteContext;
 use Core\View\Render\RenderContext;
 use Core\View\Render\RenderResult;
 
@@ -167,7 +167,10 @@ foreach ([
         throw new RuntimeException('Permalink URL and output file mapping disagree.');
     }
 }
-foreach (['/../escape', '/a/./b', '/a//b', '/a%2fb', '/a?x=1', '/a#fragment', '/a\\b', '/admin', '/api/x', '/health', '/assets/x', '/storage/x', '/media/x'] as $unsafePath) {
+foreach ([
+    '/../escape', '/a/./b', '/a//b', '/a%2fb', '/a?x=1', '/a#fragment', '/a\\b',
+    '/admin', '/api/x', '/health', '/assets/x', '/storage/x', '/media/x',
+] as $unsafePath) {
     $assertStaticRejected(fn () => $delivery->publishStatic(1, $unsafePath, 'unsafe', []));
 }
 $assertStaticRejected(fn () => $delivery->publishStatic(1, '/about', 'unsafe', [], 'unknown'));
@@ -178,10 +181,12 @@ $assertStaticRejected(fn () => $delivery->publishStatic(1, '/' . str_repeat('a',
 $cleanFile = $delivery->publishStatic(1, '/article', 'Clean', []);
 $htmlFile = $delivery->publishStatic(1, '/article', 'HTML', [], 'html');
 $otherFile = $delivery->publishStatic(2, '/article', 'Other site', [], 'html');
-if (!str_ends_with($cleanFile, '/sites/1/article/index.html')
+if (
+    !str_ends_with($cleanFile, '/sites/1/article/index.html')
     || !str_ends_with($htmlFile, '/sites/1/article.html')
     || $delivery->staticPath(1, '/article', 'html') !== $htmlFile
-    || file_get_contents($cleanFile) !== 'Clean' || file_get_contents($htmlFile) !== 'HTML') {
+    || file_get_contents($cleanFile) !== 'Clean' || file_get_contents($htmlFile) !== 'HTML'
+) {
     throw new RuntimeException('Static publisher did not honor the explicit permalink style.');
 }
 $delivery->invalidate(['site:1']);

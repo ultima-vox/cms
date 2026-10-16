@@ -26,8 +26,7 @@ final readonly class StaticPagePublisher
         string $html,
         array $dependencies,
         string $permalinkStyle = 'clean',
-    ): string
-    {
+    ): string {
         $relative = $this->relativePath($siteId, $path, $permalinkStyle);
         $key = 'static:' . $relative;
         $target = $this->targetPath($relative);
@@ -75,10 +74,12 @@ final readonly class StaticPagePublisher
                     return;
                 }
                 $relative = substr($key, 7);
-                if ($relative === false
+                if (
+                    $relative === false
                     || preg_match('#^sites/[1-9][0-9]*/[A-Za-z0-9._~/-]+$#D', $relative) !== 1
                     || in_array('..', explode('/', $relative), true)
-                    || in_array('.', explode('/', $relative), true)) {
+                    || in_array('.', explode('/', $relative), true)
+                ) {
                     return;
                 }
                 $this->removeFile($this->targetPath($relative));
@@ -114,8 +115,10 @@ final readonly class StaticPagePublisher
             if (is_link($directory) || (file_exists($directory) && !is_dir($directory))) {
                 throw new RuntimeException('Static output path contains a symbolic link or non-directory.');
             }
-            if ($createDirectories && !is_dir($directory)
-                && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+            if (
+                $createDirectories && !is_dir($directory)
+                && !mkdir($directory, 0775, true) && !is_dir($directory)
+            ) {
                 throw new RuntimeException('Unable to create static output directory.');
             }
         }
