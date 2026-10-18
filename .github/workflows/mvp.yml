@@ -44,13 +44,15 @@ jobs:
             unzip -q /tmp/ultima-vox-cms-mvp-webroot.zip -d /tmp/cms-webroot
           else
             python3 tools/package_mvp.py /tmp/ultima-vox-cms-mvp.zip
+            mkdir /tmp/cms-public
+            unzip -q /tmp/ultima-vox-cms-mvp.zip -d /tmp/cms-public
           fi
       - name: Fresh browser installation and editing journey
         run: |
           if [ "$MVP_LAYOUT" = webroot ]; then
             php -S 127.0.0.1:8086 -t /tmp/cms-webroot /tmp/cms-webroot/index.php > /tmp/cms-mvp-server.log 2>&1 &
           else
-            php -S 127.0.0.1:8086 -t public public/index.php > /tmp/cms-mvp-server.log 2>&1 &
+            php -S 127.0.0.1:8086 -t /tmp/cms-public/public /tmp/cms-public/public/index.php > /tmp/cms-mvp-server.log 2>&1 &
           fi
           SERVER_PID=$!
           trap 'kill "$SERVER_PID"' EXIT
