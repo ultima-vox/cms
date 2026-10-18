@@ -1,0 +1,13 @@
+# Place these locations in the existing server block; keep its current root.
+# Replace the PHP-FPM endpoint with the one supplied by your hosting provider.
+index index.php;
+location = /app { return 404; }
+location ^~ /app/ { return 404; }
+location ~ /\. { return 404; }
+location / { try_files $uri $uri/ /index.php?$query_string; }
+location = /index.php {
+    include fastcgi_params;
+    fastcgi_param SCRIPT_FILENAME $document_root/index.php;
+    fastcgi_pass unix:/run/php/php8.4-fpm.sock;
+}
+location ~ \.php(?:/|$) { return 404; }
