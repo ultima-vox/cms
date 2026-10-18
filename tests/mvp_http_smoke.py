@@ -69,7 +69,7 @@ public = browser()
 body, _ = request(public, '/')
 assert 'MVP test site' in body
 body, _ = request(client, '/admin/login')
-request(client, '/admin/login', {'_csrf': token(body), 'email': 'mvp@example.test', 'password': password}, expected=302)
+request(client, '/admin/login', {'_csrf': token(body), 'email': 'mvp@example.test', 'password': password}, expected=303)
 request(client, '/admin')
 _, headers = request(client, '/assets/admin.css')
 assert 'text/css' in headers.get('Content-Type', '')
