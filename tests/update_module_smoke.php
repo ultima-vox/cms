@@ -22,7 +22,7 @@ $db = Database::connection();
 (new MigrationRunner($db, dirname(__DIR__) . '/database/migrations'))->migrate();
 function verify(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
 function store(string $path, string $bytes): void { if (!is_dir(dirname($path))) mkdir(dirname($path), 0755, true); file_put_contents($path, $bytes); }
-function pack(array $files): array {
+function updateBundle(array $files): array {
     $path = tempnam(sys_get_temp_dir(), 'update-package-');
     $hashes = array_map(static fn ($v) => hash('sha256', $v), $files);
     $schema = array_filter($hashes, static fn ($p) => str_ends_with($p, '.sql'), ARRAY_FILTER_USE_KEY);
@@ -44,7 +44,7 @@ $files = array_replace($old, ['core/state.php' => 'new-code',
     'database/migrations/999_update_fixture.sql' => 'CREATE TABLE update_core_fixture (id integer); INSERT INTO update_core_fixture VALUES (1);',
     'modules/update-fixture/migrations/001_fixture.sql' => 'CREATE TABLE update_module_fixture (id integer); INSERT INTO update_module_fixture VALUES (2);']);
 try {
-    [$bad, $badOffer] = pack(array_replace($files, ['modules/update-fixture/migrations/001_fixture.sql' => 'CREATE TABLE update_module_fixture (id integer); SELECT nonexistent_update_function();']));
+    [$bad, $badOffer] = updateBundle(array_replace($files, ['modules/update-fixture/migrations/001_fixture.sql' => 'CREATE TABLE update_module_fixture (id integer); SELECT nonexistent_update_function();']));
     $failed = false;
     try { $engine->apply($bad, $badOffer); } catch (Throwable) { $failed = true; }
     verify($failed, 'Broken migration accepted');
@@ -54,10 +54,12 @@ try {
     verify($engine->current()['version'] === '0.1.1', 'Failed update changed metadata');
     verify(!is_file($root . '/storage/updates/maintenance.json'), 'Failed update left maintenance');
     verify((new UpdateState($root))->history()[0]['status'] === 'rolled_back', 'Rollback missing from history');
-    [$bytes, $offer] = pack($files);
+    [$bytes, $offer] = updateBundle($files);
     verify(DeploymentGuard::enter($root), 'Cannot enter request guard');
     // FileUpdater must release its own request lease, while still excluding other requests.
     $backup = $engine->apply($bytes, $offer);
+    verify(DeploymentGuard::held($root), 'Request lease not restored after installation');
+    DeploymentGuard::release($root);
     verify($db->query('SELECT id FROM update_core_fixture')->fetchColumn() === 1, 'Core migration absent');
     verify($db->query('SELECT id FROM update_module_fixture')->fetchColumn() === 2, 'Module migration absent');
     verify($db->query("SELECT version FROM installed_modules WHERE code = 'update-fixture'")->fetchColumn() === '1.0.0', 'Module metadata not synchronized');

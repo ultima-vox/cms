@@ -46,6 +46,7 @@ final readonly class FileUpdater
             throw new RuntimeException('Другое обновление уже выполняется.');
         }
         $requestLock = null;
+        $resumeRequest = false;
         $backup = $updates . '/backup-' . gmdate('Ymd-His') . '-' . bin2hex(random_bytes(4));
         $journal = [];
         $zipPath = $updates . '/download-' . bin2hex(random_bytes(8)) . '.zip';
@@ -120,7 +121,8 @@ final readonly class FileUpdater
                     throw new RuntimeException('Архив содержит недопустимую запись.');
                 }
             }
-            if (class_exists(\Core\Http\DeploymentGuard::class)) \Core\Http\DeploymentGuard::release($this->root);
+            $resumeRequest = class_exists(\Core\Http\DeploymentGuard::class) && \Core\Http\DeploymentGuard::held($this->root);
+            if ($resumeRequest) \Core\Http\DeploymentGuard::release($this->root);
             $requestLock = fopen($updates . '/requests.lock', 'c');
             if ($requestLock === false || !flock($requestLock, LOCK_EX | LOCK_NB)) {
                 throw new RuntimeException('Сайт обрабатывает запросы. Повторите обновление через несколько секунд.');
@@ -214,6 +216,7 @@ final readonly class FileUpdater
             if ($opened) $zip->close();
             if (is_file($zipPath)) unlink($zipPath);
             if (is_resource($requestLock)) { flock($requestLock, LOCK_UN); fclose($requestLock); }
+            if ($resumeRequest) \Core\Http\DeploymentGuard::enter($this->root);
             flock($lock, LOCK_UN); fclose($lock);
         }
     }

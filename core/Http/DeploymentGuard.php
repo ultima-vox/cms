@@ -25,6 +25,11 @@ final class DeploymentGuard
         return true;
     }
 
+    public static function held(string $root): bool
+    {
+        return isset(self::$leases[$root]);
+    }
+
     /** The caller must acquire an exclusive lease before it can replace any code. */
     public static function release(string $root): void
     {
