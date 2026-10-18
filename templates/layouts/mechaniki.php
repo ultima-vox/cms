@@ -21,7 +21,7 @@ $navigation = ['/mechaniki/services' => 'Услуги', '/mechaniki/about' => '�
 <div class="mk-topbar"><div class="mk-wrap"><span>Зеленоград · Панфиловский проспект, 15</span><span>Пн–Пт 10:00–20:00 · Сб–Вс 10:00–19:00</span></div></div>
 <header class="mk-header">
     <div class="mk-wrap mk-header-row">
-        <a class="mk-brand" href="/mechaniki" aria-label="Механики — главная"><img src="/assets/mechaniki/logo.svg" width="172" height="42" alt="Механики"><span>Автосервис в Зеленограде</span></a>
+        <a class="mk-brand" href="/mechaniki" aria-label="Механики — главная"><div class="mk-brand-line"><img src="/assets/mechaniki/logo.svg" width="36" height="36" alt=""><strong>еханики</strong></div><span>Автосервис в Зеленограде</span></a>
         <button class="mk-menu-toggle" type="button" aria-controls="mk-navigation" aria-expanded="false">Меню <span aria-hidden="true">☰</span></button>
         <nav class="mk-nav" id="mk-navigation" aria-label="Основная навигация">
             <?php foreach ($navigation as $href => $label): ?><a href="<?= text($href) ?>"<?= $page->path() === $href ? ' aria-current="page"' : '' ?>><?= text($label) ?></a><?php endforeach; ?>
@@ -34,7 +34,7 @@ $navigation = ['/mechaniki/services' => 'Услуги', '/mechaniki/about' => '�
     <?php if ($home): ?>
         <section class="mk-hero mk-wrap">
             <div class="mk-hero-copy"><p class="mk-eyebrow"><span></span>Диагностика · обслуживание · ремонт</p><h1><?= text($page->title()) ?></h1><p class="mk-lead">Поможем понять, что происходит с автомобилем. Объясним причину, обсудим стоимость — и только потом приступим к работе.</p><div class="mk-actions"><a class="mk-button" href="tel:+79268150924">Обсудить неисправность <span aria-hidden="true">↗</span></a><a class="mk-text-link" href="/mechaniki/services">Выбрать услугу <span aria-hidden="true">→</span></a></div><p class="mk-hero-note">Название сломанной детали знать необязательно.</p></div>
-            <figure class="mk-hero-image"><img src="/assets/mechaniki/workshop.webp" width="1440" height="960" alt="Автомобили на подъёмниках в мастерской «Механики»" fetchpriority="high"><figcaption><span class="mk-location-dot"></span>Зеленоград, Панфиловский проспект, 15</figcaption><span class="mk-image-index" aria-hidden="true">01 / В МАСТЕРСКОЙ</span></figure>
+            <figure class="mk-hero-image"><img src="/assets/mechaniki/workshop.webp" width="1440" height="900" alt="Автомобили на подъёмниках в ремонтной мастерской" fetchpriority="high"><figcaption><span class="mk-location-dot"></span>Зеленоград, Панфиловский проспект, 15</figcaption><span class="mk-image-index" aria-hidden="true">01 / В МАСТЕРСКОЙ</span></figure>
         </section>
         <div class="mk-wrap mk-principles"><div><span>01</span><strong>Сначала причина</strong><p>Начинаем с проверки</p></div><div><span>02</span><strong>Стоимость до ремонта</strong><p>Обсуждаем состав работ</p></div><div><span>03</span><strong>Решение за вами</strong><p>Работаем после согласования</p></div></div>
     <?php else: ?>
