@@ -4,6 +4,12 @@ Lightweight CMS built around a simple HostCMS-inspired content model: nodes, lay
 
 The public frontend and administration UI use native HTML + PHP templates; no separate template language or legacy renderer is supported.
 
+## Попробовать MVP
+
+Готовый архив для PHP-хостинга содержит production-зависимости и устанавливается через `/install` без Composer на сервере. Порядок установки и десятиминутный сценарий проверки: [docs/MVP.md](docs/MVP.md). Архив собирается workflow **MVP acceptance** только после успешной установки и редактирования сайта через HTTP.
+
+Контракт масштабирования: [docs/architecture/infrastructure-scaling.md](docs/architecture/infrastructure-scaling.md).
+
 ## Requirements
 
 - PHP 8.4+
@@ -86,11 +92,11 @@ Example:
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= text($page->title) ?></title>
+    <title><?= text($page->title()) ?></title>
 </head>
 <body>
     <main>
-        <?= html($page->content) ?>
+        <?= $page->execute() ?>
     </main>
 </body>
 </html>

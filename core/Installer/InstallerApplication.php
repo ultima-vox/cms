@@ -42,7 +42,11 @@ final readonly class InstallerApplication
                 return;
             }
 
-            Response::html($this->render('site_pending.php', []))->send();
+            if ($request->method === 'POST') {
+                $this->siteSubmit($request);
+                return;
+            }
+            $this->siteForm();
             return;
         }
 
@@ -95,6 +99,32 @@ final readonly class InstallerApplication
             Response::redirect('/install/site')->send();
         } catch (Throwable $exception) {
             $this->databaseForm($exception->getMessage());
+        }
+    }
+
+    private function siteForm(?string $error = null): void
+    {
+        Response::html($this->render('site.php', [
+            'csrfToken' => Csrf::token(),
+            'error' => $error,
+        ]), $error === null ? 200 : 422)->send();
+    }
+
+    private function siteSubmit(Request $request): void
+    {
+        $token = $request->post['_csrf'] ?? null;
+        if (!Csrf::validate(is_string($token) ? $token : null)) {
+            Response::html('<h1>419 CSRF token mismatch</h1>', 419)->send();
+            return;
+        }
+        try {
+            $config = DatabaseConfig::fromSession($_SESSION[self::SESSION_DB_KEY]);
+            (new InstallationService($this->rootPath))->install($config, $request->post);
+            $_SESSION = [];
+            session_destroy();
+            Response::redirect('/admin/login?installed=1')->send();
+        } catch (Throwable $exception) {
+            $this->siteForm($exception->getMessage());
         }
     }
 
