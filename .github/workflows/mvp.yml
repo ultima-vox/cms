@@ -23,6 +23,7 @@ jobs:
     env:
       CMS_VERSION: 0.1.${{ github.run_number }}
       MVP_LAYOUT: ${{ matrix.layout }}
+      MVP_BROWSER_STATE: /tmp/cms-browser-state.json
       MVP_DB_NAME: cms_mvp
       MVP_DB_USER: cms
       MVP_DB_PASS: 'mvp$quote"slash\2026'
@@ -47,6 +48,11 @@ jobs:
             mkdir /tmp/cms-public
             unzip -q /tmp/ultima-vox-cms-mvp.zip -d /tmp/cms-public
           fi
+      - name: Set up browser layout verification
+        if: matrix.layout == 'public'
+        run: |
+          npm install --prefix /tmp/cms-browser playwright@1.62.1 --no-package-lock --no-audit --no-fund
+          /tmp/cms-browser/node_modules/.bin/playwright install chromium --only-shell
       - name: Fresh browser installation and editing journey
         run: |
           if [ "$MVP_LAYOUT" = webroot ]; then
@@ -61,11 +67,21 @@ jobs:
             sleep 1
           done
           python3 tests/mvp_http_smoke.py
+          if [ "$MVP_LAYOUT" = public ]; then
+            NODE_PATH=/tmp/cms-browser/node_modules node tests/browser_mvp.cjs
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: ultima-vox-cms-mvp-${{ matrix.layout }}
           path: /tmp/ultima-vox-cms-mvp*.zip
           retention-days: 30
+      - name: Upload browser layout evidence
+        if: always() && matrix.layout == 'public'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp-browser-layouts
+          path: /tmp/cms-layout-*.png
+          if-no-files-found: ignore
       - name: Upload failure diagnostics
         if: failure()
         uses: actions/upload-artifact@v4

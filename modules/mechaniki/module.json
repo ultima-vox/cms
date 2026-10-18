@@ -1,0 +1,9 @@
+{
+  "code": "mechaniki",
+  "name": "Механики — пилотный сайт",
+  "version": "1.0.0",
+  "extension_api": "^1.0",
+  "default_enabled": false,
+  "requires": {"core": ">=0.1.0", "documents": "^1.0"},
+  "provider": "UltimaVox\\Modules\\Mechaniki\\MechanikiModule"
+}
