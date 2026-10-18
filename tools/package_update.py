@@ -26,6 +26,13 @@ except subprocess.CalledProcessError:
     previous = ''
 revision = previous + '..HEAD' if previous else 'HEAD'
 changes = subprocess.check_output(['git', 'log', '--format=%s', '-20', revision], cwd=root, text=True).splitlines()
+notes = root / 'docs/release-notes.md'
+if notes.is_file():
+    changed = not previous or subprocess.run(['git', 'diff', '--quiet', previous, 'HEAD', '--', 'docs/release-notes.md'], cwd=root).returncode == 1
+    if changed:
+        editorial = [line[2:].strip() for line in notes.read_text().splitlines() if line.startswith('- ')]
+        if editorial:
+            changes = editorial[:100]
 feed = {'version': version, 'sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
         'url': f'https://github.com/ultima-vox/cms/releases/download/v{version}/cms-update.zip', 'changes': changes}
 output.with_name('update.json').write_text(json.dumps(feed, ensure_ascii=False, indent=2) + '\n')
