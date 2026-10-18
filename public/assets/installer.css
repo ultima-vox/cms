@@ -178,7 +178,8 @@ body {
 }
 
 .installer-footer a,
-.installer-footer button {
+.installer-footer button,
+.installer-password-actions button {
     min-height: 42px;
     padding: 10px 16px;
     border: 1px solid #d0d5dd;
@@ -226,4 +227,20 @@ body {
         margin-left: -20px;
         margin-right: -20px;
     }
+}
+
+.installer-password-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.installer-password-actions button {
+    cursor: pointer;
+}
+
+.installer-password-actions button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
 }
