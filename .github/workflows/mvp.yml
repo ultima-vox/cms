@@ -6,6 +6,9 @@ on:
 jobs:
   install-and-edit:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        layout: [public, webroot]
     services:
       postgres:
         image: postgres:16
@@ -18,6 +21,7 @@ jobs:
           --health-cmd "pg_isready -U cms -d cms_mvp"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
+      MVP_LAYOUT: ${{ matrix.layout }}
       MVP_DB_NAME: cms_mvp
       MVP_DB_USER: cms
       MVP_DB_PASS: 'mvp$quote"slash\2026'
@@ -29,9 +33,22 @@ jobs:
           extensions: pdo_pgsql, dom, mbstring
           coverage: none
       - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
+      - name: Build clean hosting archive
+        run: |
+          if [ "$MVP_LAYOUT" = webroot ]; then
+            python3 tools/package_mvp.py /tmp/ultima-vox-cms-mvp-webroot.zip --webroot
+            mkdir /tmp/cms-webroot
+            unzip -q /tmp/ultima-vox-cms-mvp-webroot.zip -d /tmp/cms-webroot
+          else
+            python3 tools/package_mvp.py /tmp/ultima-vox-cms-mvp.zip
+          fi
       - name: Fresh browser installation and editing journey
         run: |
-          php -S 127.0.0.1:8086 -t public public/index.php > /tmp/cms-mvp-server.log 2>&1 &
+          if [ "$MVP_LAYOUT" = webroot ]; then
+            php -S 127.0.0.1:8086 -t /tmp/cms-webroot /tmp/cms-webroot/index.php > /tmp/cms-mvp-server.log 2>&1 &
+          else
+            php -S 127.0.0.1:8086 -t public public/index.php > /tmp/cms-mvp-server.log 2>&1 &
+          fi
           SERVER_PID=$!
           trap 'kill "$SERVER_PID"' EXIT
           for n in $(seq 1 30); do
@@ -39,16 +56,14 @@ jobs:
             sleep 1
           done
           python3 tests/mvp_http_smoke.py
-      - name: Build clean hosting archive
-        run: python3 tools/package_mvp.py /tmp/ultima-vox-cms-mvp.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: ultima-vox-cms-mvp
-          path: /tmp/ultima-vox-cms-mvp.zip
+          name: ultima-vox-cms-mvp-${{ matrix.layout }}
+          path: /tmp/ultima-vox-cms-mvp*.zip
           retention-days: 30
       - name: Upload failure diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: mvp-failure-diagnostics
+          name: mvp-failure-diagnostics-${{ matrix.layout }}
           path: /tmp/cms-mvp-server.log

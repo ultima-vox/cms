@@ -46,6 +46,14 @@ def query(sql):
     ], env=env, text=True).strip()
 
 
+def check_private_files():
+    if os.environ.get('MVP_LAYOUT') == 'webroot':
+        for path in ('/app', '/app/.env', '/app/composer.json', '/app/vendor/autoload.php',
+                     '/app/public/index.php', '/%61pp/composer.json', '/app%2f.env', '/.env'):
+            request(browser(), path, expected=404)
+
+
+check_private_files()
 client = browser()
 request(client, '/', expected=302)
 css, headers = request(client, '/assets/installer.css')
@@ -65,6 +73,7 @@ assert headers.get('Location') == '/admin/login?installed=1'
 assert query('SELECT COUNT(*) FROM users') == '1'
 request(client, '/install/site', setup, expected=405)
 assert query('SELECT COUNT(*) FROM users') == '1'
+check_private_files()
 public = browser()
 body, _ = request(public, '/')
 assert 'MVP test site' in body
