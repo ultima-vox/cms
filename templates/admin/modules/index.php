@@ -17,7 +17,7 @@ echo $view->render('admin/_header.php', [
 
     <?php if (!empty($notice)): ?><div class="admin-notice admin-notice--success"><?= text($notice) ?></div><?php endif; ?>
 
-    <div class="admin-dashboard-grid">
+    <div class="module-upload-grid">
         <section class="admin-panel module-upload-panel">
             <div><p class="admin-eyebrow">Package install</p><h2 class="admin-panel__title">Установить ZIP-пакет</h2><p class="module-upload-panel__description">Новый пакет устанавливается выключенным. После установки выполните синхронизацию, миграции и включение. Для подписанного пакета приложите detached <code>.sig</code>.</p></div>
             <form class="module-upload-form" method="post" action="/admin/modules/install" enctype="multipart/form-data">

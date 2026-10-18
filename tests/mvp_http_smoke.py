@@ -80,6 +80,11 @@ assert 'MVP test site' in body
 body, _ = request(client, '/admin/login')
 request(client, '/admin/login', {'_csrf': token(body), 'email': 'mvp@example.test', 'password': password}, expected=303)
 request(client, '/admin')
+updates, _ = request(client, '/admin/updates')
+assert 'Проверить обновления' in updates
+request(client, '/admin/updates/check', {'_csrf': 'invalid'}, expected=419)
+request(client, '/admin/updates/apply', {'_csrf': 'invalid'}, expected=419)
+request(public, '/admin/updates', expected=302)
 _, headers = request(client, '/assets/admin.css')
 assert 'text/css' in headers.get('Content-Type', '')
 root_id = query("SELECT id FROM nodes WHERE site_id = 1 AND path = '/'")

@@ -1,5 +1,8 @@
 """Package source plus installed production dependencies, never runtime credentials/data."""
 import argparse
+import hashlib
+import json
+import os
 import pathlib
 import zipfile
 
@@ -13,7 +16,7 @@ prefix = 'app/' if args.webroot else ''
 if not (root / 'vendor/autoload.php').is_file():
     raise SystemExit('Run composer install --no-dev --classmap-authoritative first.')
 folders = ('core', 'modules', 'templates', 'public', 'database', 'installer', 'deploy', 'vendor', 'bin')
-files = ('composer.json', 'composer.lock', '.env.example', 'README.md', 'docs/MVP.md', 'docs/architecture/infrastructure-scaling.md')
+files = ('composer.json', 'composer.lock', '.env.example', 'README.md', 'docs/MVP.md', 'docs/UPDATES.md', 'docs/architecture/infrastructure-scaling.md')
 with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
     for folder in folders:
         for path in sorted((root / folder).rglob('*')):
@@ -21,6 +24,14 @@ with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
                 archive.write(path, prefix + path.relative_to(root).as_posix())
     for name in files:
         archive.write(root / name, prefix + name)
+    managed = {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+               for folder in folders for p in sorted((root / folder).rglob('*'))
+               if p.is_file() and not p.is_symlink()}
+    for name in ('composer.json', 'composer.lock'):
+        managed[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
+    schema = {k: v for k, v in managed.items() if k.endswith('.sql') and (k.startswith('database/migrations/') or '/migrations/' in k)}
+    archive.writestr(prefix + 'release.json', json.dumps({'version': os.environ.get('CMS_VERSION', '0.1.0'),
+        'layout': 'webroot' if args.webroot else 'public', 'files': managed, 'schema': schema}))
     for folder in ('storage/cache', 'storage/logs', 'storage/templates/layouts'):
         archive.writestr(prefix + folder + '/.gitkeep', '')
     if args.webroot:
