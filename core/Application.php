@@ -16,6 +16,7 @@ use Core\Controller\ModuleManagerController;
 use Core\Controller\NodeController;
 use Core\Controller\StructureController;
 use Core\Delivery\DeliveryInvalidatingHandler;
+use Core\Delivery\Cache\CacheBackendInterface;
 use Core\Delivery\Page\PageCache;
 use Core\Extension\Api\RuntimeApi;
 use Core\Extension\Core as ExtensionCore;
@@ -49,7 +50,10 @@ final class Application
 {
     private const SESSION_COOKIE = 'uvcms_session';
 
-    public function __construct(private readonly string $rootPath)
+    public function __construct(
+        private readonly string $rootPath,
+        private readonly ?CacheBackendInterface $cacheBackend = null,
+    )
     {
     }
 
@@ -63,7 +67,7 @@ final class Application
         $adminSite = $this->isAdminPath($request->path)
             ? (new AdminSiteSelector($siteRepository))->current()
             : new SiteContext(1, 'default', 'Default site', '');
-        $core = new ExtensionCore(new RuntimeApi($db, $this->rootPath, $adminSite));
+        $core = new ExtensionCore(new RuntimeApi($db, $this->rootPath, $adminSite, $this->cacheBackend));
         (new BuiltinExtensions())->register($core);
 
         $auth = new AuthService(
@@ -166,6 +170,7 @@ final class Application
             $db,
             $this->rootPath,
             new SiteContext(1, 'default', 'Default site', ''),
+            $this->cacheBackend,
         ));
         $generation = $core->delivery()->beginStaticGeneration();
         $sites = new SiteRepository($db);

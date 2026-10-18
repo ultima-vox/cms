@@ -1,0 +1,54 @@
+name: MVP acceptance
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  install-and-edit:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cms_mvp
+          POSTGRES_USER: cms
+          POSTGRES_PASSWORD: 'mvp$quote"slash\2026'
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U cms -d cms_mvp"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      MVP_DB_NAME: cms_mvp
+      MVP_DB_USER: cms
+      MVP_DB_PASS: 'mvp$quote"slash\2026'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, dom, mbstring
+          coverage: none
+      - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
+      - name: Fresh browser installation and editing journey
+        run: |
+          php -S 127.0.0.1:8086 -t public public/index.php > /tmp/cms-mvp-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          for n in $(seq 1 30); do
+            if curl --silent --output /dev/null http://127.0.0.1:8086/install; then break; fi
+            sleep 1
+          done
+          python3 tests/mvp_http_smoke.py
+      - name: Build clean hosting archive
+        run: python3 tools/package_mvp.py /tmp/ultima-vox-cms-mvp.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ultima-vox-cms-mvp
+          path: /tmp/ultima-vox-cms-mvp.zip
+          retention-days: 30
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp-failure-diagnostics
+          path: /tmp/cms-mvp-server.log
