@@ -27,17 +27,17 @@ final class LayoutTemplateService
             throw new RuntimeException('Код макета: только a-z, 0-9, дефис и подчёркивание, до 80 символов.');
         }
 
-        return 'layouts/' . $code . '.html.php';
+        return 'layouts/' . $code . '.php';
     }
 
-    public function validate(string $source, string $templateName = 'layout.html.php'): void
+    public function validate(string $source, string $templateName = 'layout.php'): void
     {
         if (trim($source) === '') {
             throw new RuntimeException('Шаблон макета не может быть пустым.');
         }
 
-        if (!str_ends_with($templateName, '.html.php')) {
-            throw new RuntimeException('Поддерживаются только .html.php макеты.');
+        if (!str_ends_with($templateName, '.php') || str_ends_with($templateName, '.html.php')) {
+            throw new RuntimeException('Поддерживаются только нативные .php макеты.');
         }
 
         try {
@@ -139,7 +139,7 @@ final class LayoutTemplateService
 
     private function assertTemplatePath(string $templatePath): void
     {
-        if (!preg_match('#^layouts/[a-z0-9][a-z0-9_-]{0,79}\.html\.php$#', $templatePath)) {
+        if (!preg_match('#^layouts/[a-z0-9][a-z0-9_-]{0,79}\.php$#', $templatePath)) {
             throw new RuntimeException('Некорректный путь файла макета.');
         }
     }

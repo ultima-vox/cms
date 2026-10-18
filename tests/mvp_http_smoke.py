@@ -1,5 +1,7 @@
 """Exercise a fresh install and an editor journey against a real PHP/PostgreSQL app."""
+import html
 import http.cookiejar
+import json
 import os
 import re
 import secrets
@@ -16,7 +18,10 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def browser():
-    return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()), NoRedirect())
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar), NoRedirect())
+    opener.cookie_jar = jar
+    return opener
 
 
 def request(client, path, data=None, expected=200):
@@ -113,3 +118,58 @@ request(client, path, {'_csrf': csrf, 'name': 'MVP page', 'content': '<p>Updated
 body, _ = request(public, '/poc')
 assert 'Updated MVP content' in body and 'Published MVP content' not in body
 print('MVP HTTP OK: install -> login -> create page -> publish -> anonymous read -> draft -> republish')
+
+# Install the optional pilot through the same controls available to an administrator.
+body, _ = request(client, '/admin/modules')
+csrf = token(body)
+request(client, '/admin/modules/sync', {'_csrf': csrf}, expected=302)
+request(client, '/admin/modules/mechaniki/enable', {'_csrf': csrf}, expected=302)
+body, _ = request(client, '/admin/mechaniki')
+csrf = token(body)
+request(public, '/admin/mechaniki', expected=302)
+request(client, '/admin/mechaniki/import', {'_csrf': 'invalid'}, expected=419)
+request(client, '/admin/mechaniki/import', {'_csrf': csrf}, expected=302)
+count = query("SELECT COUNT(*) FROM nodes WHERE site_id = 1 AND (path = '/mechaniki' OR path LIKE '/mechaniki/%')")
+assert count == '6', count
+request(client, '/admin/mechaniki/import', {'_csrf': csrf}, expected=422)
+assert query("SELECT COUNT(*) FROM nodes WHERE site_id = 1 AND (path = '/mechaniki' OR path LIKE '/mechaniki/%')") == count
+for path in ('/mechaniki', '/mechaniki/services', '/mechaniki/services/engine', '/mechaniki/services/suspension', '/mechaniki/about', '/mechaniki/contacts'):
+    body, _ = request(public, path)
+    assert 'noindex, nofollow' in body and '/assets/mechaniki/site.css' in body
+    assert '+7 (926) 815-09-24' in body
+for name in ('site.css', 'site.js', 'logo.svg', 'OFL.txt'):
+    request(public, '/assets/mechaniki/' + name)
+# Verify that imported pages remain editable documents and invalidate public HTML.
+contact_node = query("SELECT id FROM nodes WHERE site_id = 1 AND path = '/mechaniki/contacts'")
+contact_document = query(f"SELECT id FROM documents WHERE site_id = 1 AND code = 'node-{int(contact_node)}'")
+body, _ = request(client, f'/admin/documents/{contact_document}/edit')
+request(client, f'/admin/documents/{contact_document}', {'_csrf': token(body), 'name': 'Контакты', 'content': '<p>Редактирование пилотного сайта работает.</p>', 'save_mode': 'publish'}, expected=302)
+body, _ = request(public, '/mechaniki/contacts')
+assert 'Редактирование пилотного сайта работает.' in body
+body, _ = request(public, '/poc')
+assert 'Updated MVP content' in body, 'Pilot import overwrote existing content'
+if os.environ.get('MVP_BROWSER_STATE'):
+    cookies = [{'name': c.name, 'value': c.value, 'domain': urllib.parse.urlparse(BASE).hostname,
+                'path': c.path, 'secure': c.secure, 'httpOnly': True, 'sameSite': 'Lax', 'expires': c.expires or -1}
+               for c in client.cookie_jar]
+    with open(os.environ['MVP_BROWSER_STATE'], 'w') as handle:
+        json.dump({'cookies': cookies, 'origins': []}, handle)
+print('Mechaniki pilot OK: authenticated import, replay guard, six pages, editable documents, existing content preserved')
+
+# The layout editor must generate the same native PHP format accepted by the renderer.
+body, _ = request(client, '/admin/layouts/create')
+source = html.unescape(re.search(r'<textarea[^>]*name="source"[^>]*>(.*?)</textarea>', body, re.S).group(1))
+assert '$page->title()' in source and '$page->execute()' in source
+_, headers = request(client, '/admin/layouts', {'_csrf': token(body), 'name': 'Native editor layout', 'code': 'mvp-native', 'description': '', 'source': source}, expected=302)
+layout_id = query("SELECT id FROM layouts WHERE code = 'mvp-native' AND template_path = 'layouts/mvp-native.php'")
+assert layout_id.isdigit(), 'Editor did not create a native PHP layout'
+request(client, f'/admin/layouts/{layout_id}/edit')
+body, _ = request(client, '/admin/structure/create')
+request(client, '/admin/structure', {'_csrf': token(body), 'name': 'Native layout page', 'title': 'Native layout page',
+    'parent_id': root_id, 'slug': 'native-layout', 'page_type': 'documents.page', 'status': 'published',
+    'is_active': '1', 'sorting': '0', 'layout_id': layout_id, 'meta_description': '', 'publish_at': ''}, expected=302)
+body, _ = request(public, '/native-layout')
+assert '<h1>Native layout page</h1>' in body
+mechaniki_layout = query("SELECT id FROM layouts WHERE code = 'mechaniki'")
+request(client, f'/admin/layouts/{mechaniki_layout}/edit')
+print('Native layout editor OK: create -> assign -> public render -> edit pilot template')

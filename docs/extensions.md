@@ -30,7 +30,7 @@ final class ExampleModule implements ModuleInterface
         $core->templates()->view(
             'example.list',
             'example.items',
-            'modules/example/templates/list.html.php',
+            'modules/example/templates/list.php',
         );
     }
 }
@@ -94,7 +94,7 @@ Content is loaded lazily. PHP layouts do not fetch infosystem items unless a ren
 
 ## View Templates
 
-A View Template has a stable logical code, a source type and a physical `*.html.php` file shipped by its module. A content source may only render a View Template registered for its own source type.
+A View Template has a stable logical code, a source type and a physical `*.php` file shipped by its module. A content source may only render a View Template registered for its own source type.
 
 This keeps database IDs and module internals out of frontend templates and makes module upgrades safe as long as logical view codes remain stable.
 

@@ -48,7 +48,7 @@ Multiple independent `show()` calls in one HTML template are valid. They must sh
 
 ## View templates
 
-View templates use stable logical codes (`reviews.product`, `news.cards`) rather than database IDs. A registered view declares its source type and physical `*.html.php` path. PHP, system, and future visual/WYSIWYG renderers must converge on the same ViewDefinition contract.
+View templates use stable logical codes (`reviews.product`, `news.cards`) rather than database IDs. A registered view declares its source type and physical `*.php` path. PHP, system, and future visual/WYSIWYG renderers must converge on the same ViewDefinition contract.
 
 Views format prepared data; they do not query the database or external APIs.
 
@@ -63,7 +63,7 @@ final class ReviewsModule implements ModuleInterface
     {
         $core->routes()->get('/reviews', 'reviews.index', [$this, 'index']);
         $core->templates()->facade('reviews', fn ($context) => new ReviewsFacade($context));
-        $core->templates()->view('reviews.product', 'reviews.collection', 'reviews/product.html.php');
+        $core->templates()->view('reviews.product', 'reviews.collection', 'reviews/product.php');
     }
 }
 ```
@@ -76,6 +76,6 @@ Module PHP is trusted code. The runtime API controls architecture and compatibil
 
 ## Migration
 
-The packaged system layout is `layouts/main.php`. The layout editor creates `*.html.php` layouts and validates them with the PHP parser before an atomic write. Custom layouts from a removed template engine must be rewritten as native PHP before use; changing a filename alone does not convert template syntax.
+The packaged system layout is `layouts/main.php`. The layout editor creates `*.php` layouts and validates them with the PHP parser before an atomic write. Custom layouts from a removed template engine must be rewritten as native PHP before use; changing a filename alone does not convert template syntax.
 
 Stored HTML is currently wrapped as trusted legacy content. Sanitizer-on-write remains required before low-trust editors receive broad HTML editing access.

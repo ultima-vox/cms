@@ -31,7 +31,7 @@ echo $view->render('admin/_header.php', [
             <h2 class="admin-panel__title">Основное</h2>
             <div class="admin-form__grid">
                 <label class="admin-field"><span class="admin-field__label">Название</span><input class="admin-input" name="name" maxlength="255" required value="<?= text($layout['name'] ?? '') ?>"></label>
-                <label class="admin-field"><span class="admin-field__label">Код макета</span><input class="admin-input" name="code" maxlength="80" pattern="[a-z0-9][a-z0-9_-]*" required value="<?= text($layout['code'] ?? '') ?>"<?= $layoutId ? ' readonly' : '' ?>><span class="admin-field__hint">Новые макеты: <code>layouts/&lt;code&gt;.html.php</code>. После создания код не меняется.</span></label>
+                <label class="admin-field"><span class="admin-field__label">Код макета</span><input class="admin-input" name="code" maxlength="80" pattern="[a-z0-9][a-z0-9_-]*" required value="<?= text($layout['code'] ?? '') ?>"<?= $layoutId ? ' readonly' : '' ?>><span class="admin-field__hint">Новые макеты: <code>layouts/&lt;code&gt;.php</code>. После создания код не меняется.</span></label>
                 <label class="admin-field admin-field--wide"><span class="admin-field__label">Описание</span><textarea class="admin-textarea admin-textarea--small" name="description"><?= text($layout['description'] ?? '') ?></textarea></label>
             </div>
         </section>
