@@ -37,6 +37,8 @@ jobs:
       - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
       - name: Update engine integration tests
         run: php tests/update_smoke.php
+      - name: Build standard updater module
+        run: python3 tools/package_module.py updater /tmp/updater-module.zip
       - name: Live official release update
         if: matrix.layout == 'public'
         run: php tests/update_release_smoke.php
@@ -124,6 +126,7 @@ jobs:
         run: |
           unzip -q /tmp/release-artifacts/ultima-vox-cms-mvp.zip 'vendor/*' -d .
           python3 tools/package_update.py /tmp/release-artifacts/cms-update.zip
+          python3 tools/package_module.py updater /tmp/release-artifacts/updater-module.zip
       - name: Publish tested development release
         run: |
           python3 - <<'PY'

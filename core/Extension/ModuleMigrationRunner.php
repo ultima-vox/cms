@@ -34,11 +34,12 @@ final class ModuleMigrationRunner
         }
         sort($files, SORT_STRING);
 
-        $this->lock($moduleCode);
+        $outer = $this->db->inTransaction();
+        $this->lock($moduleCode, $outer);
         try {
             return $this->apply($moduleCode, $files);
         } finally {
-            $this->unlock($moduleCode);
+            if (!$outer) $this->unlock($moduleCode);
         }
     }
 
@@ -71,7 +72,9 @@ final class ModuleMigrationRunner
                 continue;
             }
 
-            $this->db->beginTransaction();
+            $owned = !$this->db->inTransaction();
+            if ($owned) $this->db->beginTransaction();
+            else $this->db->exec('SAVEPOINT module_migration');
             try {
                 if (trim($sql) !== '') {
                     $this->db->exec($sql);
@@ -88,11 +91,13 @@ final class ModuleMigrationRunner
                     'migration' => $name,
                     'checksum' => $checksum,
                 ]);
-                $this->db->commit();
+                if ($owned) $this->db->commit();
+                else $this->db->exec('RELEASE SAVEPOINT module_migration');
                 $applied[] = $name;
             } catch (Throwable $exception) {
                 if ($this->db->inTransaction()) {
-                    $this->db->rollBack();
+                    if ($owned) $this->db->rollBack();
+                    else $this->db->exec('ROLLBACK TO SAVEPOINT module_migration');
                 }
                 throw $exception;
             }
@@ -148,9 +153,9 @@ final class ModuleMigrationRunner
         throw new RuntimeException('Manifest модуля не найден: ' . $moduleCode);
     }
 
-    private function lock(string $moduleCode): void
+    private function lock(string $moduleCode, bool $outer): void
     {
-        $statement = $this->db->prepare('SELECT pg_advisory_lock(hashtext(:lock_key))');
+        $statement = $this->db->prepare('SELECT ' . ($outer ? 'pg_advisory_xact_lock' : 'pg_advisory_lock') . '(hashtext(:lock_key))');
         $statement->execute(['lock_key' => 'uvcms:module-migrate:' . $moduleCode]);
     }
 

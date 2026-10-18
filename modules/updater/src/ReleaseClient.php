@@ -15,9 +15,9 @@ final class ReleaseClient
     {
         $manifest = json_decode($this->download(self::FEED, 1_000_000), true, 32, JSON_THROW_ON_ERROR);
         if (!is_array($manifest)
-            || !preg_match('/^0\.1\.[0-9]+$/', $manifest['version'] ?? '')
+            || !preg_match('/^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/D', $manifest['version'] ?? '')
             || !preg_match('/^[a-f0-9]{64}$/', $manifest['sha256'] ?? '')
-            || !preg_match('~^https://github\.com/ultima-vox/cms/releases/download/v0\.1\.[0-9]+/cms-update\.zip$~D', $manifest['url'] ?? '')
+            || ($manifest['url'] ?? '') !== 'https://github.com/ultima-vox/cms/releases/download/v' . $manifest['version'] . '/cms-update.zip'
             || !is_array($manifest['changes'] ?? null)
             || count($manifest['changes']) > 100) {
             throw new RuntimeException('Некорректный манифест обновления.');

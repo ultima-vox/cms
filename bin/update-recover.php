@@ -17,6 +17,28 @@ if (!$lock || !$requests || !flock($lock, LOCK_EX | LOCK_NB) || !flock($requests
 }
 $backup = $directory . '/' . $name;
 $journal = json_decode((string) file_get_contents($backup . '/journal.json'), true, 32, JSON_THROW_ON_ERROR);
+$maintenance = $directory . '/maintenance.json';
+$active = json_decode((string) @file_get_contents($maintenance), true);
+if (($active['backup'] ?? null) !== $name) throw new RuntimeException('Recovery is only allowed for the interrupted active update.');
+if (($journal['db_transaction'] ?? null) !== null) {
+    // PostgreSQL 16+ retains the authoritative COMMIT outcome. Never guess it from files.
+    $transaction = $journal['db_transaction'];
+    if (!is_string($transaction) || !ctype_digit($transaction)) throw new RuntimeException('Invalid transaction ID.');
+    require $root . '/vendor/autoload.php';
+    Dotenv\Dotenv::createImmutable($root)->safeLoad();
+    $db = Core\Database::connection();
+    $statement = $db->prepare('SELECT pg_xact_status(CAST(:transaction AS xid8))');
+    $statement->execute(['transaction' => $transaction]);
+    $status = $statement->fetchColumn();
+    if ($status === 'committed') {
+        $journal['status'] = 'complete';
+        file_put_contents($backup . '/journal.json', json_encode($journal, JSON_THROW_ON_ERROR));
+        if (!unlink($maintenance)) throw new RuntimeException('Cannot exit maintenance.');
+        echo "Database committed: new files retained. Restart the PHP handler to clear its opcode cache.\n";
+        exit;
+    }
+    if ($status !== 'aborted') throw new RuntimeException('Transaction outcome is not yet available; keep maintenance and retry.');
+}
 foreach (array_reverse($journal['files']) as $entry) {
     $target = $entry['target'];
     if (!str_starts_with($target, dirname($root) . '/') || str_contains($target, '/../')) throw new RuntimeException('Invalid recovery path.');
@@ -29,5 +51,7 @@ foreach (array_reverse($journal['files']) as $entry) {
         if (!copy($backup . '/' . $source, $temporary) || !chmod($temporary, $entry['mode']) || !rename($temporary, $target)) throw new RuntimeException('Cannot restore file.');
     }
 }
-if (is_file($directory . '/maintenance.json')) unlink($directory . '/maintenance.json');
-echo "Files restored. Restart the PHP handler in FASTPANEL to clear its opcode cache. Database was not modified.\n";
+$journal['status'] = 'rolled_back';
+file_put_contents($backup . '/journal.json', json_encode($journal, JSON_THROW_ON_ERROR));
+if (is_file($maintenance) && !unlink($maintenance)) throw new RuntimeException('Cannot exit maintenance.');
+echo "Files restored. Restart the PHP handler in FASTPANEL to clear its opcode cache. Database transaction was aborted (or no transaction was used).\n";
