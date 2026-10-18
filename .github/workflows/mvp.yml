@@ -21,6 +21,7 @@ jobs:
           --health-cmd "pg_isready -U cms -d cms_mvp"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
+      CMS_VERSION: 0.1.${{ github.run_number }}
       MVP_LAYOUT: ${{ matrix.layout }}
       MVP_DB_NAME: cms_mvp
       MVP_DB_USER: cms
@@ -30,9 +31,11 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_pgsql, dom, mbstring
+          extensions: pdo_pgsql, dom, mbstring, zip
           coverage: none
       - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
+      - name: Update engine integration tests
+        run: php tests/update_smoke.php
       - name: Build clean hosting archive
         run: |
           if [ "$MVP_LAYOUT" = webroot ]; then
@@ -41,13 +44,15 @@ jobs:
             unzip -q /tmp/ultima-vox-cms-mvp-webroot.zip -d /tmp/cms-webroot
           else
             python3 tools/package_mvp.py /tmp/ultima-vox-cms-mvp.zip
+            mkdir /tmp/cms-public
+            unzip -q /tmp/ultima-vox-cms-mvp.zip -d /tmp/cms-public
           fi
       - name: Fresh browser installation and editing journey
         run: |
           if [ "$MVP_LAYOUT" = webroot ]; then
             php -S 127.0.0.1:8086 -t /tmp/cms-webroot /tmp/cms-webroot/index.php > /tmp/cms-mvp-server.log 2>&1 &
           else
-            php -S 127.0.0.1:8086 -t public public/index.php > /tmp/cms-mvp-server.log 2>&1 &
+            php -S 127.0.0.1:8086 -t /tmp/cms-public/public /tmp/cms-public/public/index.php > /tmp/cms-mvp-server.log 2>&1 &
           fi
           SERVER_PID=$!
           trap 'kill "$SERVER_PID"' EXIT
@@ -67,3 +72,44 @@ jobs:
         with:
           name: mvp-failure-diagnostics-${{ matrix.layout }}
           path: /tmp/cms-mvp-server.log
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: install-and-edit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      CMS_VERSION: 0.1.${{ github.run_number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Wait for full CI on this exact commit
+        run: |
+          for attempt in $(seq 1 60); do
+            result=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&event=push" --jq '.workflow_runs[0] | if .status == "completed" then .conclusion else "pending" end')
+            if [ "$result" = success ]; then exit 0; fi
+            if [ "$result" != pending ] && [ "$result" != null ]; then exit 1; fi
+            sleep 10
+          done
+          exit 1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ultima-vox-cms-mvp-*
+          path: /tmp/release-artifacts
+          merge-multiple: true
+      - name: Build layout-neutral update
+        run: |
+          unzip -q /tmp/release-artifacts/ultima-vox-cms-mvp.zip 'vendor/*' -d .
+          python3 tools/package_update.py /tmp/release-artifacts/cms-update.zip
+      - name: Publish tested development release
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+          m = json.loads(pathlib.Path('/tmp/release-artifacts/update.json').read_text())
+          pathlib.Path('/tmp/release-notes.md').write_text('\n'.join('- ' + c for c in m['changes']) + '\n')
+          PY
+          gh release create "v$CMS_VERSION" /tmp/release-artifacts/*.zip /tmp/release-artifacts/update.json --target "$GITHUB_SHA" --title "Vox CMS $CMS_VERSION" --notes-file /tmp/release-notes.md --latest
