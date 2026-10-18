@@ -89,7 +89,7 @@ final readonly class MechanikiModule implements ModuleInterface
             $layout = $layouts->findByCode('mechaniki');
             $layoutId = $layout !== null
                 ? (int) $layout['id']
-                : $layouts->create('Механики · MVP', 'layouts/mechaniki.html.php', 'Пилотный сайт автосервиса.');
+                : $layouts->create('Механики · MVP', 'layouts/mechaniki.php', 'Пилотный сайт автосервиса.');
             $provision = new StructurePageProvisioningService($db, $structure, new PageSelectionRepository($db), $core->pages());
             $documents = new DocumentRepository($db);
             $sanitizer = new HtmlSanitizer();

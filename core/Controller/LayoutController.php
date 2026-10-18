@@ -328,12 +328,12 @@ final class LayoutController
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= text($page->title) ?></title>
+    <title><?= text($page->title()) ?></title>
 </head>
 <body>
     <main>
-        <h1><?= text($page->title) ?></h1>
-        <?= html($page->content) ?>
+        <h1><?= text($page->title()) ?></h1>
+        <?= $page->execute() ?>
     </main>
 </body>
 </html>

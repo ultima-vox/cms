@@ -37,6 +37,9 @@ jobs:
       - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
       - name: Update engine integration tests
         run: php tests/update_smoke.php
+      - name: Live official release update
+        if: matrix.layout == 'public'
+        run: php tests/update_release_smoke.php
       - name: Build clean hosting archive
         run: |
           if [ "$MVP_LAYOUT" = webroot ]; then
