@@ -43,6 +43,11 @@ foreach ($iterator as $file) {
         throw new RuntimeException('Invalid packaged page path: ' . $path);
     }
     $html = file_get_contents($file->getPathname());
+    if (!is_string($html)) {
+        throw new RuntimeException('Unable to read packaged document.');
+    }
+    // Forms are presentation-only on staging: prevent keyboard/JS-off submission.
+    $html = preg_replace('/<form\\b/i', '<form inert aria-disabled="true"', $html);
     if (!is_string($html) || $html === '' || str_contains($html, '<?')
         || preg_match('/<script\b/i', $html) === 1) {
         throw new RuntimeException('Page is empty or contains executable markup: ' . $path);
