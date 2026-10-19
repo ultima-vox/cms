@@ -158,14 +158,17 @@ final class LayoutController
         $model['template_path'] = (string) $layout['template_path'];
 
         try {
-            $this->folders->assertFolder(\Core\Content\FolderRepository::id($model['folder_id']));
+            $name = $this->requiredName($model['name']);
+            $folderId = \Core\Content\FolderRepository::id($model['folder_id']);
+            $this->folders->assertFolder($folderId);
+            $previous = $this->templates->read((string) $layout['template_path']);
             $this->templates->update((string) $layout['template_path'], (string) $model['source']);
-            $this->layouts->update(
-                (int) $layout['id'],
-                $this->requiredName($model['name']),
-                $this->nullableText($model['description']),
-                    \Core\Content\FolderRepository::id($model['folder_id']),
-            );
+            try {
+                $this->layouts->update((int) $layout['id'], $name, $this->nullableText($model['description']), $folderId);
+            } catch (Throwable $exception) {
+                $this->templates->update((string) $layout['template_path'], $previous);
+                throw $exception;
+            }
             $this->audit($request, 'layout.update', (int) $layout['id'], [
                 'template_path' => $layout['template_path'],
             ]);

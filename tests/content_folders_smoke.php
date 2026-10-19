@@ -47,6 +47,13 @@ try {
     $assert(count($a->filter($manage->all(), $a->browser($child, '/admin/documents'))) === 1, 'Folder filtering failed');
     $manage->move($document, $root); $a->delete($child);
     $assert($manage->find($document)['code'] === 'folder-unit', 'Move changed stable content code');
+    $deep = $a->save(null, 'Depth root', null);
+    for ($i = 0; $i < 62; $i++) $deep = $a->save(null, 'Level ' . $i, $deep);
+    $leaf = $a->save(null, 'Depth 64', $deep);
+    $reject(fn () => $a->save(null, 'Depth 65', $leaf));
+    $branch = $a->save(null, 'Movable branch', null);
+    $a->save(null, 'Branch child', $branch);
+    $reject(fn () => $a->save($branch, 'Too deep subtree', $deep));
     $systems = new InfosystemManagementRepository($db, 1);
     $system = $systems->create('Folder IS', 'folder-is-unit', null, [], true, $isFolder);
     $reject(fn () => $systems->update($system, 'bad', null, [], true, $root));
