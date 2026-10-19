@@ -1,8 +1,8 @@
 # G0 — карта функций Ultima Vox CMS
 
-Дата: 2026-10-19. **Проверенный main: `68cd931945ecb1afad608f22398cce84fa994063`**. Исходный G0 runtime baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`; план вошёл через PR101. После baseline объединены исправление доступности PR132, детерминированный TTL test PR135 и нативная страница элемента Infosystem PR136. Core `0.4.0`, Extension API `1.0.0`; применённые миграции не менялись.
+Дата: 2026-10-19. **Проверенный main: `c4dbd280396477d9e54ff65dc01a69fd11b008e8`**. Исходный G0 runtime baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`; план вошёл через PR101. После baseline объединены исправление доступности PR132, детерминированный TTL test PR135 и нативная страница элемента Infosystem PR136, перенос Mechaniki PR96 и поставка ресурсов PR138. Core `0.4.0`, Extension API `1.0.0`; применённые миграции не менялись.
 
-Основание: [утверждённый пользователем источник ТЗ](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md), [epic102](https://github.com/ultima-vox/cms/issues/102), [G0-01](https://github.com/ultima-vox/cms/issues/104). Ветка G0 сверена с main68cd931; отдельная работа PR136 сохранена. [Main CI39255125805](https://github.com/ultima-vox/cms/actions/runs/39255125805) и [MVP39255125931](https://github.com/ultima-vox/cms/actions/runs/39255125931) — success. Эта карта заменяет предварительный материал PR99 для формальной приёмки G0; ветки не объединяются автоматически.
+Основание: [утверждённый пользователем источник ТЗ](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md), [epic102](https://github.com/ultima-vox/cms/issues/102), [G0-01](https://github.com/ultima-vox/cms/issues/104). Ветка G0 сверена с mainc4dbd28; отдельная работа PR136, перенос Mechaniki PR96 и поставочные ресурсы PR138 сохранены, включая новые CI checks. [Main CI39255125805](https://github.com/ultima-vox/cms/actions/runs/39255125805) и [MVP39255125931](https://github.com/ultima-vox/cms/actions/runs/39255125931) — success. Эта карта заменяет предварительный материал PR99 для формальной приёмки G0; ветки не объединяются автоматически.
 
 ## Как читать статусы и доказательства
 
@@ -74,7 +74,7 @@
 | C16 Published full-site search | missing | Admin navigation/list search не public search; `search` отсутствует в manifests | Нет indexing/query acceptance; #114 |
 | C17 Typed document Actions + notifications | missing | Actions/notifications owner отсутствует; HTML sanitizer не является dispatch API | Нет submission/SMTP/idempotency/retention acceptance; #115; Forms не обязательная зависимость |
 | C18 Localization + regions | missing | `localization`/`regions` отсутствуют; [product variants](../architecture/product-variants.md) — план | Нет 2×2×2 acceptance; #116. Язык UI не равен языку публикации |
-| C19 Mechaniki reference product | partial | [MechanikiModule](../../modules/mechaniki/src/MechanikiModule.php) — opt-in пилот /mechaniki, Documents | [MVP pilot](../../tests/mvp_http_smoke.py); перенос в корень PR96 не merged, формы не разрешены. Live deployment этой ревизии не проверен |
+| C19 Mechaniki reference product | partial | [MechanikiModule](../../modules/mechaniki/src/MechanikiModule.php) — opt-in пилот /mechaniki, Documents | [MVP pilot](../../tests/mvp_http_smoke.py); перенос в корень и реальные IS resources объединены PR96; [integration](../../tests/mechaniki_stage_smoke.php) и [distribution](../../tests/mechaniki_distribution_smoke.py) добавлены. Runtime формы не разрешены; staging mock не доказывает обработку заявки. Live deployment этой ревизии не проверен |
 | C20 Общий admin shell/a11y/UX | partial | [AdminPhpRenderer](../../core/View/AdminPhpRenderer.php), [AdminApi](../../core/Extension/Api/AdminApi.php), [design rules](../admin-design-system.md) | [browser](../../tests/browser_mvp.cjs), [module template scope](../../tests/module_template_scope_smoke.php); три browser flows на 390/1024/1440 с actions/errors/screenshot измерены в PR130; доступность collapsed/mobile controls исправлена PR132; axe/WCAG и полные пользовательские walkthrough остаются release gate |
 | C21 Published Infosystem item page | implemented | [executor](../../modules/infosystem/src/InfosystemItemPageExecutor.php), [bounded repository](../../modules/infosystem/src/Repository/InfosystemRepository.php), [generic not-found contract](../../core/Page/PageNotFoundException.php) | PR136/main68cd931; [module tests](../../tests/infosystem_module_smoke.php) проверяют site/publication/group visibility, view и cache dependencies. Полный новый сценарий — PG smoke; legacy общий subset не заменяет отдельный item HTTP contract |
 
@@ -103,7 +103,7 @@
 | [menu-infosystem](../../modules/menu-infosystem/module.json) | 1.1.0 | off | menu ^1.0, infosystem ^1.0 | bridge navigation source, не отдельное хранилище |
 | [sites](../../modules/sites/module.json) | 1.2.0 | on | нет | /admin/sites; Core владеет site identity/access primitives |
 | [updater](../../modules/updater/module.json) | 1.3.0 | on | нет | /admin/updates; global permission |
-| [mechaniki](../../modules/mechaniki/module.json) | 1.1.0 | off | documents ^1.0 | opt-in pilot/import; sidebar скрыт, маршрут сохранён |
+| [mechaniki](../../modules/mechaniki/module.json) | 1.2.0 | off | documents ^1.0 + infosystem ^1.2 | opt-in pilot и root-site import, reusable public IS views; sidebar скрыт |
 
 Core владеет Structure/layouts, users/RBAC, site identity, generic bindings, folders, routing/render/cache/lifecycle. Удаляемые домены владеют собственными controllers/templates/tables. Providers ИС: `InfosystemProvider` вызывает `InfosystemModule`, затем регистрирует page type — это используемый код, не доказанный dead code. `module.php` — поддерживаемый fallback reader; не удалять только из-за наличия JSON.
 
@@ -123,7 +123,7 @@ Core владеет Structure/layouts, users/RBAC, site identity, generic bindin
 | PR | В baseline? | Правило интеграции |
 | --- | --- | --- |
 | [85](https://github.com/ultima-vox/cms/pull/85) permalink conflicts | нет | Сверить с URL/SEO задачами, не заявлять canonical migration готовым |
-| [96](https://github.com/ultima-vox/cms/pull/96) Mechaniki root | нет | Отдельная задача95; не менять mechaniki.ru и не включать server forms |
+| [96](https://github.com/ultima-vox/cms/pull/96) Mechaniki root | да, mainbd5c875 | Documents + реальные Infosystems, owner views/import; private resources дополнены PR138. Live deployment не подтверждён; не менять mechaniki.ru и не включать server forms |
 | [98](https://github.com/ultima-vox/cms/pull/98) IS lists | нет | Сохранить работающий код, интеграция #123 после G0, CI на combined head |
 | [99](https://github.com/ultima-vox/cms/pull/99) preliminary audit | нет | Источник предварительных находок; формальные файлы этой карты — отдельный PR104-task |
 | [101](https://github.com/ultima-vox/cms/pull/101) full plan | да, main0a10ade | Документ вошёл во время G0; runtime не изменён, pinned revision остаётся источником ТЗ |

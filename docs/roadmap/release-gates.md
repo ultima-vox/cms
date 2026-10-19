@@ -1,6 +1,6 @@
 # G0 и production 1.0 — release gates
 
-Main review: `68cd931945ecb1afad608f22398cce84fa994063`; runtime CI baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`, 2026-10-19. После исходного baseline вошли plan PR101, a11y PR132, TTL-test PR135 и infosystem.item PR136; схема не менялась. Исторические CI ниже остаются привязаны к своим SHA. [Карта функций и доказательства](feature-matrix.md), [tracking102](https://github.com/ultima-vox/cms/issues/102), [план](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md).
+Main review: `c4dbd280396477d9e54ff65dc01a69fd11b008e8`; runtime CI baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`, 2026-10-19. После исходного baseline вошли plan PR101, a11y PR132, TTL-test PR135 и infosystem.item PR136; схема не менялась. Исторические CI ниже остаются привязаны к своим SHA. [Карта функций и доказательства](feature-matrix.md), [tracking102](https://github.com/ultima-vox/cms/issues/102), [план](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md).
 
 **Решение сейчас: NO-GO для v1.0.0. G0 inventory candidate — на review, G1 не начат.** Зелёный baseline CI доказывает перечисленные MVP-сценарии, не закрывает отсутствующие функции и неизвестные измерения. GitHub merge/tag не доказывает deployment на ru.rewired.ru или другом production URL.
 
