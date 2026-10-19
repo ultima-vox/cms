@@ -80,8 +80,7 @@ foreach ($structure->all() as $node) {
     $existing[(string) $node['path']] = $node;
 }
 foreach ($pages as $path => $page) {
-    if (isset($existing[$path]) && $path !== '/'
-        && $existing[$path]['page_type'] !== 'documents.page') {
+    if (isset($existing[$path]) && $path !== '/') {
         // StructureRepository::all() does not expose page_type, load the full node.
         $current = $structure->find((int) $existing[$path]['id']);
         if (($current['page_type'] ?? null) !== 'documents.page') {
