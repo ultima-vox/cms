@@ -7,7 +7,7 @@ assert.match(source, /textarea\.dispatchEvent\(new Event\('input'/);
 assert.match(source, /textarea\.form\?\.addEventListener\('reset'/);
 assert.match(source, /window\.UVCodeFormatter\.apply\(textarea, language, status\)/);
 assert.match(source, /data-cms-editor/);
-assert.match(source, /data\.allowHtmlNormalization !== 'true'/);
+assert.match(source, /dataset\.allowHtmlNormalization !== 'true'/);
 assert.match(bundle, /bundle: true/);
 for (const filename of [
     'modules/documents/templates/admin/documents/form.php',
