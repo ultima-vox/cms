@@ -66,3 +66,6 @@ body, _ = request("/admin/documents")
 folder_link = DocumentPage(body).link("Legacy folder")
 folder_id = int(urllib.parse.parse_qs(urllib.parse.urlsplit(folder_link).query)["folder"][0])
 verify_document_return_context(request, 1, folder_id)
+
+from infosystem_property_http import verify_infosystem_properties
+verify_infosystem_properties(request)

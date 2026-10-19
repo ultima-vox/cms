@@ -60,15 +60,21 @@ echo $view->render('admin/_header.php', [
             <section class="admin-panel"><h2 class="admin-panel__title">Дополнительные свойства</h2><div class="admin-form__grid">
                 <?php foreach ($fields as $field): ?>
                     <?php $code = (string) ($field['code'] ?? ''); $value = $item['properties'][$code] ?? null; $required = !empty($field['required']); $type = (string) ($field['type'] ?? 'text'); ?>
+                    <?php
+                    $fieldError = $field_errors[$code] ?? null;
+                    $errorAttributes = $fieldError !== null
+                        ? ' aria-invalid="true" aria-describedby="property-error-' . text($code) . '"'
+                        : '';
+                    ?>
                     <?php if ($type === 'textarea'): ?>
-                        <label class="admin-field admin-field--wide"><span class="admin-field__label"><?= text($field['name'] ?? '') ?><?= $required ? ' *' : '' ?></span><textarea class="admin-textarea admin-textarea--small" name="properties[<?= text($code) ?>]"<?= $required ? ' required' : '' ?>><?= text(is_scalar($value) ? $value : '') ?></textarea></label>
+                        <label class="admin-field admin-field--wide"><span class="admin-field__label"><?= text($field['name'] ?? '') ?><?= $required ? ' *' : '' ?></span><textarea class="admin-textarea admin-textarea--small" name="properties[<?= text($code) ?>]"<?= $errorAttributes ?><?= $required ? ' required' : '' ?>><?= text(is_scalar($value) ? $value : '') ?></textarea><?php if ($fieldError !== null): ?><span class="admin-field__hint" id="property-error-<?= text($code) ?>" role="alert"><?= text($fieldError) ?></span><?php endif; ?></label>
                     <?php elseif ($type === 'boolean'): ?>
-                        <label class="admin-check"><input type="hidden" name="properties[<?= text($code) ?>]" value="0"><input type="checkbox" name="properties[<?= text($code) ?>]" value="1"<?= $value ? ' checked' : '' ?>><span><?= text($field['name'] ?? '') ?></span></label>
+                        <label class="admin-check"><input type="hidden" name="properties[<?= text($code) ?>]" value="0"><input type="checkbox" name="properties[<?= text($code) ?>]"<?= $errorAttributes ?> value="1"<?= $value ? ' checked' : '' ?>><span><?= text($field['name'] ?? '') ?></span><?php if ($fieldError !== null): ?><span class="admin-field__hint" id="property-error-<?= text($code) ?>" role="alert"><?= text($fieldError) ?></span><?php endif; ?></label>
                     <?php elseif ($type === 'select'): ?>
-                        <label class="admin-field"><span class="admin-field__label"><?= text($field['name'] ?? '') ?><?= $required ? ' *' : '' ?></span><select class="admin-select" name="properties[<?= text($code) ?>]"<?= $required ? ' required' : '' ?>><option value="">—</option><?php foreach ((array) ($field['options'] ?? []) as $option): ?><option value="<?= text($option) ?>"<?= $value === $option ? ' selected' : '' ?>><?= text($option) ?></option><?php endforeach; ?></select></label>
+                        <label class="admin-field"><span class="admin-field__label"><?= text($field['name'] ?? '') ?><?= $required ? ' *' : '' ?></span><select class="admin-select" name="properties[<?= text($code) ?>]"<?= $errorAttributes ?><?= $required ? ' required' : '' ?>><option value="">—</option><?php foreach ((array) ($field['options'] ?? []) as $option): ?><option value="<?= text($option) ?>"<?= $value === $option ? ' selected' : '' ?>><?= text($option) ?></option><?php endforeach; ?></select><?php if ($fieldError !== null): ?><span class="admin-field__hint" id="property-error-<?= text($code) ?>" role="alert"><?= text($fieldError) ?></span><?php endif; ?></label>
                     <?php else: ?>
-                        <?php $inputType = $type === 'number' ? 'number' : ($type === 'date' ? 'date' : 'text'); ?>
-                        <label class="admin-field"><span class="admin-field__label"><?= text($field['name'] ?? '') ?><?= $required ? ' *' : '' ?></span><input class="admin-input" name="properties[<?= text($code) ?>]" value="<?= text(is_scalar($value) ? $value : '') ?>" type="<?= text($inputType) ?>"<?= $type === 'number' ? ' step="any"' : '' ?><?= $required ? ' required' : '' ?>></label>
+                        <?php $inputType = $fieldError !== null ? 'text' : ($type === 'number' ? 'number' : ($type === 'date' ? 'date' : 'text')); ?>
+                        <label class="admin-field"><span class="admin-field__label"><?= text($field['name'] ?? '') ?><?= $required ? ' *' : '' ?></span><input class="admin-input" name="properties[<?= text($code) ?>]"<?= $errorAttributes ?> value="<?= text(is_scalar($value) ? $value : '') ?>" type="<?= text($inputType) ?>"<?= $type === 'number' ? ' step="any"' : '' ?><?= $required ? ' required' : '' ?>><?php if ($fieldError !== null): ?><span class="admin-field__hint" id="property-error-<?= text($code) ?>" role="alert"><?= text($fieldError) ?></span><?php endif; ?></label>
                     <?php endif; ?>
                 <?php endforeach; ?>
             </div></section>

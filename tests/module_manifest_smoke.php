@@ -17,7 +17,7 @@ foreach ($manifests as $manifest) {
     $byCode[$manifest->code] = $manifest;
 }
 
-foreach (['documents' => '1.3.1', 'infosystem' => '1.2.0', 'sites' => '1.2.0'] as $code => $version) {
+foreach (['documents' => '1.3.1', 'infosystem' => '1.2.1', 'sites' => '1.2.0'] as $code => $version) {
     $manifest = $byCode[$code] ?? null;
     if ($manifest === null || $manifest->version !== $version) {
         throw new RuntimeException(sprintf('%s module manifest is missing or invalid.', $code));

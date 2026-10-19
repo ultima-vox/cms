@@ -13,6 +13,7 @@ use Core\View\AdminPhpRenderer;
 use RuntimeException;
 use Throwable;
 use UltimaVox\Modules\Infosystem\FieldSchema;
+use UltimaVox\Modules\Infosystem\PropertyValidationException;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
 
 final class InfosystemController
@@ -387,7 +388,10 @@ final class InfosystemController
             $this->audit($request, 'infosystem_item.create', 'infosystem_item', $itemId, ['infosystem_id' => $infosystemId]);
             return Response::redirect('/admin/infosystems/' . $infosystemId . '/items/' . $itemId . '/edit?saved=1');
         } catch (Throwable $exception) {
-            return $this->itemFormResponse($system, $request->post, $exception->getMessage(), 422);
+            return $this->itemFormResponse(
+                $system, $request->post, $exception->getMessage(), 422,
+                fieldErrors: $exception instanceof PropertyValidationException ? [$exception->fieldCode => $exception->getMessage()] : [],
+            );
         }
     }
 
@@ -422,6 +426,7 @@ final class InfosystemController
                 array_merge($existing, $request->post),
                 $exception->getMessage(),
                 422,
+                fieldErrors: $exception instanceof PropertyValidationException ? [$exception->fieldCode => $exception->getMessage()] : [],
             );
         }
     }
@@ -500,6 +505,7 @@ final class InfosystemController
         ?string $error = null,
         int $status = 200,
         bool $saved = false,
+        array $fieldErrors = [],
     ): Response {
         $form = array_merge([
             'id' => null,
@@ -524,6 +530,7 @@ final class InfosystemController
         return Response::html($this->view->render('admin/infosystems/item_form.php', [
             'infosystem' => $system,
             'item' => $form,
+            'field_errors' => $fieldErrors,
             'fields' => is_array($system['field_schema'] ?? null) ? $system['field_schema'] : [],
             'groups' => $this->flattenGroups($this->infosystems->groups((int) $system['id'])),
             'csrf_token' => Csrf::token(),
