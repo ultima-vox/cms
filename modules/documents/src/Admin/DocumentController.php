@@ -36,9 +36,13 @@ final class DocumentController
 
         try { $browser = $this->folders->browser($request->query['folder'] ?? null, '/admin/documents'); }
         catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
+        $listQuery = DocumentListQuery::fromQuery($request->query, $browser['selected'], $browser['all']);
+        $listing = $this->documents->page($listQuery);
         return Response::html($this->view->render('admin/documents/index.php', [
             'folder_browser' => $browser,
-            'documents' => $this->folders->filter($this->documents->all(), $browser),
+            'documents' => $listing['rows'],
+            'listing' => $listing,
+            'list_query' => $listQuery,
             'created' => isset($request->query['created']),
         ]));
     }

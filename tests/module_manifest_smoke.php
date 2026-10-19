@@ -17,9 +17,9 @@ foreach ($manifests as $manifest) {
     $byCode[$manifest->code] = $manifest;
 }
 
-foreach (['documents', 'infosystem', 'sites'] as $code) {
+foreach (['documents' => '1.3.0', 'infosystem' => '1.2.0', 'sites' => '1.2.0'] as $code => $version) {
     $manifest = $byCode[$code] ?? null;
-    if ($manifest === null || $manifest->version !== '1.2.0') {
+    if ($manifest === null || $manifest->version !== $version) {
         throw new RuntimeException(sprintf('%s module manifest is missing or invalid.', $code));
     }
     if (($manifest->requires['core'] ?? null) !== '>=0.4.0') {

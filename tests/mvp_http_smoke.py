@@ -320,3 +320,6 @@ request(editor, '/admin/logout', {'_csrf': token(editor_body)}, expected=303)
 with open('/tmp/cms-folder-browser.json', 'w') as handle:
     json.dump({'folder': folder_a, 'infosystem': is_a}, handle)
 print('Multisite folders HTTP OK: hierarchy, equal codes, independent layouts, direct-ID isolation, stale forms, explicit grants and revocation')
+
+# Enough isolated documents to exercise real list pagination in the browser.
+query("INSERT INTO documents(site_id,code,name) SELECT 1, 'browser-list-' || n, 'Browser list ' || lpad(n::text,2,'0') FROM generate_series(1,26) AS n")

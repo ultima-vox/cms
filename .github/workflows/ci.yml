@@ -143,6 +143,9 @@ jobs:
       - name: Portable database repository contract
         run: php tests/database_driver_smoke.php
 
+      - name: Document search and bounded list pagination
+        run: php tests/document_list_smoke.php
+
       - name: Site-scoped content folders
         run: php tests/content_folders_smoke.php
 
@@ -453,6 +456,7 @@ jobs:
           php bin/console extensions:sync
           php bin/console health
           php tests/database_driver_smoke.php
+          php tests/document_list_smoke.php
           php tests/content_folders_smoke.php
           php tests/mysql_update_smoke.php
           php tests/mysql_migration_failure_smoke.php
