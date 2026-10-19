@@ -2,7 +2,7 @@
 
 Дата: 2026-10-19. **Проверенный main: `c56e50b1fbd4416179c8a9207a3a08e79008cb73`**. Исходный G0 runtime baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`; план вошёл через PR101. После baseline объединены исправление доступности PR132, детерминированный TTL test PR135 и нативная страница элемента Infosystem PR136, перенос Mechaniki PR96 и поставка ресурсов PR138. Core `0.4.0`, Extension API `1.0.0`; применённые миграции не менялись.
 
-Основание: [утверждённый пользователем источник ТЗ](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md), [epic102](https://github.com/ultima-vox/cms/issues/102), [G0-01](https://github.com/ultima-vox/cms/issues/104). Ветка G0 сверена с mainc4dbd28; отдельная работа PR136, перенос Mechaniki PR96 и поставочные ресурсы PR138 сохранены, включая новые CI checks. [Main CI39255125805](https://github.com/ultima-vox/cms/actions/runs/39255125805) и [MVP39255125931](https://github.com/ultima-vox/cms/actions/runs/39255125931) — success. Эта карта заменяет предварительный материал PR99 для формальной приёмки G0; ветки не объединяются автоматически.
+Основание: [утверждённый пользователем источник ТЗ](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md), [epic102](https://github.com/ultima-vox/cms/issues/102), [G0-01](https://github.com/ultima-vox/cms/issues/104). Ветка G0 сверена с runtime mainc56e50b; отдельная работа PR136, перенос Mechaniki PR96 и поставочные ресурсы PR138 сохранены, включая новые CI checks. [Main CI39255125805](https://github.com/ultima-vox/cms/actions/runs/39255125805) и [MVP39255125931](https://github.com/ultima-vox/cms/actions/runs/39255125931) — success. Эта карта заменяет предварительный материал PR99 для формальной приёмки G0; PR129/130/133 интегрированы в mainf3185b6; приёмка и её границы записаны в release-gates.md.
 
 ## Как читать статусы и доказательства
 
@@ -148,11 +148,15 @@ Core владеет Structure/layouts, users/RBAC, site identity, generic bindin
 
 ## Очередь после G0
 
-- G0: интегрировать evidence PR129/130/133 и зафиксировать review; #107 уже закрыт, #106 сохраняет явные compatibility/release ограничения. Не считать сам факт открытия задач прохождением gate.
-- G1: #109 → маленькие задачи #123 (существующий IS list), #124 (layouts), #125 (document revisions/conflicts), #126 (preview; после #125), #127 (Documents bulk move), #128 (Structure UX); #108 — validation fix.
+- G0: inventory, UX/performance evidence и executable guards интегрированы PR129/130/133; technical acceptance разрешает G1 в пределах release-gates.md. #106 сохраняет явные compatibility/release ограничения; это не приёмка production1.0.
+- G1: #109 → маленькие задачи #123 (существующий IS list), #124 (layouts), #125 (document revisions/conflicts), #126 (preview; после #125), #127 (Documents bulk move), #128 (Structure UX), #142 (Documents list return); #108 — validation fix.
 - Эпики плана02–15: #109–#122. Зависимости и acceptance находятся в issue bodies и epic102. Никакая из этих функций не помечена реализованной из-за созданного issue.
 - CRM/ERP/WMS, AI editor, frontend SPA-builder, full Forms-конструктор и обязательный external search — вне 1.0 по выбранному ТЗ.
 
 ### Последующий main: Mechaniki media
 
 PR140 добавляет проверенную локальную синхронизацию 14 ресурсов (`modules/mechaniki/site/sync-media.php`, `SiteMedia.php`) и `tests/mechaniki_media_smoke.php`; соответствующий CI step сохранён. Это доставка ресурсов пилотного сайта, а не самостоятельная медиабиблиотека: C14 остаётся missing. Ни deployment, ни обработка заявок этим не подтверждаются.
+
+## Наборы приёмки
+
+[Fixture profiles](../../tests/fixtures/g0/profiles.json) связывает реальный Content-v1 fixture с измеренным snapshot. Multilingual-corporate и commerce-site имеют статус blocked, явные зависимости #116–#119 и критерии будущих данных/проверок. Они не заселены и не считаются пройденными до появления владельцев доменов.

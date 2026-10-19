@@ -2,20 +2,35 @@
 
 Main review: `c56e50b1fbd4416179c8a9207a3a08e79008cb73`; runtime CI baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`, 2026-10-19. После исходного baseline вошли plan PR101, a11y PR132, TTL-test PR135 и infosystem.item PR136; схема не менялась. Исторические CI ниже остаются привязаны к своим SHA. [Карта функций и доказательства](feature-matrix.md), [tracking102](https://github.com/ultima-vox/cms/issues/102), [план](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md).
 
-**Решение сейчас: NO-GO для v1.0.0. G0 inventory candidate — на review, G1 не начат.** Зелёный baseline CI доказывает перечисленные MVP-сценарии, не закрывает отсутствующие функции и неизвестные измерения. GitHub merge/tag не доказывает deployment на ru.rewired.ru или другом production URL.
+**Решение: G0 technical acceptance — PASS для начала G1. Production v1.0.0 — NO-GO.** Зелёный baseline CI доказывает перечисленные MVP-сценарии, не закрывает отсутствующие функции и неизвестные измерения. GitHub merge/tag не доказывает deployment на ru.rewired.ru или другом production URL.
 
 ## G0: что требуется до перехода
 
-| Gate | Состояние baseline / candidate | Критерий закрытия / владелец задачи |
+| Gate | Решение | Основание / владелец |
 | --- | --- | --- |
-| G0-A Source/dependencies/API/PR inventory | Подготовлено в candidate | Review feature-matrix и pinned plan; source/test links, no mixed unfinished branches; #104 |
-| G0-B Reproducible install/upgrade baseline | Есть bounded MVP evidence | CI584 + MVP65 на точном SHA, PG both layouts/real v0.1.20 upgrade, four legacy contracts/webroot. Расширение матрицы #106 не выдавать за уже покрытое |
-| G0-C Module removal / architecture executable checks | Добавлено в candidate, требуется green CI | Physical package removal + fresh application dispatch и two-site isolation на пяти DB jobs; targeted SQL/import guard и failing fixtures. Не считать это удалением domain tables или формальным анализом всех dynamic SQL |
-| G0-D UX и performance baseline | Данные готовы в PR130/133, требуется интеграция/review | #105: фиксированные fixtures, три editor flows на 390/1024/1440, clicks/errors, cold/warm p50/p95, SQL count и peak memory, описанное окружение/нагрузка. Не выдумывать measurements |
-| G0-E Bug/compatibility registry | Подготовлен, задачи открыты | #108 P1 data validation; #107 исправлен PR135 (main CI/MVP green); #106 hosting/legacy limitations. Подтверждённый критический security/data/installation bug запрещает переход; не объявлять неизвестный риск исправленным |
-| G0-F Compatibility/version policy | Кандидат правил ниже, на review | Сохранить Extension API1 current behavior, additive migrations; versioned REST ещё missing; owner review перед breaking changes |
+| G0-A Source/dependencies/API/PR inventory | PASS в области baseline | PR129: source/test links, семь manifests, реальные API, открытые PR и риски; #104. Сверка runtime mainc56e50b; integrated tree mainf3185b6 |
+| G0-B Reproducible install/upgrade baseline | PASS bounded baseline | PG clean public/webroot и populated v0.1.20 upgrade; Apache private-file/refusal tests; четыре legacy contracts/webroot. Расширение #106 остаётся обязательным для релиза |
+| G0-C Module removal / architecture checks | PASS bounded executable scope | 9 файловых scenarios × 8 fresh dispatches на каждой из пяти СУБД; two-site isolation; SQL/import guard и negative fixtures. Не purge и не полный dynamic SQL/type analysis |
+| G0-D UX и performance baseline | PASS измеренный baseline | PR130: три browser flows × 390/1024/1440, actions/errors/screenshots. PR133: Content 1k/10k, пять DB, 2000 cold/warm CLI samples, SQL/peak memory и pinned provenance; #105 |
+| G0-E Bug/compatibility registry | PASS реестр, не отсутствие всех дефектов | P1 #108 зарегистрирован для G1 и блокирует 1.0; #107 исправлен PR135. #106 — явные ограничения совместимости. Нового подтверждённого критического data/security/install нарушения в проверенных сценариях не найдено |
+| G0-F Compatibility/version policy | PASS текущая политика ниже | Сохранение Extension API1, SemVer, additive immutable migrations и review breaking changes. Публичный REST v1 ещё missing; это не обещание стабильности отсутствующих endpoints |
 
-G0 не объявляется целиком принятым этим документом. Измеримые доказательства #105 готовы в отдельных PR130 (browser UX) и PR133 (Content 1k/10k CLI profiling); #107 уже закрыт. Следующий шаг — интеграция и явное решение по G0 gates. Пользовательские walkthrough G10/G-REL-07 и утверждение load budgets после G0 не вводятся как новые неоговорённые блокеры G0. G1 #109/#123–#128 остаётся blocked до приёмки G0 и отсутствия его критических проблем. #108 должен быть исправлен до production; отсутствие запланированного Commerce не является регрессией существующего MVP, но запрещает релиз 1.0.
+Приёмка ограничена G0 основного плана: воспроизводимый baseline установки/обновления, реестр P0/P1, подтверждённые измерения и границы модулей. Код новых доменов, полный hosting matrix, PHP type/SAST/pentest, human walkthroughs и нагрузка при concurrency не считаются пройденными. Незакрытые #106/#108 сохраняют release gates; #108 исправляется в G1 до production. Это не основание обходить новый критический дефект данных/безопасности/установки, если он будет подтверждён.
+
+Профили [tests/fixtures/g0/profiles.json](../../tests/fixtures/g0/profiles.json): Content-v1 реализован и измерен. Multilingual и commerce — blocked контракты данных и проверок для #116–#119, а не фиктивные запущенные стенды. Полные пользовательские walkthrough относятся к G10/G-REL-07, утверждение load budgets следует после G0. G1 #109/#123–#128/#142 разрешён; каждая задача идёт самостоятельным PR.
+
+### Доказательства интеграции и review
+
+Технический review: агент Codex; проверены source/test ownership, неизменность миграций/Core/config, границы fixture safety, сохранение новых Mechaniki CI steps, методика и область измерений. Это не независимый внешний security или human usability sign-off.
+
+| Evidence | Проверенный head / результат |
+| --- | --- |
+| PR129 inventory/removal | `7529f496996ad293583f9b277f1535f918650fc4`; [CI39295696679](https://github.com/ultima-vox/cms/actions/runs/39295696679) и [MVP39295696655](https://github.com/ultima-vox/cms/actions/runs/39295696655) — success |
+| PR130 browser UX | `beacbd50609fa9bf8878e04ee1b30f6dccfe59e3`; [CI39295703428](https://github.com/ultima-vox/cms/actions/runs/39295703428) и [MVP39295703427](https://github.com/ultima-vox/cms/actions/runs/39295703427) — success |
+| PR133 five-DB baseline | `592af530b5b5b11bf13af378b7c8fd5bf45df2ac`; [CI39295714762](https://github.com/ultima-vox/cms/actions/runs/39295714762), [MVP39295714924](https://github.com/ultima-vox/cms/actions/runs/39295714924), [G039295715073](https://github.com/ultima-vox/cms/actions/runs/39295715073) — success |
+| Integrated main | `f3185b6c50fdc2d859f9d59413996dccce2c7d16`; [CI39296125670](https://github.com/ultima-vox/cms/actions/runs/39296125670), [MVP39296125609](https://github.com/ultima-vox/cms/actions/runs/39296125609) — success |
+
+Числа производительности сохраняют собственный pinned SHA/run из [методики](content-performance-baseline.md) и [snapshot](baselines/content-v1-2026-10-19.json); последующий green CI не переписывает исторические цифры. API/DB runtime diff G0 PR129/130/133 — отсутствует; изменения только документации, tests/tools и CI wiring. Локально прошли targeted guard/self-tests, Node/Python syntax, YAML/JSON/relative links и diff hygiene; PHP выполнялся в CI, не заявляется локально.
 
 ## Полная матрица совместимости
 
@@ -28,7 +43,7 @@ G0 не объявляется целиком принятым этим доку
 | Real populated old-release HTTP upgrade | pass, PG webroot v0.1.20 | не принято | не принято |
 | Public/webroot × DB × crash/restore full matrix | partial | partial | partial |
 | Module package purge | PG suite pass | intentionally unsupported | intentionally unsupported |
-| G0 candidate physical package removal | candidate CI required | candidate CI required | candidate CI required |
+| G0 physical package removal | pass, 9 cases / 72 dispatches | pass на обеих версиях | pass на обеих версиях |
 
 Private Apache denial accepts 403/404. Nginx/FPM/proxy and TLS wrong-name/untrusted-chain acceptance остаются #106. Installer фиксирует DNS-IP, не следует redirects, по умолчанию не обращается к private IP; environment allowlist для LAN не является обходом proof. Не ослаблять эти ограничения ради green tests.
 
@@ -52,7 +67,7 @@ Private Apache denial accepts 403/404. Nginx/FPM/proxy and TLS wrong-name/untrus
 ## Versioning и безопасное обновление
 
 - Текущее: [Core0.4.0](../../core/Version.php), [Extension API1.0.0](../../core/Extension/ExtensionApiVersion.php), manifest constraints и `VersionConstraint` проверяются loader. Dev CMS tags вида 0.1.N происходят из workflow run number; это не утверждение о стабильности production API.
-- На review G0: SemVer для Core/module/API; добавление совместимых возможностей — minor, bugfix — patch; breaking contract требует отдельного ADR, migration/deprecation notes, dependency matrix и явного approval. Не обещать существующим third-party packages несуществующий REST API.
+- Принятая G0 политика: SemVer для Core/module/API; добавление совместимых возможностей — minor, bugfix — patch; breaking contract требует отдельного ADR, migration/deprecation notes, dependency matrix и явного approval. Не обещать существующим third-party packages несуществующий REST API.
 - `extensions()` — экспериментальный registry; typed API вводить для реального сценария, не каталог пустых интерфейсов. Существующий working API не переписывать ради единообразия.
 - Применённые миграции неизменяемы. Новая схема — новый файл, backfill/cutover/cleanup только по потребности, fresh+upgrade tests, crash/recovery procedure. Автоматического PG↔MySQL conversion и общего SQL downgrade нет.
 - PostgreSQL transactional DDL и legacy dirty marker/snapshot — разные механики. Unknown COMMIT сохраняет maintenance. Legacy snapshot restrictions/purge exception должны быть видны до операции, а не скрыты адаптером.
