@@ -201,6 +201,18 @@ try {
     if ($itemRepository->findPublishedItemByPath(1, $infosystemId, $publishedPath) !== null) {
         throw new RuntimeException('Future item was exposed.');
     }
+
+    if ($first['group_id'] !== null) {
+        $restore = $db->prepare(
+            "UPDATE infosystem_items SET status = 'published', publish_at = NULL WHERE id = :id"
+        );
+        $restore->execute(['id' => $first['id']]);
+        $hideGroup = $db->prepare('UPDATE infosystem_groups SET is_active = FALSE WHERE id = :id');
+        $hideGroup->execute(['id' => $first['group_id']]);
+        if ($itemRepository->findPublishedItemByPath(1, $infosystemId, $publishedPath) !== null) {
+            throw new RuntimeException('Item in a disabled group was exposed.');
+        }
+    }
 } finally {
     $db->rollBack();
 }
