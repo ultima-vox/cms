@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import pathlib
 import zipfile
 
@@ -30,7 +31,7 @@ with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
     for name in ('composer.json', 'composer.lock'):
         managed[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
     schema = {k: v for k, v in managed.items() if k.endswith('.sql') and (k.startswith('database/migrations/') or '/migrations/' in k)}
-    archive.writestr(prefix + 'release.json', json.dumps({'version': os.environ.get('CMS_VERSION', '0.1.0'),
+    archive.writestr(prefix + 'release.json', json.dumps({'core_version': re.search(r"STRING = '([^']+)'", (root / 'core/Version.php').read_text()).group(1), 'version': os.environ.get('CMS_VERSION', '0.1.0'),
         'layout': 'webroot' if args.webroot else 'public', 'files': managed, 'schema': schema}))
     for folder in ('storage/cache', 'storage/logs', 'storage/templates/layouts'):
         archive.writestr(prefix + folder + '/.gitkeep', '')

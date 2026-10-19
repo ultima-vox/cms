@@ -21,7 +21,8 @@ echo $view->render('admin/_header.php', [
     <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
 
     <form class="admin-form" method="post" action="<?= text($infosystemId ? '/admin/infosystems/' . $infosystemId : '/admin/infosystems') ?>" id="infosystem-form">
-        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
+        <?= $view->render('admin/folders/select.php', ['options' => $folder_options, 'selected' => $infosystem['folder_id'] ?? null]) ?>
         <section class="admin-panel"><h2 class="admin-panel__title">Основное</h2><div class="admin-form__grid">
             <label class="admin-field"><span class="admin-field__label">Название</span><input class="admin-input" name="name" maxlength="255" required value="<?= text($infosystem['name'] ?? '') ?>"></label>
             <label class="admin-field"><span class="admin-field__label">Код</span><input class="admin-input" name="code" maxlength="120" pattern="[a-z][a-z0-9_-]*" required value="<?= text($infosystem['code'] ?? '') ?>"<?= $infosystemId ? ' readonly' : '' ?>><span class="admin-field__hint">Стабильный системный идентификатор. После создания не меняется.</span></label>
@@ -53,29 +54,12 @@ echo $view->render('admin/_header.php', [
     </form>
 
     <?php if ($infosystemId): ?>
-        <section class="admin-danger-zone"><div><strong>Удаление инфосистемы</strong><p><?= (int) ($infosystem['node_count'] ?? 0) > 0 ? 'Сначала отвяжите её от всех разделов сайта.' : 'Будут удалены все группы и элементы этой инфосистемы.' ?></p></div><form method="post" action="/admin/infosystems/<?= text($infosystemId) ?>/delete" onsubmit="return confirm('Удалить инфосистему вместе со всем контентом?');"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><button class="admin-button admin-button--danger" type="submit"<?= (int) ($infosystem['node_count'] ?? 0) > 0 ? ' disabled' : '' ?>>Удалить</button></form></section>
+        <section class="admin-danger-zone"><div><strong>Удаление инфосистемы</strong><p><?= (int) ($infosystem['node_count'] ?? 0) > 0 ? 'Сначала отвяжите её от всех разделов сайта.' : 'Будут удалены все группы и элементы этой инфосистемы.' ?></p></div><form method="post" action="/admin/infosystems/<?= text($infosystemId) ?>/delete" data-confirm="Удалить инфосистему вместе со всем контентом?"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><button class="admin-button admin-button--danger" type="submit"<?= (int) ($infosystem['node_count'] ?? 0) > 0 ? ' disabled' : '' ?>>Удалить</button></form></section>
     <?php endif; ?>
 </div>
 
 <template id="field-template">
     <div class="field-schema__row" data-field-row><span class="field-schema__drag">⋮⋮</span><input class="admin-input" placeholder="Название" required data-name="name"><input class="admin-input" placeholder="code" pattern="[a-z][a-z0-9_]*" required data-name="code"><select class="admin-select" data-name="type"><option value="text">text</option><option value="textarea">textarea</option><option value="number">number</option><option value="boolean">boolean</option><option value="select">select</option><option value="date">date</option></select><input class="admin-input" placeholder="Опции через запятую" data-name="options"><label class="field-schema__check"><input type="hidden" value="0" data-name="required-hidden"><input type="checkbox" value="1" data-name="required"> обяз.</label><label class="field-schema__check"><input type="hidden" value="0" data-name="filterable-hidden"><input type="checkbox" value="1" data-name="filterable"> фильтр</label><button class="field-schema__remove" type="button" aria-label="Удалить поле" data-remove-field>×</button></div>
 </template>
-<script>
-(() => {
-    const container = document.getElementById('field-schema');
-    const template = document.getElementById('field-template');
-    const add = document.getElementById('add-field');
-    const rename = () => {
-        [...container.querySelectorAll('[data-field-row]')].forEach((row, index) => {
-            row.querySelectorAll('[data-name]').forEach((input) => {
-                const key = input.dataset.name.replace('-hidden', '');
-                input.name = `fields[${index}][${key}]`;
-            });
-        });
-    };
-    add.addEventListener('click', () => { container.append(template.content.cloneNode(true)); rename(); });
-    container.addEventListener('click', (event) => { const button = event.target.closest('[data-remove-field]'); if (!button) return; button.closest('[data-field-row]').remove(); rename(); });
-    rename();
-})();
-</script>
-<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive]) ?>
+
+<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive, 'admin_scripts' => ['/assets/infosystem-fields.js']]) ?>

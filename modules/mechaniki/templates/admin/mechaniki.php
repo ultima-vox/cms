@@ -11,7 +11,7 @@ echo $view->render('admin/_header.php', ['admin_active' => 'mechaniki', 'admin_t
         <h2 class="admin-panel__title">Загрузить пилотный сайт</h2>
         <p>Будет создан раздел <strong>/mechaniki</strong>: главная, услуги, ремонт двигателя, подвески, о сервисе и контакты. Существующие страницы сохраняются. Повторная загрузка блокируется.</p>
         <p>Тексты редактируются в «Документах», адреса и заголовки — в «Структуре», общий шаблон — в «Макетах». Запись в этой версии — по телефону; форма заявок не подключена.</p>
-        <form method="post" action="/admin/mechaniki/import"><input type="hidden" name="_csrf" value="<?= text($admin_shell->csrfToken()) ?>"><button class="admin-button admin-button--primary" type="submit">Создать страницы «Механиков»</button> <a class="admin-button" href="/mechaniki" target="_blank" rel="noopener">Открыть сайт ↗</a></form>
+        <form method="post" action="/admin/mechaniki/import"><input type="hidden" name="_csrf" value="<?= text($admin_shell->csrfToken()) ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><button class="admin-button admin-button--primary" type="submit">Создать страницы «Механиков»</button> <a class="admin-button" href="/mechaniki" target="_blank" rel="noopener">Открыть сайт ↗</a></form>
     </section>
 </div>
 <?= $view->render('admin/_footer.php') ?>

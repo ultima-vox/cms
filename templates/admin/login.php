@@ -23,7 +23,7 @@ $email = isset($email) && is_string($email) ? $email : '';
         <?php endif; ?>
 
         <form class="admin-form" action="/admin/login" method="post">
-            <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+            <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
 
             <label class="admin-field">
                 <span class="admin-field__label">Email</span>

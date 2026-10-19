@@ -26,7 +26,8 @@ echo $view->render('admin/_header.php', [
     <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
 
     <form class="admin-form" method="post" action="<?= text($layoutId ? '/admin/layouts/' . $layoutId : '/admin/layouts') ?>">
-        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
+        <?= $view->render('admin/folders/select.php', ['options' => $folder_options, 'selected' => $layout['folder_id'] ?? null]) ?>
         <section class="admin-panel">
             <h2 class="admin-panel__title">Основное</h2>
             <div class="admin-form__grid">
@@ -56,14 +57,14 @@ echo $view->render('admin/_header.php', [
     <?php endif; ?>
 
     <?php if ($layoutId && !empty($layout['is_system']) && !empty($layout['has_override'])): ?>
-        <form class="admin-reset-zone" method="post" action="/admin/layouts/<?= text($layoutId) ?>/reset" onsubmit="return confirm('Вернуть штатную версию макета из поставки CMS?');">
-            <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><div><strong>Вернуть штатный шаблон</strong><p>Runtime-override будет удалён, после чего CMS снова использует файл из поставки.</p></div><button class="admin-button admin-button--secondary" type="submit">Вернуть штатный</button>
+        <form class="admin-reset-zone" method="post" action="/admin/layouts/<?= text($layoutId) ?>/reset" data-confirm="Вернуть штатную версию макета из поставки CMS?">
+            <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><div><strong>Вернуть штатный шаблон</strong><p>Runtime-override будет удалён, после чего CMS снова использует файл из поставки.</p></div><button class="admin-button admin-button--secondary" type="submit">Вернуть штатный</button>
         </form>
     <?php endif; ?>
 
     <?php if ($layoutId && empty($layout['is_system'])): ?>
-        <form class="admin-danger-zone" method="post" action="/admin/layouts/<?= text($layoutId) ?>/delete" onsubmit="return confirm('Удалить макет и его файл?');">
-            <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><div><strong>Удаление макета</strong><p><?= (int) ($layout['node_count'] ?? 0) > 0 ? 'Сначала назначьте другой макет всем использующим его узлам.' : 'Макет и его runtime-файл будут удалены.' ?></p></div><button class="admin-button admin-button--danger" type="submit"<?= (int) ($layout['node_count'] ?? 0) > 0 ? ' disabled' : '' ?>>Удалить</button>
+        <form class="admin-danger-zone" method="post" action="/admin/layouts/<?= text($layoutId) ?>/delete" data-confirm="Удалить макет и его файл?">
+            <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><div><strong>Удаление макета</strong><p><?= (int) ($layout['node_count'] ?? 0) > 0 ? 'Сначала назначьте другой макет всем использующим его узлам.' : 'Макет и его runtime-файл будут удалены.' ?></p></div><button class="admin-button admin-button--danger" type="submit"<?= (int) ($layout['node_count'] ?? 0) > 0 ? ' disabled' : '' ?>>Удалить</button>
         </form>
     <?php endif; ?>
 </div>

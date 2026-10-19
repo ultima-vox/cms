@@ -33,6 +33,11 @@ final readonly class SitesApi
         return $this->context($record);
     }
 
+    public function accessible(int $userId): array
+    {
+        return (new \Core\Site\SiteAccessRepository($this->sites->database()))->filter($this->active(), $userId);
+    }
+
     public function adminId(): int
     {
         return $this->admin()->id;

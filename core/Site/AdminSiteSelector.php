@@ -11,7 +11,7 @@ final class AdminSiteSelector
 {
     private const SESSION_KEY = 'uvcms_admin_site_id';
 
-    public function __construct(private readonly SiteRepository $sites)
+    public function __construct(private readonly SiteRepository $sites, private readonly ?SiteAccessRepository $access = null, private readonly ?int $userId = null)
     {
     }
 
@@ -25,11 +25,13 @@ final class AdminSiteSelector
             : (is_string($selected) && ctype_digit($selected) ? (int) $selected : 0);
 
         $record = $selectedId > 0 ? $this->sites->findActiveById($selectedId) : null;
+        if ($record !== null && !$this->allowed((int) $record['id'])) $record = null;
         if ($record === null) {
             $record = $this->sites->findActiveByCode('default');
+            if ($record !== null && !$this->allowed((int) $record['id'])) $record = null;
         }
         if ($record === null) {
-            $active = $this->sites->allActive();
+            $active = array_values(array_filter($this->sites->allActive(), fn ($site) => $this->allowed((int) $site['id'])));
             $record = $active[0] ?? null;
         }
         if (!is_array($record)) {
@@ -46,8 +48,8 @@ final class AdminSiteSelector
     {
         $this->requireSession();
         $record = $this->sites->findActiveById($siteId);
-        if ($record === null) {
-            throw new RuntimeException('Активный сайт не найден.');
+        if ($record === null || !$this->allowed($siteId)) {
+            throw new RuntimeException('Активный сайт не найден или недоступен.');
         }
 
         $context = $this->context($record);
@@ -67,6 +69,8 @@ final class AdminSiteSelector
             settings: is_array($record['settings'] ?? null) ? $record['settings'] : [],
         );
     }
+
+    private function allowed(int $siteId): bool { return $this->access === null || $this->userId === null || $this->access->canAccess($this->userId, $siteId); }
 
     private function requireSession(): void
     {

@@ -36,7 +36,8 @@ final class PhpRenderer
         array $context = [],
         ?RenderContext $renderContext = null,
     ): RenderResult {
-        $file = $this->resolveTemplate($template);
+        $site = ($context['site'] ?? null) instanceof \Core\Site\SiteContext ? $context['site'] : null;
+        $file = $this->resolveTemplate($template, $site);
         $renderContext ??= new RenderContext();
         $renderEngine = new RenderEngine($renderContext);
         $facadeContext = new TemplateFacadeContext(
@@ -69,7 +70,7 @@ final class PhpRenderer
         return new RenderResult($renderer($file, $variables), $renderContext);
     }
 
-    private function resolveTemplate(string $template): string
+    private function resolveTemplate(string $template, ?\Core\Site\SiteContext $site): string
     {
         $template = trim($template);
 
@@ -79,8 +80,12 @@ final class PhpRenderer
             throw new RuntimeException('Invalid PHP template path.');
         }
 
+        if ($site !== null) {
+            $scoped = $this->rootPath . '/storage/templates/sites/' . $site->id . '/' . $template;
+            if (is_file($scoped)) return $scoped;
+        }
         $runtime = $this->rootPath . '/storage/templates/' . $template;
-        if (is_file($runtime)) {
+        if (($site === null || ($site->setting('legacy_layout_overrides', false) === true && !is_file($scoped . '.packaged'))) && is_file($runtime)) {
             return $runtime;
         }
 

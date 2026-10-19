@@ -32,6 +32,7 @@ final class InfosystemModule implements ModuleInterface
 {
     public function register(Core $core): void
     {
+        $core->folders()->define('infosystems', 'Инфосистемы', '/admin/infosystems', 'infosystems.manage');
         $db = $core->runtime()->database();
         $repository = new InfosystemRepository($db);
         $bindings = new NodeModuleBindingRepository($db);
@@ -134,8 +135,9 @@ final class InfosystemModule implements ModuleInterface
             $auth,
             $management,
             new FieldSchema(),
-            new AuditLogRepository($db),
+            new AuditLogRepository($db, $core->sites()->adminId()),
             $adminView,
+            new \Core\Content\FolderRepository($db, $siteId, 'infosystems'),
         );
         $listController = new InfosystemItemListController(
             $auth,

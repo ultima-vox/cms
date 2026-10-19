@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 import pathlib
 import subprocess
 import sys
@@ -15,7 +16,8 @@ paths = sorted(p for folder in folders for p in (root / folder).rglob('*') if p.
 paths += [root / p for p in ('composer.json', 'composer.lock')]
 files = {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
 schema = {k: v for k, v in files.items() if k.endswith('.sql') and (k.startswith('database/migrations/') or '/migrations/' in k)}
-manifest = {'version': version, 'files': files, 'schema': schema}
+core_version = re.search(r"STRING = '([^']+)'", (root / 'core/Version.php').read_text()).group(1)
+manifest = {'core_version': core_version, 'version': version, 'files': files, 'schema': schema}
 with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
     archive.writestr('update.json', json.dumps(manifest, ensure_ascii=False))
     for p in paths:

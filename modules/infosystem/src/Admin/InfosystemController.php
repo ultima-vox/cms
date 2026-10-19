@@ -23,6 +23,7 @@ final class InfosystemController
         private readonly FieldSchema $fieldSchema,
         private readonly AuditLogRepository $audit,
         private readonly AdminPhpRenderer $view,
+        private readonly \Core\Content\FolderRepository $folders,
     ) {
     }
 
@@ -34,8 +35,11 @@ final class InfosystemController
             return $denied;
         }
 
+        try { $browser = $this->folders->browser($request->query['folder'] ?? null, '/admin/infosystems'); }
+        catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
         return Response::html($this->view->render('admin/infosystems/index.php', [
-            'infosystems' => $this->infosystems->all(),
+            'folder_browser' => $browser,
+            'infosystems' => $this->folders->filter($this->infosystems->all(), $browser),
             'deleted' => isset($request->query['deleted']),
         ]));
     }
@@ -43,12 +47,14 @@ final class InfosystemController
     /** @param array<string, string> $variables */
     public function createForm(Request $request, array $variables = []): Response
     {
-        unset($request, $variables);
+        unset($variables);
         if (($denied = $this->requirePermission()) !== null) {
             return $denied;
         }
 
-        return $this->systemFormResponse(null);
+        try { $folder = $this->folders->browser($request->query['folder'] ?? null, '/admin/infosystems')['selected']; }
+        catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
+        return $this->systemFormResponse(['folder_id' => $folder]);
     }
 
     /** @param array<string, string> $variables */
@@ -85,6 +91,7 @@ final class InfosystemController
                 $data['description'],
                 $data['field_schema'],
                 $data['is_active'],
+                $data['folder_id'],
             );
             $this->audit($request, 'infosystem.create', 'infosystem', $id, ['code' => $data['code']]);
             return Response::redirect('/admin/infosystems/' . $id . '?created=1');
@@ -117,6 +124,7 @@ final class InfosystemController
                 $data['description'],
                 $data['field_schema'],
                 $data['is_active'],
+                $data['folder_id'],
             );
             $this->audit($request, 'infosystem.update', 'infosystem', $id, ['code' => $existing['code']]);
             return Response::redirect('/admin/infosystems/' . $id . '/edit?saved=1');
@@ -239,6 +247,7 @@ final class InfosystemController
                 $data['description'],
                 $data['sorting'],
                 $data['is_active'],
+                $data['folder_id'],
             );
             $this->audit($request, 'infosystem_group.create', 'infosystem_group', $groupId, ['infosystem_id' => $infosystemId]);
             return Response::redirect('/admin/infosystems/' . $infosystemId . '?saved=1');
@@ -278,6 +287,7 @@ final class InfosystemController
                 $data['description'],
                 $data['sorting'],
                 $data['is_active'],
+                $data['folder_id'],
             );
             $this->audit($request, 'infosystem_group.update', 'infosystem_group', $groupId, ['infosystem_id' => $infosystemId]);
             return Response::redirect('/admin/infosystems/' . $infosystemId . '?saved=1');
@@ -444,6 +454,7 @@ final class InfosystemController
 
         return Response::html($this->view->render('admin/infosystems/form.php', [
             'infosystem' => $form,
+            'folder_options' => $this->folders->all(),
             'csrf_token' => Csrf::token(),
             'error' => $error,
             'saved' => $saved,
@@ -538,6 +549,7 @@ final class InfosystemController
             'description' => $this->nullableText($input['description'] ?? null),
             'field_schema' => $fieldSchema,
             'is_active' => (string) ($input['is_active'] ?? '0') === '1',
+            'folder_id' => \Core\Content\FolderRepository::id($input['folder_id'] ?? null),
         ];
     }
 
@@ -560,6 +572,7 @@ final class InfosystemController
             'description' => $this->nullableText($input['description'] ?? null),
             'sorting' => max(0, (int) ($input['sorting'] ?? 0)),
             'is_active' => (string) ($input['is_active'] ?? '0') === '1',
+            'folder_id' => \Core\Content\FolderRepository::id($input['folder_id'] ?? null),
         ];
     }
 
@@ -597,6 +610,7 @@ final class InfosystemController
             'meta_description' => $this->nullableText($input['meta_description'] ?? null),
             'status' => $status,
             'is_active' => (string) ($input['is_active'] ?? '0') === '1',
+            'folder_id' => \Core\Content\FolderRepository::id($input['folder_id'] ?? null),
             'sorting' => max(0, (int) ($input['sorting'] ?? 0)),
             'properties' => $properties,
             'publish_at' => $publishAt === '' ? null : $publishAt,

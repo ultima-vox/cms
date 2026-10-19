@@ -12,7 +12,7 @@ use Throwable;
 
 final class SitesManagementRepository
 {
-    public function __construct(private readonly PDO $db)
+    public function __construct(private readonly PDO $db, private readonly ?int $userId = null)
     {
     }
 
@@ -32,12 +32,13 @@ final class SitesManagementRepository
             SQL
         )->fetchAll();
 
-        return is_array($rows) ? $rows : [];
+        return $this->userId === null ? (is_array($rows) ? $rows : []) : (new \Core\Site\SiteAccessRepository($this->db))->filter(is_array($rows) ? $rows : [], $this->userId);
     }
 
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
+        if ($this->userId !== null && !(new \Core\Site\SiteAccessRepository($this->db))->canAccess($this->userId, $id)) return null;
         $statement = $this->db->prepare('SELECT * FROM sites WHERE id = :id LIMIT 1');
         $statement->execute(['id' => $id]);
         $row = $statement->fetch();
@@ -55,6 +56,7 @@ final class SitesManagementRepository
     /** @return list<array<string, mixed>> */
     public function domains(int $siteId): array
     {
+        if ($this->find($siteId) === null) return [];
         $statement = $this->db->prepare(
             'SELECT id, site_id, host, is_primary, created_at FROM site_domains WHERE site_id = :site_id ORDER BY is_primary DESC, host'
         );
@@ -66,6 +68,7 @@ final class SitesManagementRepository
 
     public function create(string $name, string $code, string $permalinkStyle = 'clean'): int
     {
+        if ($this->userId !== null && !(new \Core\Site\SiteAccessRepository($this->db))->isGlobal($this->userId)) throw new RuntimeException('Создавать сайты может только суперадминистратор.');
         new Permalink('/', $permalinkStyle);
         $statement = $this->db->prepare(
             'INSERT INTO sites (name, code, settings) VALUES (:name, :code, CAST(:settings AS jsonb)) RETURNING id'

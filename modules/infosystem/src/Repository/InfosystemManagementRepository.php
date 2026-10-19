@@ -86,12 +86,13 @@ final class InfosystemManagementRepository
         return $row;
     }
 
-    public function create(string $name, string $code, ?string $description, array $fieldSchema, bool $isActive): int
+    public function create(string $name, string $code, ?string $description, array $fieldSchema, bool $isActive, ?int $folderId = null): int
     {
+        (new \Core\Content\FolderRepository($this->db, $this->siteId, 'infosystems'))->assertFolder($folderId);
         $statement = $this->db->prepare(
             <<<'SQL'
-            INSERT INTO infosystems (site_id, name, code, description, field_schema, is_active)
-            VALUES (:site_id, :name, :code, :description, CAST(:field_schema AS jsonb), :is_active)
+            INSERT INTO infosystems (site_id, name, code, description, field_schema, is_active, folder_id)
+            VALUES (:site_id, :name, :code, :description, CAST(:field_schema AS jsonb), :is_active, :folder_id)
             RETURNING id
             SQL
         );
@@ -102,13 +103,15 @@ final class InfosystemManagementRepository
             'description' => $description,
             'field_schema' => json_encode($fieldSchema, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'is_active' => $isActive,
+            'folder_id' => $folderId,
         ]);
 
         return (int) $statement->fetchColumn();
     }
 
-    public function update(int $id, string $name, ?string $description, array $fieldSchema, bool $isActive): void
+    public function update(int $id, string $name, ?string $description, array $fieldSchema, bool $isActive, ?int $folderId = null): void
     {
+        (new \Core\Content\FolderRepository($this->db, $this->siteId, 'infosystems'))->assertFolder($folderId);
         $statement = $this->db->prepare(
             <<<'SQL'
             UPDATE infosystems
@@ -116,6 +119,7 @@ final class InfosystemManagementRepository
                 description = :description,
                 field_schema = CAST(:field_schema AS jsonb),
                 is_active = :is_active,
+                folder_id = :folder_id,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
               AND site_id = :site_id
@@ -128,6 +132,7 @@ final class InfosystemManagementRepository
             'description' => $description,
             'field_schema' => json_encode($fieldSchema, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'is_active' => $isActive,
+            'folder_id' => $folderId,
         ]);
     }
 
@@ -220,6 +225,7 @@ final class InfosystemManagementRepository
             'description' => $description,
             'sorting' => $sorting,
             'is_active' => $isActive,
+            'folder_id' => $folderId,
         ]);
         return (int) $statement->fetchColumn();
     }
@@ -258,6 +264,7 @@ final class InfosystemManagementRepository
                     description = :description,
                     sorting = :sorting,
                     is_active = :is_active,
+                folder_id = :folder_id,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE infosystem_id = :infosystem_id AND id = :id
                 SQL
@@ -270,6 +277,7 @@ final class InfosystemManagementRepository
                 'description' => $description,
                 'sorting' => $sorting,
                 'is_active' => $isActive,
+            'folder_id' => $folderId,
                 'infosystem_id' => $infosystemId,
                 'id' => $id,
             ]);
@@ -430,6 +438,7 @@ final class InfosystemManagementRepository
                     meta_description = :meta_description,
                     status = :status,
                     is_active = :is_active,
+                folder_id = :folder_id,
                     sorting = :sorting,
                     properties = CAST(:properties AS jsonb),
                     publish_at = :publish_at,

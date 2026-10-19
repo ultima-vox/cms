@@ -24,6 +24,7 @@ final class SitesController
         private readonly AdminSiteSelector $selector,
         private readonly SiteResolver $hostPolicy,
         private readonly AdminPhpRenderer $view,
+        private readonly \Core\Site\SiteAccessRepository $access,
     ) {
     }
 
@@ -37,6 +38,7 @@ final class SitesController
 
         return Response::html($this->view->render('admin/sites/index.php', [
             'sites' => $this->sites->all(),
+            'can_create' => $this->auth->can('sites.create'),
             'admin_site' => $this->selector->current(),
             'csrf_token' => Csrf::token(),
             'saved' => isset($request->query['saved']),
@@ -47,7 +49,7 @@ final class SitesController
     public function createForm(Request $request, array $variables = []): Response
     {
         unset($request, $variables);
-        if (($denied = $this->requirePermission('sites.manage')) !== null) {
+        if (($denied = $this->requirePermission('sites.create')) !== null) {
             return $denied;
         }
 
@@ -58,7 +60,7 @@ final class SitesController
     public function store(Request $request, array $variables = []): Response
     {
         unset($variables);
-        if (($denied = $this->requirePermission('sites.manage')) !== null) {
+        if (($denied = $this->requirePermission('sites.create')) !== null) {
             return $denied;
         }
         if (($csrf = $this->validateCsrf($request)) !== null) {
@@ -241,6 +243,8 @@ final class SitesController
 
         return Response::html($this->view->render('admin/sites/form.php', [
             'site' => $form,
+            'can_manage_access' => $this->auth->can('sites.access.manage'),
+            'site_users' => $this->auth->can('sites.access.manage') && isset($form['id']) ? $this->access->users((int) $form['id']) : [],
             'publication_preview' => $publicationPreview,
             'domains' => $domains,
             'admin_site' => $this->selector->current(),
@@ -248,6 +252,21 @@ final class SitesController
             'error' => $error,
             'saved' => $saved,
         ]), $status);
+    }
+
+    public function access(Request $request, array $variables = []): Response
+    {
+        if (($denied = $this->requirePermission('sites.access.manage')) !== null) return $denied;
+        if (($csrf = $this->validateCsrf($request)) !== null) return $csrf;
+        $id = $this->routeId($variables, 'id');
+        $site = $this->sites->find($id);
+        if ($site === null) return Response::html('<h1>404 Not Found</h1>', 404);
+        try {
+            $ids = $request->post['users'] ?? [];
+            if (!is_array($ids)) throw new RuntimeException('Некорректный список пользователей.');
+            $this->access->assign($id, $ids);
+            return Response::redirect('/admin/sites/' . $id . '/edit?saved=1');
+        } catch (Throwable $e) { return $this->formResponse($site, $e->getMessage(), 422); }
     }
 
     private function requirePermission(string $permission): ?Response

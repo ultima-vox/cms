@@ -22,7 +22,7 @@ final readonly class UpdaterModule implements ModuleInterface
     public function register(Core $core): void
     {
         $core->permissions()->define('updates.view', 'Просмотр обновлений CMS', ['superadmin', 'admin']);
-        $core->permissions()->define('updates.apply', 'Установка обновлений CMS', ['superadmin', 'admin']);
+        $core->permissions()->define('updates.apply', 'Установка обновлений CMS', ['superadmin']);
         $db = $core->runtime()->database();
         $root = $core->runtime()->rootPath();
         $auth = new AuthService(new UserRepository($db), new LoginAttemptRepository($db));
@@ -68,7 +68,7 @@ final readonly class UpdaterModule implements ModuleInterface
                     // Installation has committed. An audit/cache failure must not report it as rolled back.
                     try {
                         foreach ($core->sites()->active() as $site) $core->delivery()->invalidate(['site:' . $site->id]);
-                        (new AuditLogRepository($db))->record((int) $user['id'], 'cms.update', 'release', null,
+                        (new AuditLogRepository($db, $core->sites()->adminId()))->record((int) $user['id'], 'cms.update', 'release', null,
                             ['from' => $current['version'], 'to' => $offer['version'], 'backup' => basename($backup)], null);
                     } catch (Throwable $exception) {
                         error_log('CMS update post-install: ' . $exception->getMessage());

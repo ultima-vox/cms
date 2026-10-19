@@ -8,7 +8,7 @@ use PDO;
 
 final class AuditLogRepository
 {
-    public function __construct(private readonly PDO $db)
+    public function __construct(private readonly PDO $db, private readonly int $siteId = 1)
     {
     }
 
@@ -23,11 +23,12 @@ final class AuditLogRepository
     ): void {
         $statement = $this->db->prepare(
             <<<'SQL'
-            INSERT INTO audit_log (user_id, action, entity_type, entity_id, context, ip_address)
-            VALUES (:user_id, :action, :entity_type, :entity_id, CAST(:context AS jsonb), CAST(:ip_address AS inet))
+            INSERT INTO audit_log (site_id, user_id, action, entity_type, entity_id, context, ip_address)
+            VALUES (:site_id, :user_id, :action, :entity_type, :entity_id, CAST(:context AS jsonb), CAST(:ip_address AS inet))
             SQL
         );
         $statement->execute([
+            'site_id' => $this->siteId,
             'user_id' => $userId,
             'action' => $action,
             'entity_type' => $entityType,
@@ -61,10 +62,12 @@ final class AuditLogRepository
                 audit_log.created_at
             FROM audit_log
             LEFT JOIN users ON users.id = audit_log.user_id
+            WHERE audit_log.site_id = :site_id
             ORDER BY audit_log.created_at DESC, audit_log.id DESC
             LIMIT :limit
             SQL
         );
+        $statement->bindValue(':site_id', $this->siteId, PDO::PARAM_INT);
         $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
         $statement->execute();
 

@@ -22,6 +22,7 @@ final class DocumentController
         private readonly DocumentAdminService $service,
         private readonly AuditLogRepository $audit,
         private readonly AdminPhpRenderer $view,
+        private readonly \Core\Content\FolderRepository $folders,
     ) {
     }
 
@@ -33,8 +34,11 @@ final class DocumentController
             return $denied;
         }
 
+        try { $browser = $this->folders->browser($request->query['folder'] ?? null, '/admin/documents'); }
+        catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
         return Response::html($this->view->render('admin/documents/index.php', [
-            'documents' => $this->documents->all(),
+            'folder_browser' => $browser,
+            'documents' => $this->folders->filter($this->documents->all(), $browser),
             'created' => isset($request->query['created']),
         ]));
     }
@@ -42,12 +46,14 @@ final class DocumentController
     /** @param array<string, string> $variables */
     public function createForm(Request $request, array $variables = []): Response
     {
-        unset($request, $variables);
+        unset($variables);
         if (($denied = $this->requirePermission()) !== null) {
             return $denied;
         }
 
-        return $this->formResponse(null);
+        try { $folder = $this->folders->browser($request->query['folder'] ?? null, '/admin/documents')['selected']; }
+        catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
+        return $this->formResponse(['folder_id' => $folder]);
     }
 
     /** @param array<string, string> $variables */
@@ -90,6 +96,7 @@ final class DocumentController
                 $data['name'],
                 $data['content'],
                 $data['publish'],
+                $data['folder_id'],
             );
             $this->audit($request, 'document.create', $id, [
                 'code' => $data['code'],
@@ -127,6 +134,7 @@ final class DocumentController
                 $data['name'],
                 $data['content'],
                 $data['publish'],
+                $data['folder_id'],
             );
             $this->audit($request, 'document.version.create', $id, [
                 'code' => $existing['code'],
@@ -172,6 +180,7 @@ final class DocumentController
 
         return Response::html($this->view->render('admin/documents/form.php', [
             'document' => $form,
+            'folder_options' => $this->folders->all(),
             'editable_version' => $editable,
             'versions' => $versions,
             'csrf_token' => Csrf::token(),
@@ -204,6 +213,7 @@ final class DocumentController
             'name' => $name,
             'content' => (string) ($input['content'] ?? ''),
             'publish' => $mode === 'publish',
+            'folder_id' => \Core\Content\FolderRepository::id($input['folder_id'] ?? null),
         ];
     }
 

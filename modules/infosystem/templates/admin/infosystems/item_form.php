@@ -22,7 +22,7 @@ echo $view->render('admin/_header.php', [
     <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
 
     <form class="admin-form" method="post" action="<?= text($itemId ? '/admin/infosystems/' . $infosystemId . '/items/' . $itemId : '/admin/infosystems/' . $infosystemId . '/items') ?>">
-        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
         <section class="admin-panel"><h2 class="admin-panel__title">Основное</h2><div class="admin-form__grid">
             <label class="admin-field admin-field--wide"><span class="admin-field__label">Название</span><input class="admin-input" name="name" required maxlength="255" value="<?= text($item['name'] ?? '') ?>"></label>
             <label class="admin-field"><span class="admin-field__label">Группа</span><select class="admin-select" name="group_id"><option value="">Корень инфосистемы</option><?php foreach ($groups as $group): ?><option value="<?= text($group['id'] ?? '') ?>"<?= (int) ($item['group_id'] ?? 0) === (int) ($group['id'] ?? 0) ? ' selected' : '' ?>><?= text($group['path'] ?? '') ?> — <?= text($group['name'] ?? '') ?></option><?php endforeach; ?></select></label>
@@ -60,6 +60,6 @@ echo $view->render('admin/_header.php', [
         <div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?>">Отмена</a></div>
     </form>
 
-    <?php if ($itemId): ?><section class="admin-danger-zone"><div><strong>Удаление элемента</strong><p>Действие необратимо.</p></div><form method="post" action="/admin/infosystems/<?= text($infosystemId) ?>/items/<?= text($itemId) ?>/delete" onsubmit="return confirm('Удалить элемент?');"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><button class="admin-button admin-button--danger" type="submit">Удалить</button></form></section><?php endif; ?>
+    <?php if ($itemId): ?><section class="admin-danger-zone"><div><strong>Удаление элемента</strong><p>Действие необратимо.</p></div><form method="post" action="/admin/infosystems/<?= text($infosystemId) ?>/items/<?= text($itemId) ?>/delete" data-confirm="Удалить элемент?"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><button class="admin-button admin-button--danger" type="submit">Удалить</button></form></section><?php endif; ?>
 </div>
 <?= $view->render('admin/_footer.php', ['admin_active' => $adminActive]) ?>

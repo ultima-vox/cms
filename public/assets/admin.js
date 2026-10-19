@@ -1,6 +1,32 @@
 (() => {
     'use strict';
 
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
+            event.preventDefault();
+            return;
+        }
+        if (form.hasAttribute('data-submit-pending')) {
+            if (form.dataset.pending === 'true') { event.preventDefault(); return; }
+            form.dataset.pending = 'true';
+            form.setAttribute('aria-busy', 'true');
+            form.querySelectorAll('button[type="submit"]').forEach(button => { if (!button.disabled) { button.disabled = true; button.dataset.pendingDisabled = 'true'; } });
+            const status = form.querySelector('[role="status"]');
+            if (status) status.textContent = form.dataset.submitPending;
+        }
+    });
+    window.addEventListener('pageshow', () => {
+        document.querySelectorAll('form[data-submit-pending]').forEach(form => {
+            delete form.dataset.pending;
+            form.removeAttribute('aria-busy');
+            form.querySelectorAll('[data-pending-disabled]').forEach(button => { button.disabled = false; delete button.dataset.pendingDisabled; });
+            const status = form.querySelector('[role="status"]');
+            if (status) status.textContent = '';
+        });
+    });
+
     const shell = document.body;
     const collapseButton = document.querySelector('[data-admin-collapse]');
     const collapseKey = 'uv-admin-sidebar-collapsed';

@@ -16,11 +16,12 @@ echo $view->render('admin/_header.php', [
             <h1 class="admin-header__title">Макеты</h1>
             <p class="admin-page-header__description">Обычные HTML/PHP-макеты без XML/XSLT и отдельного шаблонного языка публичного сайта.</p>
         </div>
-        <a class="admin-button admin-button--primary" href="/admin/layouts/create">Новый макет</a>
+        <a class="admin-button admin-button--primary" href="/admin/layouts/create?folder=<?= text($folder_browser['selected'] ?? '') ?>">Новый макет</a>
     </header>
 
     <?php if (!empty($deleted)): ?><div class="admin-notice admin-notice--success">Макет удалён.</div><?php endif; ?>
 
+    <?= $view->render('admin/folders/browser.php', ['browser' => $folder_browser]) ?>
     <section class="admin-panel admin-panel--flush">
         <?php if ($layouts === []): ?>
             <div class="admin-empty"><h2 class="admin-panel__title">Макетов пока нет</h2><p>Создайте первый HTML/PHP-макет для страниц сайта.</p></div>

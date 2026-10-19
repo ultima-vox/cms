@@ -13,9 +13,9 @@ final class LayoutTemplateService
     private string $runtimeLayoutsPath;
     private string $packagedLayoutsPath;
 
-    public function __construct(private readonly string $rootPath)
+    public function __construct(private readonly string $rootPath, private readonly int $siteId = 1, private readonly bool $legacyOverrides = true)
     {
-        $this->runtimeLayoutsPath = $rootPath . '/storage/templates/layouts';
+        $this->runtimeLayoutsPath = $rootPath . '/storage/templates/sites/' . $siteId . '/layouts';
         $this->packagedLayoutsPath = $rootPath . '/templates/layouts';
     }
 
@@ -55,7 +55,8 @@ final class LayoutTemplateService
     {
         $runtimeFile = $this->runtimeFile($templatePath);
         $packagedFile = $this->packagedFile($templatePath);
-        $file = is_file($runtimeFile) ? $runtimeFile : $packagedFile;
+        $legacyFile = $this->rootPath . '/storage/templates/' . $templatePath;
+        $file = is_file($runtimeFile) ? $runtimeFile : ($this->legacyOverrides && !is_file($runtimeFile . '.packaged') && is_file($legacyFile) ? $legacyFile : $packagedFile);
         $content = @file_get_contents($file);
 
         if ($content === false) {
@@ -67,7 +68,7 @@ final class LayoutTemplateService
 
     public function hasOverride(string $templatePath): bool
     {
-        return is_file($this->runtimeFile($templatePath));
+        return is_file($this->runtimeFile($templatePath)) || ($this->legacyOverrides && !is_file($this->runtimeFile($templatePath) . '.packaged') && is_file($this->rootPath . '/storage/templates/' . $templatePath));
     }
 
     public function create(string $templatePath, string $source): void
@@ -81,6 +82,7 @@ final class LayoutTemplateService
 
         $this->validate($source, $templatePath);
         $this->writeAtomically($runtimeFile, $source);
+        if (is_file($runtimeFile . '.packaged')) unlink($runtimeFile . '.packaged');
         $this->refreshRuntimeCache($runtimeFile);
     }
 
@@ -88,12 +90,13 @@ final class LayoutTemplateService
     {
         $runtimeFile = $this->runtimeFile($templatePath);
 
-        if (!is_file($runtimeFile) && !is_file($this->packagedFile($templatePath))) {
+        if (!is_file($runtimeFile) && !($this->legacyOverrides && is_file($this->rootPath . '/storage/templates/' . $templatePath)) && !is_file($this->packagedFile($templatePath))) {
             throw new RuntimeException('Файл макета не найден.');
         }
 
         $this->validate($source, $templatePath);
         $this->writeAtomically($runtimeFile, $source);
+        if (is_file($runtimeFile . '.packaged')) unlink($runtimeFile . '.packaged');
         $this->refreshRuntimeCache($runtimeFile);
     }
 
@@ -109,6 +112,7 @@ final class LayoutTemplateService
             throw new RuntimeException('Не удалось удалить runtime-override макета.');
         }
 
+        $this->writeAtomically($runtimeFile . '.packaged', '1');
         $this->refreshRuntimeCache($runtimeFile);
     }
 
@@ -127,7 +131,7 @@ final class LayoutTemplateService
     {
         $this->assertTemplatePath($templatePath);
 
-        return $this->rootPath . '/storage/templates/' . $templatePath;
+        return $this->rootPath . '/storage/templates/sites/' . $this->siteId . '/' . $templatePath;
     }
 
     private function packagedFile(string $templatePath): string
@@ -153,7 +157,7 @@ final class LayoutTemplateService
         }
 
         if (!is_writable($this->runtimeLayoutsPath)) {
-            throw new RuntimeException('Каталог storage/templates/layouts недоступен для записи PHP-FPM.');
+            throw new RuntimeException('Каталог макетов этого сайта недоступен для записи PHP-FPM.');
         }
 
         $temporary = tempnam($this->runtimeLayoutsPath, '.uv-layout-');

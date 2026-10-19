@@ -34,7 +34,8 @@ echo $view->render('admin/_header.php', [
     <?php endif; ?>
 
     <form class="admin-form" method="post" action="<?= text($isCreate ? '/admin/documents' : '/admin/documents/' . $documentId) ?>">
-        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
+        <?= $view->render('admin/folders/select.php', ['options' => $folder_options, 'selected' => $document['folder_id'] ?? null]) ?>
 
         <section class="admin-panel">
             <h2 class="admin-panel__title">Документ</h2>
