@@ -11,17 +11,17 @@ if len(sys.argv) != 4:
 
 root = Path(__file__).resolve().parent.parent
 tracked = subprocess.check_output(
-    ["git", "ls-files", "--", "sites/mechaniki"], cwd=root, text=True
+    ["git", "ls-files", "--", "modules/mechaniki/site"], cwd=root, text=True
 ).splitlines()
 assert len(tracked) == 65, f"Unexpected site package inventory: {len(tracked)}"
 assert all(Path(name).suffix in {".php", ".html", ".json", ".md"} for name in tracked)
 for file in tracked:
     assert (root / file).is_file(), f"Missing source file: {file}"
 for key in [
-    "sites/mechaniki/activate.php",
-    "sites/mechaniki/activate-infosystems.php",
-    "sites/mechaniki/infosystems/services.json",
-    "sites/mechaniki/infosystems/prices.json",
+    "modules/mechaniki/site/activate.php",
+    "modules/mechaniki/site/activate-infosystems.php",
+    "modules/mechaniki/site/infosystems/services.json",
+    "modules/mechaniki/site/infosystems/prices.json",
 ]:
     assert key in tracked, f"Required resource missing: {key}"
 
@@ -34,7 +34,7 @@ for archive_name, prefix, manifest_path in [
         names = set(archive.namelist())
         manifest = json.loads(archive.read(manifest_path))
         packaged = set(manifest["files"])
-        assert all(not item.startswith("sites/") for item in packaged - set(tracked)), (
+        assert all(not item.startswith("sites/") for item in packaged), (
             "Unexpected site files bundled"
         )
         assert set(tracked) <= packaged, "Site package omitted from managed file manifest"
