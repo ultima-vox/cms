@@ -18,6 +18,8 @@ final class SiteMedia
             return $html;
         }
 
+        $release = json_decode((string) @file_get_contents($rootPath . '/release.json'), true);
+        $layout = $release['layout'] ?? null;
         $replace = [];
         foreach ($data['assets'] as $asset) {
             if (!is_array($asset)
@@ -33,13 +35,25 @@ final class SiteMedia
                 continue;
             }
 
-            $release = json_decode((string) @file_get_contents($rootPath . '/release.json'), true);
-            if (($release['layout'] ?? null) === 'webroot'
+            if ($layout === 'webroot'
                 && !is_file(dirname($rootPath) . $asset['target'])) {
                 continue;
             }
 
             $replace[$asset['source_url']] = $asset['target'];
+        }
+
+        // The old static export references diagnostic.jpeg on many pages,
+        // but that binary was not included in the signed release.
+        // Use an explicit local fallback until the original can be imported.
+        $diagnostic = '/assets/mechaniki/diagnostic.jpeg';
+        $fallback = '/assets/mechaniki/workshop.webp';
+        $hasDiagnostic = is_file($rootPath . '/public' . $diagnostic)
+            && ($layout !== 'webroot' || is_file(dirname($rootPath) . $diagnostic));
+        if (!$hasDiagnostic
+            && is_file($rootPath . '/public' . $fallback)
+            && ($layout !== 'webroot' || is_file(dirname($rootPath) . $fallback))) {
+            $replace[$diagnostic] = $fallback;
         }
 
         return $replace === [] ? $html : strtr($html, $replace);
