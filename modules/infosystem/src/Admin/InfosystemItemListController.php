@@ -19,6 +19,7 @@ final class InfosystemItemListController
         private readonly InfosystemManagementRepository $infosystems,
         private readonly InfosystemItemSearchRepository $search,
         private readonly AdminPhpRenderer $view,
+        private readonly \Core\Page\PageEditorNavigation $pageNavigation,
     ) {
     }
 
@@ -70,6 +71,7 @@ final class InfosystemItemListController
 
         return Response::html($this->view->render('admin/infosystems/manage.php', [
             'infosystem' => $system,
+            'page_return' => $this->pageNavigation->returnContext($request->query, '/admin/infosystems/' . $infosystemId),
             'groups' => $children,
             'selected_group' => $selected,
             'selected_group_id' => $groupId,

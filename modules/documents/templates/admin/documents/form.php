@@ -22,6 +22,7 @@ echo $view->render('admin/_header.php', [
             <?php endif; ?>
         </div>
         <a class="admin-button admin-button--secondary" href="<?= text($return_url) ?>">К документам</a>
+        <?php if ($page_return !== null): ?><a class="admin-button" href="<?= text($page_return['url']) ?>">К странице</a><?php endif; ?>
     </header>
 
     <?php if (!empty($error)): ?>
@@ -36,6 +37,7 @@ echo $view->render('admin/_header.php', [
 
     <form class="admin-form" method="post" action="<?= text($isCreate ? '/admin/documents' : '/admin/documents/' . $documentId) ?>">
         <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
+        <?php foreach ($page_return['parameters'] ?? [] as $key => $value): ?><input type="hidden" name="<?= text($key) ?>" value="<?= text($value) ?>"><?php endforeach; ?>
         <?php if ($return_parameters !== []): ?>
             <input type="hidden" name="_list_site" value="<?= text($return_parameters['_list_site']) ?>">
             <?php foreach ($return_parameters['_list'] as $key => $value): ?>
@@ -83,7 +85,7 @@ echo $view->render('admin/_header.php', [
         <div class="admin-actions">
             <button class="admin-button admin-button--secondary" type="submit" name="save_mode" value="draft">Сохранить черновик</button>
             <button class="admin-button admin-button--primary" type="submit" name="save_mode" value="publish">Опубликовать новую версию</button>
-            <a class="admin-button admin-button--secondary" href="<?= text($return_url) ?>">Отмена</a>
+            <a class="admin-button admin-button--secondary" href="<?= text($page_return['url'] ?? $return_url) ?>">Отмена</a>
         </div>
     </form>
 

@@ -10,6 +10,7 @@ use Core\Page\PageExecutionStageProviderInterface;
 use Core\Page\PageExecutorInterface;
 use Core\Page\PageTypeDefinition;
 use Core\Page\PageTypeProvisioningContext;
+use Core\Security\AuthService;
 use LogicException;
 use RuntimeException;
 
@@ -75,6 +76,22 @@ final class PagesApi
     public function resolve(string $code): PageExecutorInterface
     {
         return $this->definition($code)->executor;
+    }
+
+    /** Optional owner capability; a missing owner/resource never breaks Core settings.
+     * @param array<string, mixed> $node
+     */
+    public function editorUrl(array $node, AuthService $auth): ?string
+    {
+        if (!$auth->can('structure.manage') || !$this->has((string) ($node['page_type'] ?? ''))) {
+            return null;
+        }
+        try {
+            $url = $this->definition((string) $node['page_type'])->editorLinkProvider?->editorUrl($node, $auth);
+        } catch (\RuntimeException | \JsonException) {
+            return null;
+        }
+        return is_string($url) && preg_match('~^/admin/[a-z0-9/_-]+$~iD', $url) ? $url : null;
     }
 
     /** @return list<PageTypeDefinition> */

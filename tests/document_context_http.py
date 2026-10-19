@@ -17,7 +17,7 @@ class DocumentPage(HTMLParser):
             self.anchor = [attrs.get('href', ''), '']
         if tag == 'input' and attrs.get('type') == 'hidden':
             name = attrs.get('name', '')
-            if name in ('_csrf', '_site_id', '_list_site') or name.startswith('_list['):
+            if name in ('_csrf', '_site_id', '_list_site', '_page', '_page_site') or name.startswith('_list['):
                 self.hidden[name] = attrs.get('value', '')
 
     def handle_data(self, value):

@@ -337,3 +337,8 @@ from infosystem_property_http import verify_infosystem_properties
 property_edit = verify_infosystem_properties(lambda path, data=None, expected=200: request(client, path, data, expected=expected))
 with open("/tmp/cms-property-browser.json", "w") as handle:
     json.dump({"edit": property_edit}, handle)
+
+from page_editor_handoff_http import verify_page_editor_handoff
+handoff = verify_page_editor_handoff(lambda path, data=None, expected=200: request(client, path, data, expected=expected), query)
+with open("/tmp/cms-page-editor-browser.json", "w") as handle:
+    json.dump(handoff, handle)

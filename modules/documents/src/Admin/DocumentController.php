@@ -24,6 +24,7 @@ final class DocumentController
         private readonly AdminPhpRenderer $view,
         private readonly \Core\Content\FolderRepository $folders,
         private readonly int $siteId,
+        private readonly \Core\Page\PageEditorNavigation $pageNavigation,
     ) {
     }
 
@@ -81,6 +82,7 @@ final class DocumentController
             isset($request->query['saved']),
             isset($request->query['published']),
             $this->returnContext($request->query),
+            $this->pageNavigation->returnContext($request->query, '/admin/documents/' . $id . '/edit'),
         );
     }
 
@@ -135,6 +137,7 @@ final class DocumentController
         }
 
         $returnContext = $this->returnContext($request->post);
+        $pageReturn = $this->pageNavigation->returnContext($request->post, '/admin/documents/' . $id . '/edit');
         try {
             $data = $this->formData($request->post, false);
             $versionId = $this->service->save(
@@ -151,7 +154,7 @@ final class DocumentController
             ]);
 
             return Response::redirect(
-                $this->savedUrl($id, $data['publish'], $returnContext),
+                $this->savedUrl($id, $data['publish'], $returnContext, $pageReturn),
             );
         } catch (Throwable $exception) {
             return $this->formResponse(
@@ -159,6 +162,7 @@ final class DocumentController
                 $exception->getMessage(),
                 422,
                 returnContext: $returnContext,
+                pageReturn: $pageReturn,
             );
         }
     }
@@ -171,6 +175,7 @@ final class DocumentController
         bool $saved = false,
         bool $published = false,
         ?DocumentListQuery $returnContext = null,
+        ?array $pageReturn = null,
     ): Response {
         $documentId = isset($document['id']) && is_numeric($document['id'])
             ? (int) $document['id']
@@ -199,6 +204,7 @@ final class DocumentController
             'published' => $published,
             'return_url' => $returnContext?->url($returnContext->page) ?? '/admin/documents',
             'return_parameters' => $returnContext?->returnParameters($this->siteId, $returnContext->page) ?? [],
+            'page_return' => $pageReturn,
         ]), $status);
     }
 
@@ -221,9 +227,12 @@ final class DocumentController
         return DocumentListQuery::fromQuery($query, $folder, $all);
     }
 
-    private function savedUrl(int $id, bool $published, ?DocumentListQuery $context): string
+    private function savedUrl(int $id, bool $published, ?DocumentListQuery $context, ?array $pageReturn = null): string
     {
         $url = '/admin/documents/' . $id . '/edit?' . ($published ? 'published=1' : 'saved=1');
+        if ($pageReturn !== null) {
+            $url .= '&' . http_build_query($pageReturn['parameters'], '', '&', PHP_QUERY_RFC3986);
+        }
         return $context === null ? $url : $url . '&' . http_build_query(
             $context->returnParameters($this->siteId, $context->page), '', '&', PHP_QUERY_RFC3986,
         );

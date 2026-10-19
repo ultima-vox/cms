@@ -31,6 +31,18 @@ echo $view->render('admin/_header.php', [
 
     <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
 
+    <?php if ($nodeId): ?>
+        <section class="admin-panel" aria-label="Содержимое страницы">
+            <h2 class="admin-panel__title">Содержимое страницы</h2>
+            <?php if (!empty($content_editor_url)): ?>
+                <a class="admin-button admin-button--primary" href="<?= text($content_editor_url) ?>">Редактировать содержимое</a>
+                <p class="admin-field__hint">Параметры страницы и публикация настраиваются здесь. Материал редактируется в его модуле.</p>
+            <?php else: ?>
+                <p>Редактор содержимого недоступен: проверьте модуль, материал и права доступа.</p>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
+
     <form class="admin-form" method="post" action="<?= text($nodeId ? '/admin/structure/' . $nodeId : '/admin/structure') ?>">
         <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
         <section class="admin-panel"><h2 class="admin-panel__title">Основное</h2><div class="admin-form__grid">

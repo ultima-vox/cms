@@ -18,6 +18,7 @@ echo $view->render('admin/_header.php', [
 ]);
 ?>
 <div class="admin-dashboard">
+    <?php if ($page_return !== null): ?><a class="admin-button" href="<?= text($page_return['url']) ?>">К странице</a><?php endif; ?>
     <header class="admin-page-header">
         <div>
             <p class="admin-eyebrow"><?= text((string) ($infosystem['code'] ?? '')) ?> · Информационная система</p>

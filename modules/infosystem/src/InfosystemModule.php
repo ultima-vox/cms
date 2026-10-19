@@ -138,6 +138,7 @@ final class InfosystemModule implements ModuleInterface
             $core->sites(),
         ))->create([dirname(__DIR__) . '/templates']);
         $management = new InfosystemManagementRepository($db, $siteId);
+        $pageNavigation = new \Core\Page\PageEditorNavigation($core->pages(), new StructureRepository($db, $siteId), $auth, $siteId);
         $controller = new InfosystemController(
             $auth,
             $management,
@@ -149,12 +150,14 @@ final class InfosystemModule implements ModuleInterface
                 $core->runtime()->rootPath(),
                 new \Core\Repository\LayoutRepository($db, $siteId),
             ),
+            $pageNavigation,
         );
         $listController = new InfosystemItemListController(
             $auth,
             $management,
             new InfosystemItemSearchRepository($db),
             $adminView,
+            $pageNavigation,
         );
         $bindingController = new InfosystemBindingController(
             $auth,

@@ -69,3 +69,16 @@ verify_document_return_context(request, 1, folder_id)
 
 from infosystem_property_http import verify_infosystem_properties
 verify_infosystem_properties(request)
+
+from page_editor_handoff_http import verify_page_editor_handoff
+import shutil
+import subprocess
+
+def handoff_fixture_query(sql):
+    env = os.environ.copy()
+    env['MYSQL_PWD'] = 'cms'
+    return subprocess.check_output([shutil.which('mariadb') or shutil.which('mysql'),
+        '-h127.0.0.1', '-P' + os.environ.get('DB_PORT', '3306'), '-ucms',
+        '--batch', '--skip-column-names', 'cms_legacy_http', '-e', sql], env=env, text=True).strip()
+
+verify_page_editor_handoff(request, handoff_fixture_query)
