@@ -36,3 +36,23 @@ The build produces `public/assets/cms-editors.js`, to be deployed as a locally h
 - Never infer rich-text consent from field name alone.
 - CodeMirror only changes client editing experience and must not bypass server-side permissions, sanitization or audit.
 - The existing custom editor will be removed only after safe migration and browser tests.
+
+## Progress (19 October 2026)
+
+- CodeMirror is opt-in in Documents source and Layouts source forms through `data-cms-editor="code"`.
+- HTML/PHP form templates only emit the bundled editor asset and editor stylesheet if `public/assets/cms-editors.js` exists on disk; without the build, the existing editor and formatter remain active.
+- New source edits update the original textarea and dispatch input events; source input, reset, and the no-save format action synchronize back to CodeMirror.
+- `Shift+Alt+F` invokes the existing conservative source formatter. It is **not** a full-featured language formatter.
+- The TipTap adapter remains disabled in live forms pending explicit content compatibility tests.
+- Added `tests/editor_integration_smoke.cjs` static checks.
+
+Run after installing dependencies:
+```bash
+npm install
+npm run check:editors
+node tests/editor_integration_smoke.cjs
+node tests/code_formatter_smoke.cjs
+npm run build:editors
+```
+
+**Do not commit the generated bundle without producing a lockfile and running browser tests.** This environment did not have npm registry access, so package installation/build and browser acceptance remain unverified.
