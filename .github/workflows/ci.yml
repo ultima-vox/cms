@@ -346,6 +346,11 @@ jobs:
       - name: Site resolution and isolation smoke test
         run: php tests/site_resolution_smoke.php
 
+      - name: Mechaniki root-site integration smoke
+        run: |
+          php -l sites/mechaniki/activate.php
+          php tests/mechaniki_stage_smoke.php
+
       - name: Static page generation integration test
         run: |
           php tests/static_page_generation_smoke.php
