@@ -24,6 +24,7 @@ final class InfosystemController
         private readonly AuditLogRepository $audit,
         private readonly AdminPhpRenderer $view,
         private readonly \Core\Content\FolderRepository $folders,
+        private readonly SiteStylesheetResolver $siteStyles,
     ) {
     }
 
@@ -466,6 +467,7 @@ final class InfosystemController
             'csrf_token' => Csrf::token(),
             'error' => $error,
             'saved' => $saved,
+            'editor_styles' => $this->siteStyles->resolve(),
         ]), $status);
     }
 
