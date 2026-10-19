@@ -23,6 +23,11 @@ echo $view->render('admin/_header.php', [
 
     <form class="admin-form" method="post" action="<?= text($itemId ? '/admin/infosystems/' . $infosystemId . '/items/' . $itemId : '/admin/infosystems/' . $infosystemId . '/items') ?>">
         <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
+        <?php if ($itemId): ?>
+            <?php foreach (['content', 'description'] as $originalField): ?>
+                <input type="hidden" name="_original_<?= text($originalField) ?>_hash" value="<?= text(hash('sha256', (string) ($item[$originalField] ?? ''))) ?>">
+            <?php endforeach; ?>
+        <?php endif; ?>
         <nav class="is-form-tabs" data-is-tabs aria-label="Разделы редактора">
             <button type="button" data-tab="main" aria-controls="is-tab-main">Основные</button>
             <button type="button" data-tab="description" aria-controls="is-tab-description">Описание</button>
