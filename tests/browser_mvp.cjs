@@ -22,6 +22,10 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
             }
         }
         await page.goto(base + '/admin/documents?folder=all');
+        assert.equal(await page.locator('.admin-folder-create').getAttribute('open'), null);
+        await page.locator('.admin-folder-create summary').click();
+        assert.equal(await page.locator('.admin-folder-create input[name=name]').isVisible(), true);
+        await page.locator('.admin-folder-create summary').click();
         await page.getByLabel('Название или код').fill('Browser list');
         await page.getByLabel('Публикация', {exact: true}).selectOption('unpublished');
         await page.getByLabel('Сортировка', {exact: true}).selectOption('code');
