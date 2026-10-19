@@ -9,7 +9,7 @@ $title = $layoutId ? 'Редактирование макета' : 'Новый �
 echo $view->render('admin/_header.php', [
     'admin_active' => $adminActive,
     'admin_title' => $title,
-    'admin_styles' => ['/assets/layouts.css', '/assets/code-formatter.css'],
+    'admin_styles' => ['/assets/layouts.css', '/assets/code-formatter.css', ...(is_file(dirname(__DIR__, 2) . '/public/assets/cms-editors.js') ? ['/assets/cms-editors.css'] : [])],
 ]);
 ?>
 <div class="admin-dashboard">
@@ -45,7 +45,7 @@ echo $view->render('admin/_header.php', [
                 </div>
                 <?php if (!empty($layout['is_system'])): ?><span class="admin-badge"><?= !empty($layout['has_override']) ? 'runtime override' : 'штатная версия' ?></span><?php endif; ?>
             </div>
-            <textarea class="admin-textarea layout-editor" name="source" spellcheck="false" required data-code-format data-code-language="php"><?= text($layout['source'] ?? '') ?></textarea>
+            <textarea class="admin-textarea layout-editor" name="source" spellcheck="false" required data-code-format data-code-language="php" data-cms-editor="code"><?= text($layout['source'] ?? '') ?></textarea>
             <p class="admin-field__hint">Синтаксис проверяется до записи. Изменения сохраняются в <code>storage/templates/layouts</code>; поставка CMS остаётся read-only.</p>
         </section>
 
@@ -68,4 +68,4 @@ echo $view->render('admin/_header.php', [
         </form>
     <?php endif; ?>
 </div>
-<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive, 'admin_scripts' => ['/assets/code-formatter.js']]) ?>
+<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive, 'admin_scripts' => ['/assets/code-formatter.js', ...(is_file(dirname(__DIR__, 2) . '/public/assets/cms-editors.js') ? ['/assets/cms-editors.js'] : [])]]) ?>
