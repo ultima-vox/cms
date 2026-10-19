@@ -27,12 +27,19 @@ final class ModuleManager
     {
         $manifests = $this->loader->discover();
         $modules = $this->state->sync($manifests);
+        // The updating request still holds the previous PHP classes and Composer class map.
+        // Reconcile providers and permissions only in a fresh worker after code replacement.
+        if (is_file($this->rootPath . '/storage/updates/maintenance.json')) {
+            $this->db->exec('INSERT INTO extension_sync_jobs(singleton) VALUES(TRUE) ON CONFLICT(singleton) DO UPDATE SET requested_at = CURRENT_TIMESTAMP');
+            return ['modules' => $modules, 'loaded' => 0, 'permissions' => 0];
+        }
 
         $core = new Core(new RuntimeApi($this->db, $this->rootPath));
         (new BuiltinExtensions())->register($core);
         $loaded = $this->loader->load($core);
         $core->freeze();
         $permissions = (new PermissionSynchronizer($this->db))->sync($core->permissions());
+        $this->db->exec("DELETE FROM role_permissions rp USING roles r, permissions p WHERE rp.role_id = r.id AND rp.permission_id = p.id AND p.global_only = TRUE AND r.code <> 'superadmin'");
 
         return [
             'modules' => $modules,

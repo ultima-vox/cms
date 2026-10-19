@@ -12,7 +12,7 @@ $available = $current !== null && $offer !== null && version_compare($offer['ver
     <section class="admin-panel">
         <h2 class="admin-panel__title">Установлена версия <?= text($current['version'] ?? 'не определена') ?></h2>
         <p>Источник: проверенные CI-релизы репозитория ultima-vox/cms. Автоматической установки нет.</p>
-        <form method="post" action="/admin/updates/check"><input type="hidden" name="_csrf" value="<?= text($admin_shell->csrfToken()) ?>"><button class="admin-button" type="submit">Проверить обновления</button></form>
+        <form method="post" action="/admin/updates/check"><input type="hidden" name="_csrf" value="<?= text($admin_shell->csrfToken()) ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><button class="admin-button" type="submit">Проверить обновления</button></form>
     </section>
     <?php if ($offer !== null): ?>
         <section class="admin-panel" style="margin-top:18px">
@@ -21,7 +21,7 @@ $available = $current !== null && $offer !== null && version_compare($offer['ver
             <?php if ($available && $canApply): ?>
                 <p>Будут заменены файлы поставки CMS. Конфигурация, пользовательские файлы и данные сохраняются. Миграции ядра и включённых модулей выполняются автоматически. Локальные изменения кода блокируют установку.</p>
                 <p>Требуются PHP zip, исходящий HTTPS, свободное место для архива и копии файлов, а также запись PHP в каталоги кода. Для нескольких серверов используйте централизованный деплой.</p>
-                <form method="post" action="/admin/updates/apply" data-update-form><input type="hidden" name="_csrf" value="<?= text($admin_shell->csrfToken()) ?>"><input type="hidden" name="version" value="<?= text($offer['version']) ?>"><input type="hidden" name="checksum" value="<?= text($offer['sha256']) ?>"><button class="admin-button admin-button--primary" type="submit">Обновить до <?= text($offer['version']) ?></button><span role="status" aria-live="polite"></span></form>
+                <form method="post" action="/admin/updates/apply" data-update-form data-submit-pending="Обновление выполняется. Не закрывайте страницу."><input type="hidden" name="_csrf" value="<?= text($admin_shell->csrfToken()) ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><input type="hidden" name="version" value="<?= text($offer['version']) ?>"><input type="hidden" name="checksum" value="<?= text($offer['sha256']) ?>"><button class="admin-button admin-button--primary" type="submit">Обновить до <?= text($offer['version']) ?></button><span role="status" aria-live="polite"></span></form>
             <?php endif; ?>
         </section>
     <?php endif; ?>
@@ -42,10 +42,4 @@ $available = $current !== null && $offer !== null && version_compare($offer['ver
         <?php endforeach; ?>
     </section>
 </div>
-<script>
-    document.querySelector('[data-update-form]')?.addEventListener('submit', event => {
-        event.currentTarget.querySelector('button').disabled = true;
-        event.currentTarget.querySelector('[role="status"]').textContent = 'Обновление выполняется. Не закрывайте страницу.';
-    });
-</script>
 <?= $view->render('admin/_footer.php') ?>

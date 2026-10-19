@@ -11,7 +11,7 @@ echo $view->render('admin/_header.php', [
 <div class="admin-dashboard">
     <header class="admin-page-header">
         <div><p class="admin-eyebrow">Sites</p><h1 class="admin-header__title">Сайты</h1><p class="admin-page-header__description">Текущий контекст: <strong><?= text($admin_site->name) ?></strong>. Домены определяют публичный SiteContext.</p></div>
-        <a class="admin-button admin-button--primary" href="/admin/sites/create">Новый сайт</a>
+        <?php if (!empty($can_create)): ?><a class="admin-button admin-button--primary" href="/admin/sites/create">Новый сайт</a><?php endif; ?>
     </header>
 
     <?php if (!empty($saved)): ?><div class="admin-notice admin-notice--success">Изменения сохранены.</div><?php endif; ?>
@@ -34,7 +34,7 @@ echo $view->render('admin/_header.php', [
                     <td><div class="admin-actions">
                         <a class="admin-button admin-button--secondary" href="/admin/sites/<?= text($site['id'] ?? '') ?>/edit">Настроить</a>
                         <?php if (!empty($site['is_active']) && (int) ($site['id'] ?? 0) !== $admin_site->id): ?>
-                            <form action="/admin/sites/select" method="post"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="site_id" value="<?= text($site['id'] ?? '') ?>"><button class="admin-button admin-button--secondary" type="submit">Выбрать</button></form>
+                            <form action="/admin/sites/select" method="post"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><input type="hidden" name="site_id" value="<?= text($site['id'] ?? '') ?>"><button class="admin-button admin-button--secondary" type="submit">Выбрать</button></form>
                         <?php endif; ?>
                     </div></td>
                 </tr>

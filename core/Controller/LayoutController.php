@@ -23,6 +23,7 @@ final class LayoutController
         private readonly LayoutTemplateService $templates,
         private readonly AuditLogRepository $audit,
         private readonly AdminPhpRenderer $view,
+        private readonly \Core\Content\FolderRepository $folders,
     ) {
     }
 
@@ -35,8 +36,11 @@ final class LayoutController
             return $denied;
         }
 
+        try { $browser = $this->folders->browser($request->query['folder'] ?? null, '/admin/layouts'); }
+        catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
         return Response::html($this->view->render('admin/layouts/index.php', [
-            'layouts' => $this->layouts->all(),
+            'folder_browser' => $browser,
+            'layouts' => $this->folders->filter($this->layouts->all(), $browser),
             'deleted' => isset($request->query['deleted']),
         ]));
     }
@@ -44,14 +48,17 @@ final class LayoutController
     /** @param array<string, string> $variables */
     public function createForm(Request $request, array $variables = []): Response
     {
-        unset($request, $variables);
+        unset($variables);
 
         if (($denied = $this->requirePermission()) !== null) {
             return $denied;
         }
 
+        try { $selected = $this->folders->browser($request->query['folder'] ?? null, '/admin/layouts')['selected']; }
+        catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
         return $this->formResponse($this->normalizeFormModel([
             'source' => $this->defaultTemplateSource(),
+            'folder_id' => $selected,
         ]));
     }
 
@@ -101,6 +108,7 @@ final class LayoutController
 
         try {
             $name = $this->requiredName($model['name']);
+            $this->folders->assertFolder(\Core\Content\FolderRepository::id($model['folder_id']));
             $templatePath = $this->templates->templatePathForCode((string) $model['code']);
             $source = (string) $model['source'];
 
@@ -115,6 +123,7 @@ final class LayoutController
                     $name,
                     $templatePath,
                     $this->nullableText($model['description']),
+                    \Core\Content\FolderRepository::id($model['folder_id']),
                 );
             } catch (Throwable $exception) {
                 $this->templates->delete($templatePath);
@@ -149,12 +158,17 @@ final class LayoutController
         $model['template_path'] = (string) $layout['template_path'];
 
         try {
+            $name = $this->requiredName($model['name']);
+            $folderId = \Core\Content\FolderRepository::id($model['folder_id']);
+            $this->folders->assertFolder($folderId);
+            $previous = $this->templates->read((string) $layout['template_path']);
             $this->templates->update((string) $layout['template_path'], (string) $model['source']);
-            $this->layouts->update(
-                (int) $layout['id'],
-                $this->requiredName($model['name']),
-                $this->nullableText($model['description']),
-            );
+            try {
+                $this->layouts->update((int) $layout['id'], $name, $this->nullableText($model['description']), $folderId);
+            } catch (Throwable $exception) {
+                $this->templates->update((string) $layout['template_path'], $previous);
+                throw $exception;
+            }
             $this->audit($request, 'layout.update', (int) $layout['id'], [
                 'template_path' => $layout['template_path'],
             ]);
@@ -253,6 +267,7 @@ final class LayoutController
     ): Response {
         return Response::html($this->view->render('admin/layouts/form.php', [
             'layout' => $this->normalizeFormModel($model),
+            'folder_options' => $this->folders->all(),
             'csrf_token' => Csrf::token(),
             'error' => $error,
             'saved' => $saved,
@@ -278,6 +293,7 @@ final class LayoutController
 
         return [
             'id' => isset($input['id']) && is_numeric($input['id']) ? (int) $input['id'] : null,
+            'folder_id' => $input['folder_id'] ?? null,
             'name' => isset($input['name']) ? (string) $input['name'] : '',
             'code' => isset($input['code']) ? (string) $input['code'] : $this->codeFromTemplatePath($templatePath),
             'template_path' => $templatePath,

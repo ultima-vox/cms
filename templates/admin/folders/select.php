@@ -1,0 +1,2 @@
+<?php declare(strict_types=1); ?>
+<label class="admin-field"><span class="admin-field__label">Папка</span><select class="admin-select" name="folder_id"><option value="">Корневая папка</option><?php foreach ($options as $option): ?><option value="<?= text($option['id']) ?>"<?= (int) ($selected ?? 0) === (int) $option['id'] ? ' selected' : '' ?>><?= text($option['label']) ?></option><?php endforeach; ?></select></label>

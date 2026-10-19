@@ -32,7 +32,7 @@ echo $view->render('admin/_header.php', [
     <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
 
     <form class="admin-form" method="post" action="<?= text($nodeId ? '/admin/structure/' . $nodeId : '/admin/structure') ?>">
-        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
         <section class="admin-panel"><h2 class="admin-panel__title">Основное</h2><div class="admin-form__grid">
             <label class="admin-field admin-field--wide"><span class="admin-field__label">Название</span><input class="admin-input" name="name" required maxlength="255" value="<?= text($node['name'] ?? '') ?>"></label>
             <label class="admin-field"><span class="admin-field__label">Родитель</span><select class="admin-select" name="parent_id"<?= $isRoot ? ' disabled' : '' ?>><option value="">Корень</option><?php foreach ($nodes as $candidate): ?><?php if (!$nodeId || (int) ($candidate['id'] ?? 0) !== (int) $nodeId): ?><option value="<?= text($candidate['id'] ?? '') ?>"<?= (int) ($node['parent_id'] ?? 0) === (int) ($candidate['id'] ?? 0) ? ' selected' : '' ?>><?= text($candidate['path'] ?? '') ?> — <?= text($candidate['name'] ?? '') ?></option><?php endif; ?><?php endforeach; ?></select><?php if ($isRoot): ?><input type="hidden" name="parent_id" value=""><?php endif; ?></label>
@@ -61,8 +61,8 @@ echo $view->render('admin/_header.php', [
     </form>
 
     <?php if ($nodeId && $alternativePageTypes !== []): ?>
-        <form class="admin-form" method="post" action="/admin/structure/<?= text($nodeId) ?>/page-type" onsubmit="return confirm('Изменить тип страницы? Прежние документы и привязки сохранятся.');">
-            <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+        <form class="admin-form" method="post" action="/admin/structure/<?= text($nodeId) ?>/page-type" data-confirm="Изменить тип страницы? Прежние документы и привязки сохранятся.">
+            <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
             <input type="hidden" name="current_page_type" value="<?= text($selectedPageType) ?>">
             <section class="admin-panel">
                 <h2 class="admin-panel__title">Смена типа страницы</h2>
@@ -74,7 +74,7 @@ echo $view->render('admin/_header.php', [
     <?php endif; ?>
 
     <?php if ($nodeId && !$isRoot): ?>
-        <form class="admin-danger-zone" method="post" action="/admin/structure/<?= text($nodeId) ?>/delete" onsubmit="return confirm('Удалить узел и всё его поддерево?');"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><div><strong>Удаление узла</strong><p>Дочерние узлы и их привязки будут удалены. Документы и другие ресурсы модулей сохранятся.</p></div><button class="admin-button admin-button--danger" type="submit">Удалить</button></form>
+        <form class="admin-danger-zone" method="post" action="/admin/structure/<?= text($nodeId) ?>/delete" data-confirm="Удалить узел и всё его поддерево?"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><div><strong>Удаление узла</strong><p>Дочерние узлы и их привязки будут удалены. Документы и другие ресурсы модулей сохранятся.</p></div><button class="admin-button admin-button--danger" type="submit">Удалить</button></form>
     <?php endif; ?>
 </div>
 <?= $view->render('admin/_footer.php', ['admin_active' => $adminActive]) ?>

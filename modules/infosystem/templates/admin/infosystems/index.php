@@ -10,8 +10,10 @@ echo $view->render('admin/_header.php', [
 ]);
 ?>
 <div class="admin-dashboard">
-    <header class="admin-page-header"><div><p class="admin-eyebrow">Content storage</p><h1 class="admin-header__title">Инфосистемы</h1><p class="admin-page-header__description">Каталоги, новости, услуги и другие структурированные наборы контента.</p></div><a class="admin-button admin-button--primary" href="/admin/infosystems/create">Новая инфосистема</a></header>
+    <header class="admin-page-header"><div><p class="admin-eyebrow">Content storage</p><h1 class="admin-header__title">Инфосистемы</h1><p class="admin-page-header__description">Каталоги, новости, услуги и другие структурированные наборы контента.</p></div><a class="admin-button admin-button--primary" href="/admin/infosystems/create?folder=<?= text($folder_browser['selected'] ?? '') ?>">Новая инфосистема</a></header>
     <?php if (!empty($deleted)): ?><div class="admin-notice admin-notice--success">Инфосистема удалена.</div><?php endif; ?>
+    <?= $view->render('admin/folders/browser.php', ['browser' => $folder_browser]) ?>
+
     <section class="admin-panel admin-panel--flush">
         <?php if ($infosystems === []): ?>
             <div class="admin-empty"><h2 class="admin-panel__title">Инфосистем пока нет</h2><p>Создайте структурированный набор контента для текущего сайта.</p></div>

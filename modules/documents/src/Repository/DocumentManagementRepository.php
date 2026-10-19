@@ -26,6 +26,7 @@ final readonly class DocumentManagementRepository
             SELECT
                 d.id,
                 d.code,
+                d.folder_id,
                 d.name,
                 d.is_active,
                 d.created_at,
@@ -70,7 +71,7 @@ final readonly class DocumentManagementRepository
 
         $statement = $this->db->prepare(
             <<<'SQL'
-            SELECT id, site_id, code, name, is_active, created_at, updated_at
+            SELECT id, site_id, folder_id, code, name, is_active, created_at, updated_at
             FROM documents
             WHERE id = :id
               AND site_id = :site_id
@@ -149,6 +150,14 @@ final readonly class DocumentManagementRepository
         if ($statement->rowCount() !== 1) {
             throw new RuntimeException('Document was not found for the current site.');
         }
+    }
+
+    public function move(int $id, ?int $folderId): void
+    {
+        (new \Core\Content\FolderRepository($this->db, $this->siteId, 'documents'))->assertFolder($folderId);
+        $q = $this->db->prepare('UPDATE documents SET folder_id = :folder WHERE id = :id AND site_id = :site');
+        $q->execute(['folder' => $folderId, 'id' => $id, 'site' => $this->siteId]);
+        if ($q->rowCount() !== 1) throw new RuntimeException('Document was not found for the current site.');
     }
 
     private function assertOwnedDocument(int $documentId): void

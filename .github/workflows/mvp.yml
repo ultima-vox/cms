@@ -94,9 +94,70 @@ jobs:
           name: mvp-failure-diagnostics-${{ matrix.layout }}
           path: /tmp/cms-mvp-server.log
 
+  upgrade-existing:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cms_upgrade_runtime
+          POSTGRES_USER: cms
+          POSTGRES_PASSWORD: cms
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U cms -d cms_upgrade_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CMS_VERSION: 0.1.${{ github.run_number }}
+      APP_ENV: production
+      APP_DEBUG: 'false'
+      APP_URL: http://127.0.0.1:8087
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: cms_upgrade_runtime
+      DB_USER: cms
+      DB_PASS: cms
+      PGPASSWORD: cms
+      CMS_ADMIN_PASSWORD: disposable-upgrade-test-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, dom, mbstring, zip
+          coverage: none
+      - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
+      - name: Build candidate and prepare the real 0.1.20 baseline
+        run: |
+          python3 tools/package_update.py /tmp/candidate-update.zip
+          curl --fail --location --retry 3 https://github.com/ultima-vox/cms/releases/download/v0.1.20/ultima-vox-cms-mvp-webroot.zip -o /tmp/baseline.zip
+          mkdir /tmp/cms-upgrade
+          unzip -q /tmp/baseline.zip -d /tmp/cms-upgrade
+          php /tmp/cms-upgrade/app/bin/console migrate
+          php /tmp/cms-upgrade/app/bin/console modules:migrate --all
+          php /tmp/cms-upgrade/app/bin/console extensions:sync
+          php tests/prepare_upgrade_runtime.php /tmp/cms-upgrade/app
+      - name: Apply using loaded baseline classes and then boot a fresh worker
+        run: |
+          php tests/update_existing_runtime_smoke.php /tmp/cms-upgrade/app /tmp/candidate-update.zip
+          php -S 127.0.0.1:8087 -t /tmp/cms-upgrade /tmp/cms-upgrade/index.php > /tmp/upgrade-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          for n in $(seq 1 30); do
+            if curl --silent --output /dev/null http://127.0.0.1:8087/; then break; fi
+            sleep 1
+          done
+          python3 tests/update_existing_runtime_http.py
+      - name: Upgrade failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upgrade-failure-diagnostics
+          path: /tmp/upgrade-server.log
+
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: install-and-edit
+    needs: [install-and-edit, upgrade-existing]
     runs-on: ubuntu-latest
     permissions:
       contents: write

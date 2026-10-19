@@ -179,6 +179,7 @@ final readonly class FileUpdater
                 (new MigrationRunner($this->db, $this->root . '/database/migrations'))->migrate();
                 (new ModuleMigrationCoordinator($this->db, $this->root))->migrateEnabled();
                 (new ModuleManager($this->db, $this->root))->sync();
+                $this->db->exec('INSERT INTO extension_sync_jobs(singleton) VALUES(TRUE) ON CONFLICT(singleton) DO UPDATE SET requested_at = CURRENT_TIMESTAMP');
                 $commitAttempted = true;
                 $this->db->commit();
             }

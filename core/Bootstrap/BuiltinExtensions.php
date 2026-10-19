@@ -10,10 +10,11 @@ final readonly class BuiltinExtensions
 {
     public function register(Core $core): void
     {
+        $core->folders()->define('layouts', 'Макеты', '/admin/layouts', 'layouts.manage');
         $core->permissions()->define(
             'templates.code.edit',
             'Edit trusted PHP templates',
-            ['superadmin', 'admin'],
+            ['superadmin'],
         );
         $core->permissions()->define(
             'modules.manage',

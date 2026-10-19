@@ -25,7 +25,20 @@ final readonly class ModuleMigrationCoordinator
         $state = new ModuleStateRepository($this->db);
         $state->sync($manifests);
 
-        $ordered = $this->migrationOrder($loader->enabledInLoadOrder($manifests, $state));
+        $enabled = array_filter($manifests, static fn ($m) => $state->isEnabled($m));
+        $build = json_decode((string) @file_get_contents($this->rootPath . '/release.json'), true);
+        $targetCore = is_string($build['core_version'] ?? null) ? $build['core_version'] : \Core\Version::STRING;
+        $indexed = [];
+        foreach ($manifests as $manifest) $indexed[$manifest->code] = $manifest;
+        foreach ($enabled as $manifest) {
+            if (!VersionConstraint::matches(ExtensionApiVersion::VERSION, $manifest->extensionApi)) throw new RuntimeException('Incompatible Extension API: ' . $manifest->code);
+            foreach ($manifest->requires as $code => $constraint) {
+                $version = $code === 'core' ? $targetCore : ($indexed[$code]->version ?? '');
+                if ($version === '' || !VersionConstraint::matches($version, $constraint)
+                    || ($code !== 'core' && !$state->isEnabled($indexed[$code]))) throw new RuntimeException('Unsatisfied migration dependency: ' . $manifest->code . ' requires ' . $code);
+            }
+        }
+        $ordered = $this->migrationOrder(array_values($enabled));
         $runner = new ModuleMigrationRunner($this->db, $this->rootPath);
         $result = [];
 

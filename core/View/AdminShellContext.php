@@ -65,7 +65,7 @@ final class AdminShellContext
     /** @return list<SiteContext> */
     public function sites(): array
     {
-        return $this->sitesCache ??= $this->sites->active();
+        return $this->sitesCache ??= $this->sites->accessible((int) ($this->user()['id'] ?? 0));
     }
 
     public function csrfToken(): string

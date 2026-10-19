@@ -57,9 +57,10 @@ final readonly class PageRenderer
         $layoutId = isset($node['layout_id']) && is_numeric($node['layout_id'])
             ? (int) $node['layout_id']
             : 0;
+        $layouts = $this->layouts->forSite($site->id);
         $layoutDefinitions = $layoutId > 0
-            ? $this->layouts->resolve($layoutId)
-            : $this->layouts->resolveDefault();
+            ? $layouts->resolve($layoutId)
+            : $layouts->resolveDefault();
 
         $stages = [];
         foreach ($layoutDefinitions as $layout) {

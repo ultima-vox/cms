@@ -58,6 +58,7 @@ try {
     verify(DeploymentGuard::enter($root), 'Cannot enter request guard');
     // FileUpdater must release its own request lease, while still excluding other requests.
     $backup = $engine->apply($bytes, $offer);
+    (new \Core\Extension\PendingExtensionSync($db, $root))->run();
     verify(DeploymentGuard::held($root), 'Request lease not restored after installation');
     DeploymentGuard::release($root);
     verify($db->query('SELECT id FROM update_core_fixture')->fetchColumn() === 1, 'Core migration absent');

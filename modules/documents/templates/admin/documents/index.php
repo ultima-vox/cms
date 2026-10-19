@@ -15,19 +15,21 @@ echo $view->render('admin/_header.php', [
             <h1 class="admin-header__title">Документы</h1>
             <p class="admin-page-header__description">Переиспользуемый HTML-контент с версионированием и стабильными кодами.</p>
         </div>
-        <a class="admin-button admin-button--primary" href="/admin/documents/create">Новый документ</a>
+        <a class="admin-button admin-button--primary" href="/admin/documents/create?folder=<?= text($folder_browser['selected'] ?? '') ?>">Новый документ</a>
     </header>
 
     <?php if (!empty($created)): ?>
         <div class="admin-notice admin-notice--success">Документ создан.</div>
     <?php endif; ?>
 
+    <?= $view->render('admin/folders/browser.php', ['browser' => $folder_browser]) ?>
+
     <section class="admin-panel">
         <?php if ($documents === []): ?>
             <div class="admin-empty-state">
                 <h2>Документов пока нет</h2>
                 <p>Создайте документ, чтобы использовать его в странице или PHP-макете.</p>
-                <a class="admin-button admin-button--primary" href="/admin/documents/create">Создать документ</a>
+                <a class="admin-button admin-button--primary" href="/admin/documents/create?folder=<?= text($folder_browser['selected'] ?? '') ?>">Создать документ</a>
             </div>
         <?php else: ?>
             <div class="admin-table-wrap">

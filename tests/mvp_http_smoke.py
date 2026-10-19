@@ -24,10 +24,10 @@ def browser():
     return opener
 
 
-def request(client, path, data=None, expected=200):
+def request(client, path, data=None, expected=200, headers=None):
     payload = None if data is None else urllib.parse.urlencode(data).encode()
     try:
-        response = client.open(BASE + path, payload, timeout=90)
+        response = client.open(urllib.request.Request(BASE + path, data=payload, headers=headers or {}), timeout=90)
     except urllib.error.HTTPError as error:
         response = error
     body = response.read().decode('utf-8')
@@ -192,3 +192,131 @@ assert '<h1>Native layout page</h1>' in body
 mechaniki_layout = query("SELECT id FROM layouts WHERE code = 'mechaniki'")
 request(client, f'/admin/layouts/{mechaniki_layout}/edit')
 print('Native layout editor OK: create -> assign -> public render -> edit pilot template')
+
+# Real multisite administration: independent folders/codes/templates and direct-ID denial.
+def folder(scope, name, parent=''):
+    body, _ = request(client, '/admin/' + scope)
+    _, headers = request(client, '/admin/folders/' + scope, {'_csrf': token(body), 'name': name, 'parent_id': parent}, expected=302)
+    return int(re.search(r'folder=(\d+)', headers['Location']).group(1))
+
+
+def choose(site):
+    body, _ = request(client, '/admin')
+    request(client, '/admin/sites/select', {'_csrf': token(body), 'site_id': site}, expected=302)
+
+
+def create_document(name, selected_folder):
+    body, _ = request(client, '/admin/documents/create')
+    _, headers = request(client, '/admin/documents', {'_csrf': token(body), 'code': 'same-folder-code', 'name': name,
+        'folder_id': selected_folder, 'content': '<p>' + name + '</p>', 'save_mode': 'publish'}, expected=302)
+    return int(re.search(r'/documents/(\d+)/', headers['Location']).group(1))
+
+
+def create_layout(marker, selected_folder):
+    body, _ = request(client, '/admin/layouts/create')
+    _, headers = request(client, '/admin/layouts', {'_csrf': token(body), 'name': marker, 'code': 'same-site-layout',
+        'folder_id': selected_folder, 'source': '<?php echo "' + marker + '"; echo $page->execute(); ?>', 'description': ''}, expected=302)
+    return int(re.search(r'/layouts/(\d+)/', headers['Location']).group(1))
+
+
+def create_proof(layout, parent):
+    body, _ = request(client, '/admin/structure/create')
+    request(client, '/admin/structure', {'_csrf': token(body), 'name': 'Isolation proof', 'title': 'Isolation proof',
+        'parent_id': parent, 'slug': 'isolation-proof' if parent else '', 'page_type': 'documents.page',
+        'status': 'published', 'is_active': '1', 'sorting': '0', 'layout_id': layout, 'meta_description': '', 'publish_at': ''}, expected=302)
+
+
+folder_a = folder('documents', 'Папка сайта')
+child_a = folder('documents', 'Вложенная папка', folder_a)
+body, _ = request(client, f'/admin/folders/documents/{folder_a}/edit')
+request(client, f'/admin/folders/documents/{folder_a}', {'_csrf': token(body), 'name': 'Цикл', 'parent_id': child_a}, expected=422)
+request(client, f'/admin/folders/documents/{folder_a}/delete', {'_csrf': token(body)}, expected=422)
+doc_a = create_document('Секрет сайта А', child_a)
+body, _ = request(client, '/admin/documents')
+assert 'Секрет сайта А' not in body
+body, _ = request(client, f'/admin/documents?folder={child_a}')
+assert 'Секрет сайта А' in body
+# Move a document and a containing folder without changing the document's code.
+request(client, f'/admin/documents/{doc_a}', {'_csrf': token(body), 'name': 'Секрет сайта А', 'content': '<p>Секрет сайта А</p>', 'folder_id': folder_a, 'save_mode': 'publish'}, expected=302)
+body, _ = request(client, f'/admin/documents?folder={child_a}')
+assert 'Секрет сайта А' not in body
+body, _ = request(client, f'/admin/documents?folder={folder_a}')
+assert 'Секрет сайта А' in body
+request(client, f'/admin/documents/{doc_a}', {'_csrf': token(body), 'name': 'Секрет сайта А', 'content': '<p>Секрет сайта А</p>', 'folder_id': child_a, 'save_mode': 'publish'}, expected=302)
+new_parent = folder('documents', 'Другой раздел')
+body, _ = request(client, f'/admin/folders/documents/{child_a}/edit')
+request(client, f'/admin/folders/documents/{child_a}', {'_csrf': token(body), 'name': 'Переименованная папка', 'parent_id': new_parent}, expected=302)
+body, _ = request(client, f'/admin/documents?folder={child_a}')
+assert 'Секрет сайта А' in body and 'Другой раздел' in body
+assert query(f'SELECT code FROM documents WHERE id = {doc_a}') == 'same-folder-code'
+is_folder_a = folder('infosystems', 'Каталоги сайта')
+body, _ = request(client, '/admin/infosystems/create')
+request(client, '/admin/infosystems', {'_csrf': token(body), 'name': 'Каталог А', 'code': 'same-site-is', 'folder_id': is_folder_a, 'is_active': '1'}, expected=302)
+is_a = int(query("SELECT id FROM infosystems WHERE site_id = 1 AND code = 'same-site-is'"))
+layout_folder_a = folder('layouts', 'Макеты сайта')
+layout_a = create_layout('SITE-A-LAYOUT', layout_folder_a)
+create_proof(layout_a, root_id)
+body, _ = request(public, '/isolation-proof')
+assert 'SITE-A-LAYOUT' in body and 'SITE-B-LAYOUT' not in body
+body, _ = request(client, '/admin/sites/create')
+_, headers = request(client, '/admin/sites', {'_csrf': token(body), 'name': 'Изолированный сайт B', 'code': 'isolation-b', 'permalink_style': 'clean'}, expected=302)
+site_b = int(re.search(r'/sites/(\d+)/', headers['Location']).group(1))
+body, _ = request(client, f'/admin/sites/{site_b}/edit')
+request(client, f'/admin/sites/{site_b}/domains', {'_csrf': token(body), 'host': 'isolation-b.test', 'is_primary': '1'}, expected=302)
+choose(site_b)
+body, _ = request(client, '/admin/documents')
+assert 'Секрет сайта А' not in body
+request(client, f'/admin/documents?folder={child_a}', expected=404)
+request(client, f'/admin/folders/documents/{folder_a}/edit', expected=404)
+request(client, f'/admin/documents/{doc_a}/edit', expected=404)
+request(client, f'/admin/infosystems/{is_a}/edit', expected=404)
+request(client, f'/admin/layouts/{layout_a}/edit', expected=404)
+request(client, f'/admin/documents/{doc_a}', {'_csrf': token(body), 'name': 'Intrusion', 'content': 'bad', 'save_mode': 'publish'}, expected=404)
+# A stale form from another tab is rejected before it can create in the wrong site.
+request(client, '/admin/documents', {'_csrf': token(body), '_site_id': '1', 'name': 'Wrong site', 'code': 'wrong-site', 'content': '', 'save_mode': 'draft'}, expected=409)
+request(client, '/admin/documents', {'_csrf': token(body), 'name': 'Foreign folder', 'code': 'foreign-folder', 'folder_id': child_a, 'content': '', 'save_mode': 'draft'}, expected=422)
+assert query("SELECT count(*) FROM documents WHERE code IN ('foreign-folder', 'wrong-site')") == '0'
+folder_b = folder('documents', 'Папка сайта')
+doc_b = create_document('Секрет сайта B', folder_b)
+assert doc_b != doc_a
+layout_folder_b = folder('layouts', 'Макеты сайта')
+layout_b = create_layout('SITE-B-LAYOUT', layout_folder_b)
+create_proof(layout_b, '')
+body, _ = request(client, f'/admin/layouts/{layout_b}/edit')
+request(client, f'/admin/layouts/{layout_b}', {'_csrf': token(body), 'name': 'Changed incorrectly', 'folder_id': layout_folder_a, 'source': '<?php echo "BAD-FOREIGN-FOLDER"; ?>'}, expected=422)
+body, _ = request(public, '/', headers={'Host': 'isolation-b.test'})
+assert 'SITE-B-LAYOUT' in body and 'SITE-A-LAYOUT' not in body
+body, _ = request(public, '/isolation-proof')
+assert 'SITE-A-LAYOUT' in body and 'SITE-B-LAYOUT' not in body
+# A node cannot reference another site's layout even with a forged POST.
+body, _ = request(client, '/admin/structure/create')
+request(client, '/admin/structure', {'_csrf': token(body), 'name': 'Foreign layout', 'title': 'Bad', 'parent_id': '', 'slug': '',
+    'page_type': 'documents.page', 'status': 'published', 'is_active': '1', 'sorting': '0', 'layout_id': layout_a}, expected=422)
+choose(1)
+editor_password = secrets.token_urlsafe(24)
+env = os.environ.copy(); env['FOLDER_EDITOR_PASSWORD'] = editor_password
+editor_hash = subprocess.check_output(['php', '-r', 'echo password_hash(getenv("FOLDER_EDITOR_PASSWORD"), PASSWORD_DEFAULT);'], env=env, text=True)
+query(f"INSERT INTO users(email, password_hash, display_name) VALUES('folder-editor@example.test', '{editor_hash}', 'Редактор сайта А')")
+editor_id = int(query("SELECT id FROM users WHERE email = 'folder-editor@example.test'"))
+query(f"INSERT INTO user_roles(user_id, role_id) SELECT {editor_id}, id FROM roles WHERE code = 'editor'")
+body, _ = request(client, '/admin/sites/1/edit')
+request(client, '/admin/sites/1/access', {'_csrf': token(body), 'users[]': str(editor_id)}, expected=302)
+editor = browser(); body, _ = request(editor, '/admin/login')
+request(editor, '/admin/login', {'_csrf': token(body), 'email': 'folder-editor@example.test', 'password': editor_password}, expected=303)
+editor_body, _ = request(editor, f'/admin/documents?folder={child_a}')
+assert 'Секрет сайта А' in editor_body and 'Изолированный сайт B' not in editor_body
+request(editor, '/admin/sites/select', {'_csrf': token(editor_body), 'site_id': site_b}, expected=404)
+request(editor, f'/admin/sites/{site_b}/access', {'_csrf': token(editor_body), 'users[]': str(editor_id)}, expected=403)
+request(editor, f'/admin/documents/{doc_b}/edit', expected=404)
+query("INSERT INTO role_permissions(role_id, permission_id) SELECT r.id, p.id FROM roles r CROSS JOIN permissions p WHERE r.code = 'editor' AND p.code IN ('templates.code.edit', 'updates.apply') ON CONFLICT DO NOTHING")
+request(editor, f'/admin/layouts/{layout_a}/edit', expected=403)
+request(editor, '/admin/updates/apply', {'_csrf': token(editor_body)}, expected=403)
+query("DELETE FROM role_permissions rp USING roles r, permissions p WHERE rp.role_id = r.id AND rp.permission_id = p.id AND r.code = 'editor' AND p.code IN ('templates.code.edit', 'updates.apply')")
+body, _ = request(client, '/admin/sites/1/edit')
+request(client, '/admin/sites/1/access', {'_csrf': token(body)}, expected=302)
+request(editor, '/admin/documents', expected=403)
+request(editor, '/admin/logout', {'_csrf': token(editor_body)}, expected=303)
+# Browser tests exercise actual forms while the original superadmin remains on site A.
+with open('/tmp/cms-folder-browser.json', 'w') as handle:
+    json.dump({'folder': folder_a, 'infosystem': is_a}, handle)
+print('Multisite folders HTTP OK: hierarchy, equal codes, independent layouts, direct-ID isolation, stale forms, explicit grants and revocation')

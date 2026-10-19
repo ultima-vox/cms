@@ -68,6 +68,7 @@ final class UserRepository
             JOIN permissions p ON p.id = rp.permission_id
             WHERE ur.user_id = :user_id
               AND p.code = :permission
+              AND (p.global_only = FALSE OR EXISTS (SELECT 1 FROM user_roles global_ur JOIN roles global_r ON global_r.id = global_ur.role_id WHERE global_ur.user_id = ur.user_id AND global_r.code = 'superadmin'))
             LIMIT 1
             SQL
         );

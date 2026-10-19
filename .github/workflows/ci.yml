@@ -89,7 +89,7 @@ jobs:
       - name: Module manifest smoke test
         run: |
           php tests/module_manifest_smoke.php
-          php bin/console modules:list | grep $'^infosystem\t1.0.0\tInfosystems$'
+          php bin/console modules:list | grep $'^infosystem\t1.1.0\tInfosystems$'
 
       - name: Apply migrations
         run: php bin/console migrate
@@ -130,7 +130,9 @@ jobs:
         run: php tests/migration_checksum_smoke.php
 
       - name: Enabled module migration pipeline check
-        run: php bin/console modules:migrate --all | grep 'No pending migrations for enabled modules.'
+        run: |
+          php bin/console modules:migrate --all
+          php bin/console modules:migrate --all | grep 'No pending migrations for enabled modules.'
 
       - name: Reserved system path smoke test
         run: php tests/system_path_smoke.php
@@ -138,14 +140,17 @@ jobs:
       - name: Sync extension metadata
         run: php bin/console extensions:sync
 
+      - name: Site-scoped content folders
+        run: php tests/content_folders_smoke.php
+
       - name: Admin delivery invalidation integration test
         run: php tests/delivery_invalidation_routes_smoke.php
 
       - name: Module lifecycle smoke test
         run: |
-          php bin/console extensions:list | grep $'^infosystem\t1.0.0\tenabled\t\^1.0\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.1.0\tenabled\t\^1.0\tInfosystems$'
           php tests/module_lifecycle_smoke.php
-          php bin/console extensions:list | grep $'^infosystem\t1.0.0\tenabled\t\^1.0\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.1.0\tenabled\t\^1.0\tInfosystems$'
 
       - name: Extension permission sync smoke test
         run: |
@@ -174,7 +179,7 @@ jobs:
               AND r.code = 'editor';
           ")"
           test "$infosystems_count" = "3"
-          test "$code_edit_count" = "2"
+          test "$code_edit_count" = "1"
           test "$editor_code_edit" = "0"
         env:
           PGPASSWORD: cms

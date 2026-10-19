@@ -1,250 +1,90 @@
 <?php
 
 declare(strict_types=1);
-
 namespace Core\Repository;
 
+use Core\Content\FolderRepository;
 use PDO;
 use RuntimeException;
 
-final class LayoutRepository
+final readonly class LayoutRepository
 {
-    public function __construct(private readonly PDO $db)
+    public function __construct(private PDO $db, private int $siteId = 1)
     {
+        if ($siteId < 1) throw new RuntimeException('Layout site must be positive.');
     }
-
-    /** @return list<array<string, mixed>> */
+    public function forSite(int $siteId): self { return new self($this->db, $siteId); }
     public function all(): array
     {
-        $statement = $this->db->query(
-            <<<'SQL'
-            SELECT
-                l.id,
-                l.parent_id,
-                l.code,
-                l.name,
-                l.template_path,
-                l.description,
-                l.is_system,
-                l.created_at,
-                l.updated_at,
-                COUNT(n.id)::int AS node_count
-            FROM layouts l
-            LEFT JOIN nodes n ON n.layout_id = l.id
-            GROUP BY l.id
-            ORDER BY l.name, l.id
-            SQL
-        );
-
-        $rows = $statement->fetchAll();
-
-        return is_array($rows) ? $rows : [];
+        $q = $this->db->prepare('SELECT l.*, COUNT(n.id)::int AS node_count FROM layouts l LEFT JOIN nodes n ON n.layout_id = l.id AND n.site_id = l.site_id WHERE l.site_id = :site GROUP BY l.id ORDER BY l.name, l.id');
+        $q->execute(['site' => $this->siteId]);
+        return $q->fetchAll(PDO::FETCH_ASSOC);
     }
-
-    /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        $statement = $this->db->prepare(
-            <<<'SQL'
-            SELECT
-                l.id,
-                l.parent_id,
-                l.code,
-                l.name,
-                l.template_path,
-                l.description,
-                l.is_system,
-                l.created_at,
-                l.updated_at,
-                COUNT(n.id)::int AS node_count
-            FROM layouts l
-            LEFT JOIN nodes n ON n.layout_id = l.id
-            WHERE l.id = :id
-            GROUP BY l.id
-            LIMIT 1
-            SQL
-        );
-        $statement->execute(['id' => $id]);
-        $layout = $statement->fetch();
-
-        return is_array($layout) ? $layout : null;
+        $q = $this->db->prepare('SELECT l.*, COUNT(n.id)::int AS node_count FROM layouts l LEFT JOIN nodes n ON n.layout_id = l.id AND n.site_id = l.site_id WHERE l.site_id = :site AND l.id = :id GROUP BY l.id');
+        $q->execute(['site' => $this->siteId, 'id' => $id]);
+        return ($row = $q->fetch(PDO::FETCH_ASSOC)) !== false ? $row : null;
     }
-
-    /** @return array<string, mixed>|null */
     public function findByCode(string $code): ?array
     {
         $code = strtolower(trim($code));
-        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,79}$/', $code)) {
-            throw new RuntimeException('Layout code is invalid.');
-        }
-
-        $statement = $this->db->prepare(
-            <<<'SQL'
-            SELECT
-                l.id,
-                l.parent_id,
-                l.code,
-                l.name,
-                l.template_path,
-                l.description,
-                l.is_system,
-                l.created_at,
-                l.updated_at,
-                COUNT(n.id)::int AS node_count
-            FROM layouts l
-            LEFT JOIN nodes n ON n.layout_id = l.id
-            WHERE l.code = :code
-            GROUP BY l.id
-            LIMIT 1
-            SQL
-        );
-        $statement->execute(['code' => $code]);
-        $layout = $statement->fetch();
-
-        return is_array($layout) ? $layout : null;
+        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,79}$/D', $code)) throw new RuntimeException('Layout code is invalid.');
+        $q = $this->db->prepare('SELECT id FROM layouts WHERE site_id = :site AND code = :code');
+        $q->execute(['site' => $this->siteId, 'code' => $code]);
+        return ($id = $q->fetchColumn()) !== false ? $this->find((int) $id) : null;
     }
-
     public function defaultSystemId(): ?int
     {
-        $value = $this->db->query(
-            'SELECT id FROM layouts WHERE is_system = TRUE ORDER BY id LIMIT 1'
-        )->fetchColumn();
-
-        if ($value === false) {
-            return null;
-        }
-
-        $id = (int) $value;
-
-        return $id > 0 ? $id : null;
+        $q = $this->db->prepare('SELECT id FROM layouts WHERE site_id = :site AND is_system = TRUE ORDER BY id LIMIT 1');
+        $q->execute(['site' => $this->siteId]);
+        return ($id = $q->fetchColumn()) !== false ? (int) $id : null;
     }
-
-    /** @return list<array<string, mixed>> */
     public function ancestry(int $id, int $maximumDepth): array
     {
-        if ($id < 1) {
-            throw new RuntimeException('Layout id must be positive.');
-        }
-        if ($maximumDepth < 1) {
-            throw new RuntimeException('Layout hierarchy depth must be positive.');
-        }
-
-        $statement = $this->db->prepare(
-            <<<'SQL'
+        if ($id < 1 || $maximumDepth < 1) throw new RuntimeException('Invalid layout hierarchy request.');
+        $q = $this->db->prepare(<<<'SQL'
             WITH RECURSIVE layout_chain AS (
-                SELECT
-                    l.id,
-                    l.parent_id,
-                    l.name,
-                    l.template_path,
-                    ARRAY[l.id]::bigint[] AS visited,
-                    FALSE AS cycle,
-                    1 AS depth
-                FROM layouts l
-                WHERE l.id = :id
-
+                SELECT l.id, l.parent_id, l.name, l.template_path, l.site_id, ARRAY[l.id]::bigint[] AS visited, FALSE AS cycle, 1 AS depth
+                FROM layouts l WHERE l.id = :id AND l.site_id = :site
                 UNION ALL
-
-                SELECT
-                    parent.id,
-                    parent.parent_id,
-                    parent.name,
-                    parent.template_path,
-                    child.visited || parent.id,
-                    parent.id = ANY(child.visited) AS cycle,
-                    child.depth + 1
-                FROM layouts parent
-                JOIN layout_chain child ON parent.id = child.parent_id
-                WHERE child.cycle = FALSE
-                  AND child.depth <= :maximum_depth
-            )
-            SELECT id, parent_id, name, template_path, cycle, depth
-            FROM layout_chain
-            ORDER BY depth DESC
-            SQL
-        );
-        $statement->bindValue(':id', $id, PDO::PARAM_INT);
-        $statement->bindValue(':maximum_depth', $maximumDepth, PDO::PARAM_INT);
-        $statement->execute();
-
-        $rows = $statement->fetchAll();
-
-        return is_array($rows) ? $rows : [];
+                SELECT p.id, p.parent_id, p.name, p.template_path, p.site_id, c.visited || p.id, p.id = ANY(c.visited), c.depth + 1
+                FROM layouts p JOIN layout_chain c ON p.id = c.parent_id AND p.site_id = c.site_id
+                WHERE c.cycle = FALSE AND c.depth <= :depth
+            ) SELECT id, parent_id, name, template_path, cycle, depth FROM layout_chain ORDER BY depth DESC
+            SQL);
+        $q->execute(['id' => $id, 'site' => $this->siteId, 'depth' => $maximumDepth]);
+        return $q->fetchAll(PDO::FETCH_ASSOC);
     }
-
-    public function create(string $name, string $templatePath, ?string $description): int
+    public function create(string $name, string $templatePath, ?string $description, ?int $folderId = null): int
     {
-        $statement = $this->db->prepare(
-            <<<'SQL'
-            INSERT INTO layouts (code, name, template_path, description)
-            VALUES (:code, :name, :template_path, :description)
-            RETURNING id
-            SQL
-        );
-        $statement->execute([
-            'code' => $this->codeFromTemplatePath($templatePath),
-            'name' => $name,
-            'template_path' => $templatePath,
-            'description' => $description,
-        ]);
-
-        return (int) $statement->fetchColumn();
+        (new FolderRepository($this->db, $this->siteId, 'layouts'))->assertFolder($folderId);
+        $q = $this->db->prepare('INSERT INTO layouts(site_id, code, name, template_path, description, folder_id) VALUES (:site, :code, :name, :path, :description, :folder) RETURNING id');
+        $q->execute(['site' => $this->siteId, 'code' => $this->codeFromTemplatePath($templatePath), 'name' => $name, 'path' => $templatePath, 'description' => $description, 'folder' => $folderId]);
+        return (int) $q->fetchColumn();
     }
-
-    public function update(int $id, string $name, ?string $description): void
+    public function update(int $id, string $name, ?string $description, ?int $folderId = null): void
     {
-        $statement = $this->db->prepare(
-            <<<'SQL'
-            UPDATE layouts
-            SET name = :name,
-                description = :description,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = :id
-            SQL
-        );
-        $statement->execute([
-            'id' => $id,
-            'name' => $name,
-            'description' => $description,
-        ]);
-
-        if ($statement->rowCount() !== 1) {
-            throw new RuntimeException('Макет не найден.');
-        }
+        (new FolderRepository($this->db, $this->siteId, 'layouts'))->assertFolder($folderId);
+        $q = $this->db->prepare('UPDATE layouts SET name = :name, description = :description, folder_id = :folder, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND site_id = :site');
+        $q->execute(['id' => $id, 'site' => $this->siteId, 'name' => $name, 'description' => $description, 'folder' => $folderId]);
+        if ($q->rowCount() !== 1) throw new RuntimeException('Макет не найден.');
     }
-
     public function delete(int $id): void
     {
-        $statement = $this->db->prepare(
-            'DELETE FROM layouts WHERE id = :id AND is_system = FALSE'
-        );
-        $statement->execute(['id' => $id]);
-
-        if ($statement->rowCount() !== 1) {
-            throw new RuntimeException('Макет не найден или является системным.');
-        }
+        $q = $this->db->prepare('DELETE FROM layouts WHERE id = :id AND site_id = :site AND is_system = FALSE');
+        $q->execute(['id' => $id, 'site' => $this->siteId]);
+        if ($q->rowCount() !== 1) throw new RuntimeException('Макет не найден или является системным.');
     }
-
     public function isTemplatePathUsed(string $templatePath): bool
     {
-        $statement = $this->db->prepare(
-            'SELECT 1 FROM layouts WHERE template_path = :template_path LIMIT 1'
-        );
-        $statement->execute(['template_path' => $templatePath]);
-
-        return $statement->fetchColumn() !== false;
+        $q = $this->db->prepare('SELECT 1 FROM layouts WHERE site_id = :site AND template_path = :path LIMIT 1');
+        $q->execute(['site' => $this->siteId, 'path' => $templatePath]);
+        return $q->fetchColumn() !== false;
     }
-
-    private function codeFromTemplatePath(string $templatePath): string
+    private function codeFromTemplatePath(string $path): string
     {
-        if (!preg_match(
-            '#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.(?:html\.php|php)$#',
-            trim($templatePath),
-            $matches,
-        )) {
-            throw new RuntimeException('Layout template path cannot be converted to a stable code.');
-        }
-
-        return $matches[1];
+        if (!preg_match('#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.(?:html\.php|php)$#D', trim($path), $match)) throw new RuntimeException('Layout template path cannot be converted to a stable code.');
+        return $match[1];
     }
 }

@@ -19,10 +19,10 @@ foreach ($manifests as $manifest) {
 
 foreach (['documents', 'infosystem', 'sites'] as $code) {
     $manifest = $byCode[$code] ?? null;
-    if ($manifest === null || $manifest->version !== '1.0.0') {
+    if ($manifest === null || $manifest->version !== '1.1.0') {
         throw new RuntimeException(sprintf('%s module manifest is missing or invalid.', $code));
     }
-    if (($manifest->requires['core'] ?? null) !== '>=0.1.0') {
+    if (($manifest->requires['core'] ?? null) !== '>=0.3.0') {
         throw new RuntimeException(sprintf('Core dependency was not parsed from %s manifest.', $code));
     }
     if ($manifest->extensionApi !== '^1.0' || !$manifest->defaultEnabled) {

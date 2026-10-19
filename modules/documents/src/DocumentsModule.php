@@ -28,6 +28,7 @@ final readonly class DocumentsModule implements ModuleInterface
 {
     public function register(Core $core): void
     {
+        $core->folders()->define('documents', 'Документы', '/admin/documents', 'documents.manage');
         $db = $core->runtime()->database();
         $repository = new DocumentRepository($db);
         $renderer = new DocumentRenderer($repository);
@@ -110,8 +111,9 @@ final readonly class DocumentsModule implements ModuleInterface
             $auth,
             $management,
             new DocumentAdminService($db, $siteId, $repository, $management),
-            new AuditLogRepository($db),
+            new AuditLogRepository($db, $core->sites()->adminId()),
             $adminView,
+            new \Core\Content\FolderRepository($db, $siteId, 'documents'),
         );
         $gate = new PermissionGate($auth);
         $html = new HtmlSanitizingHandler(new HtmlSanitizer());

@@ -85,7 +85,7 @@ final readonly class MechanikiModule implements ModuleInterface
             if ($rootId === null) {
                 throw new RuntimeException('Сначала создайте корневой узел сайта в «Структуре».');
             }
-            $layouts = new LayoutRepository($db);
+            $layouts = new LayoutRepository($db, $siteId);
             $layout = $layouts->findByCode('mechaniki');
             $layoutId = $layout !== null
                 ? (int) $layout['id']
@@ -115,7 +115,7 @@ final readonly class MechanikiModule implements ModuleInterface
                 $versionId = $documents->createDraftVersion($documentId, $sanitizer->rich($content));
                 $documents->publishVersion($documentId, $versionId);
             }
-            (new AuditLogRepository($db))->record($userId, 'mechaniki.import', 'site', $siteId, ['nodes' => $parents], null);
+            (new AuditLogRepository($db, $core->sites()->adminId()))->record($userId, 'mechaniki.import', 'site', $siteId, ['nodes' => $parents], null);
             $db->commit();
         } catch (Throwable $exception) {
             if ($db->inTransaction()) {

@@ -19,7 +19,7 @@ echo $view->render('admin/_header.php', [
     <?php if (!empty($saved)): ?><div class="admin-notice admin-notice--success">Изменения сохранены.</div><?php endif; ?>
 
     <form class="admin-form" action="<?= text($siteId ? '/admin/sites/' . $siteId : '/admin/sites') ?>" method="post">
-        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
         <section class="admin-panel"><h2 class="admin-panel__title">Основное</h2><div class="admin-form__grid">
             <label class="admin-field<?= $siteId ? ' admin-field--wide' : '' ?>"><span class="admin-field__label">Название</span><input class="admin-input" name="name" value="<?= text($site['name'] ?? '') ?>" maxlength="255" required></label>
             <?php if ($siteId): ?>
@@ -61,14 +61,24 @@ echo $view->render('admin/_header.php', [
                 <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Host</th><th>Тип</th><th></th></tr></thead><tbody>
                 <?php foreach ($domains as $domain): ?>
                     <tr><td><code><?= text($domain['host'] ?? '') ?></code></td><td><?php if (!empty($domain['is_primary'])): ?><span class="admin-badge admin-badge--success">основной</span><?php else: ?><span class="admin-badge">alias</span><?php endif; ?></td><td><div class="admin-actions">
-                        <?php if (empty($domain['is_primary'])): ?><form action="/admin/sites/<?= text($siteId) ?>/domains/<?= text($domain['id'] ?? '') ?>/primary" method="post"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><button class="admin-button admin-button--secondary" type="submit">Сделать основным</button></form><?php endif; ?>
-                        <form action="/admin/sites/<?= text($siteId) ?>/domains/<?= text($domain['id'] ?? '') ?>/delete" method="post"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><button class="admin-button admin-button--danger" type="submit">Удалить</button></form>
+                        <?php if (empty($domain['is_primary'])): ?><form action="/admin/sites/<?= text($siteId) ?>/domains/<?= text($domain['id'] ?? '') ?>/primary" method="post"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><button class="admin-button admin-button--secondary" type="submit">Сделать основным</button></form><?php endif; ?>
+                        <form action="/admin/sites/<?= text($siteId) ?>/domains/<?= text($domain['id'] ?? '') ?>/delete" method="post"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><button class="admin-button admin-button--danger" type="submit">Удалить</button></form>
                     </div></td></tr>
                 <?php endforeach; ?>
                 </tbody></table></div>
             <?php endif; ?>
-            <form class="admin-form" action="/admin/sites/<?= text($siteId) ?>/domains" method="post" style="margin-top:20px"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><div class="admin-form__grid"><label class="admin-field"><span class="admin-field__label">Новый домен</span><input class="admin-input" name="host" placeholder="example.ru" maxlength="253" required></label><label class="admin-check"><input type="checkbox" name="is_primary" value="1"><span>Сделать основным</span></label></div><div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Добавить домен</button></div></form>
+            <form class="admin-form" action="/admin/sites/<?= text($siteId) ?>/domains" method="post" style="margin-top:20px"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><div class="admin-form__grid"><label class="admin-field"><span class="admin-field__label">Новый домен</span><input class="admin-input" name="host" placeholder="example.ru" maxlength="253" required></label><label class="admin-check"><input type="checkbox" name="is_primary" value="1"><span>Сделать основным</span></label></div><div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Добавить домен</button></div></form>
         </section>
     <?php endif; ?>
+<?php if ($siteId && $can_manage_access): ?>
+    <section class="admin-panel"><h2 class="admin-panel__title">Доступ пользователей</h2><p>Суперадминистраторы имеют доступ ко всем сайтам. Остальным пользователям доступ назначается отдельно для каждого сайта.</p>
+        <form class="admin-form" method="post" action="/admin/sites/<?= text($siteId) ?>/access"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
+            <?php foreach ($site_users as $member): $global = in_array($member['global_access'], [true, 't', '1', 1], true); $granted = in_array($member['granted'], [true, 't', '1', 1], true); ?>
+                <label class="admin-check"><input type="checkbox" name="users[]" value="<?= text($member['id']) ?>"<?= $global || $granted ? ' checked' : '' ?><?= $global ? ' disabled' : '' ?>><span><?= text($member['display_name']) ?> · <?= text($member['email']) ?><?= $global ? ' · суперадминистратор' : '' ?></span></label>
+            <?php endforeach; ?>
+            <button class="admin-button admin-button--primary" type="submit">Сохранить доступ</button>
+        </form>
+    </section>
+<?php endif; ?>
 </div>
 <?= $view->render('admin/_footer.php', ['admin_active' => $adminActive]) ?>

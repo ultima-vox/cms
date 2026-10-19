@@ -24,6 +24,7 @@ use Core\Repository\SiteRepository;
 
 final class Core
 {
+    private Api\FoldersApi $folders;
     private RoutesApi $routes;
     private TemplatesApi $templates;
     private ContentApi $content;
@@ -39,6 +40,7 @@ final class Core
 
     public function __construct(private readonly RuntimeApi $runtime)
     {
+        $this->folders = new Api\FoldersApi();
         $this->routes = new RoutesApi();
         $this->templates = new TemplatesApi();
         $this->content = new ContentApi();
@@ -70,6 +72,8 @@ final class Core
     {
         return $this->runtime;
     }
+
+    public function folders(): Api\FoldersApi { return $this->folders; }
 
     public function routes(): RoutesApi
     {
@@ -132,6 +136,7 @@ final class Core
             return;
         }
 
+        $this->folders->freeze();
         $this->routes->freeze();
         $this->templates->freeze();
         $this->content->freeze();

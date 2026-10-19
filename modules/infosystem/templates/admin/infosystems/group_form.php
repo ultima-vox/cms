@@ -15,7 +15,7 @@ echo $view->render('admin/_header.php', [
     <header class="admin-page-header"><div><p class="admin-eyebrow"><?= text($infosystem['code'] ?? '') ?></p><h1 class="admin-header__title"><?= text($groupId ? ($group['name'] ?? '') : 'Новая группа') ?></h1><?php if (!empty($group['path'])): ?><p class="admin-page-header__description"><code><?= text($group['path']) ?></code></p><?php endif; ?></div><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?>">К инфосистеме</a></header>
     <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
     <form class="admin-form" method="post" action="<?= text($groupId ? '/admin/infosystems/' . $infosystemId . '/groups/' . $groupId : '/admin/infosystems/' . $infosystemId . '/groups') ?>">
-        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
         <section class="admin-panel"><h2 class="admin-panel__title">Группа</h2><div class="admin-form__grid">
             <label class="admin-field"><span class="admin-field__label">Название</span><input class="admin-input" name="name" required maxlength="255" value="<?= text($group['name'] ?? '') ?>"></label>
             <label class="admin-field"><span class="admin-field__label">Slug</span><input class="admin-input" name="slug" required maxlength="255" pattern="[a-z0-9][a-z0-9-]*" value="<?= text($group['slug'] ?? '') ?>"></label>
@@ -28,7 +28,7 @@ echo $view->render('admin/_header.php', [
     </form>
     <?php if ($groupId): ?>
         <?php $blocked = (int) ($group['child_count'] ?? 0) > 0 || (int) ($group['item_count'] ?? 0) > 0; ?>
-        <section class="admin-danger-zone"><div><strong>Удаление группы</strong><p><?= $blocked ? 'Сначала удалите или перенесите дочерние группы и элементы.' : 'Пустую группу можно удалить безопасно.' ?></p></div><form method="post" action="/admin/infosystems/<?= text($infosystemId) ?>/groups/<?= text($groupId) ?>/delete" onsubmit="return confirm('Удалить группу?');"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><button class="admin-button admin-button--danger" type="submit"<?= $blocked ? ' disabled' : '' ?>>Удалить</button></form></section>
+        <section class="admin-danger-zone"><div><strong>Удаление группы</strong><p><?= $blocked ? 'Сначала удалите или перенесите дочерние группы и элементы.' : 'Пустую группу можно удалить безопасно.' ?></p></div><form method="post" action="/admin/infosystems/<?= text($infosystemId) ?>/groups/<?= text($groupId) ?>/delete" data-confirm="Удалить группу?"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><button class="admin-button admin-button--danger" type="submit"<?= $blocked ? ' disabled' : '' ?>>Удалить</button></form></section>
     <?php endif; ?>
 </div>
 <?= $view->render('admin/_footer.php', ['admin_active' => $adminActive]) ?>

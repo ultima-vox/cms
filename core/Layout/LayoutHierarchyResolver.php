@@ -15,6 +15,8 @@ final readonly class LayoutHierarchyResolver
     {
     }
 
+    public function forSite(int $siteId): self { return new self($this->layouts->forSite($siteId)); }
+
     /** @return list<LayoutDefinition> Outermost layout first, selected layout last. */
     public function resolveDefault(): array
     {

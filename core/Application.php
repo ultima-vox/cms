@@ -62,11 +62,29 @@ final class Application
         $this->startSessionForRequest($request);
 
         $db = Database::connection();
+        (new \Core\Extension\PendingExtensionSync($db, $this->rootPath))->run();
         $siteRepository = new SiteRepository($db);
-        $layoutRepository = new LayoutRepository($db);
+        $auth = new AuthService(new UserRepository($db), new LoginAttemptRepository($db));
+        $access = new \Core\Site\SiteAccessRepository($db);
+        $user = $this->isAdminPath($request->path) ? $auth->user() : null;
+        if ($user !== null && $access->filter($siteRepository->allActive(), (int) $user['id']) === []) {
+            if ($request->path === '/admin/logout' && $request->method === 'POST' && \Core\Security\Csrf::validate(is_string($request->post['_csrf'] ?? null) ? $request->post['_csrf'] : null)) {
+                $auth->logout();
+                \Core\Http\Response::redirect('/admin/login', 303)->send();
+                return;
+            }
+            SecurityHeaders::apply(\Core\Http\Response::html('<h1>403</h1><p>Нет доступа к активным сайтам. Обратитесь к суперадминистратору.</p><form method="post" action="/admin/logout"><input type="hidden" name="_csrf" value="' . htmlspecialchars(\Core\Security\Csrf::token(), ENT_QUOTES, 'UTF-8') . '"><button type="submit">Выйти</button></form>', 403))->send();
+            return;
+        }
         $adminSite = $this->isAdminPath($request->path)
-            ? (new AdminSiteSelector($siteRepository))->current()
+            ? (new AdminSiteSelector($siteRepository, $access, $user !== null ? (int) $user['id'] : null))->current()
             : new SiteContext(1, 'default', 'Default site', '');
+        if ($user !== null && $request->method === 'POST' && isset($request->post['_site_id'])
+            && (string) $request->post['_site_id'] !== (string) $adminSite->id) {
+            SecurityHeaders::apply(\Core\Http\Response::html('<h1>409</h1><p>В другой вкладке изменён текущий сайт. Перезагрузите форму перед сохранением.</p>', 409))->send();
+            return;
+        }
+        $layoutRepository = new LayoutRepository($db, $adminSite->id);
         $core = new ExtensionCore(new RuntimeApi($db, $this->rootPath, $adminSite, $this->cacheBackend));
         (new BuiltinExtensions())->register($core);
 
@@ -82,7 +100,7 @@ final class Application
         ))->create();
         $php = new PhpRenderer($this->rootPath, $core);
 
-        $audit = new AuditLogRepository($db);
+        $audit = new AuditLogRepository($db, $adminSite->id);
         $permissionGate = new PermissionGate($auth);
         $html = new HtmlSanitizingHandler(new HtmlSanitizer());
         $siteResolver = new SiteResolver(
@@ -111,9 +129,10 @@ final class Application
             new LayoutController(
                 $auth,
                 $layoutRepository,
-                new LayoutTemplateService($this->rootPath),
+                new LayoutTemplateService($this->rootPath, $adminSite->id, $adminSite->setting('legacy_layout_overrides', false) === true),
                 $audit,
                 $adminView,
+                new \Core\Content\FolderRepository($db, $adminSite->id, 'layouts'),
             ),
             new ModuleManagerController(
                 $auth,
@@ -143,6 +162,11 @@ final class Application
         );
 
         $builtinRoutes->register($core->routes());
+        $folderController = new \Core\Controller\FolderController($core, $auth, $audit, $adminView);
+        $core->routes()->post('/admin/folders/{scope:[a-z][a-z0-9._-]*}', 'folders.store', [$folderController, 'handle']);
+        $core->routes()->get('/admin/folders/{scope:[a-z][a-z0-9._-]*}/{id:\\d+}/edit', 'folders.edit', [$folderController, 'handle']);
+        $core->routes()->post('/admin/folders/{scope:[a-z][a-z0-9._-]*}/{id:\\d+}', 'folders.update', [$folderController, 'handle']);
+        $core->routes()->post('/admin/folders/{scope:[a-z][a-z0-9._-]*}/{id:\\d+}/delete', 'folders.delete', [$folderController, 'handle']);
         (new ModuleLoader($this->rootPath))->load($core);
         $builtinRoutes->registerPublicFallback($core->routes());
         $core->freeze();

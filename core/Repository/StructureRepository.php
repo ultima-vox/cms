@@ -70,7 +70,9 @@ final class StructureRepository
     /** @return list<array{id:int,name:string,template_path:string}> */
     public function layouts(): array
     {
-        $rows = $this->db->query('SELECT id, name, template_path FROM layouts ORDER BY name, id')->fetchAll();
+        $q = $this->db->prepare('SELECT id, name, template_path FROM layouts WHERE site_id = :site ORDER BY name, id');
+        $q->execute(['site' => $this->siteId]);
+        $rows = $q->fetchAll();
         return is_array($rows) ? $rows : [];
     }
 

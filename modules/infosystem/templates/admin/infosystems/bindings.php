@@ -15,7 +15,7 @@ echo $view->render('admin/_header.php', [
     <?php if (!empty($saved)): ?><div class="admin-notice">Привязки сохранены.</div><?php endif; ?>
     <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
     <form class="admin-form" method="post" action="/admin/infosystems/<?= text($infosystemId) ?>/bindings">
-        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>">
+        <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
         <section class="admin-panel"><h2 class="admin-panel__title">Структура сайта</h2><p class="admin-field__hint">Один раздел может иметь только одну основную привязку модуля <code>infosystem</code>. Переназначение раздела автоматически заменит предыдущую привязку.</p>
             <?php if (($nodes ?? []) === []): ?><div class="admin-empty">В структуре сайта пока нет разделов.</div><?php else: ?><div class="admin-form__grid">
                 <?php foreach ($nodes as $node): ?><label class="admin-check admin-field--wide"><input type="checkbox" name="node_ids[]" value="<?= text($node['id'] ?? '') ?>"<?= !empty($bound_node_ids[$node['id'] ?? 0]) ? ' checked' : '' ?>><span style="padding-left: <?= text((int) ($node['depth'] ?? 0) * 18) ?>px"><code><?= text($node['path'] ?? '') ?></code> — <?= text($node['name'] ?? '') ?></span></label><?php endforeach; ?>

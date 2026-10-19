@@ -63,7 +63,7 @@ $initials = $displayName !== '' ? mb_strtoupper(mb_substr($displayName, 0, 2)) :
 
             <?php if (count($shellSites) > 1): ?>
                 <form class="admin-site-switcher" action="/admin/sites/select" method="post">
-                    <input type="hidden" name="_csrf" value="<?= text($shellCsrf) ?>">
+                    <input type="hidden" name="_csrf" value="<?= text($shellCsrf) ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
                     <select class="admin-site-switcher__select" name="site_id" data-site-select aria-label="Текущий сайт">
                         <?php foreach ($shellSites as $site): ?>
                             <option value="<?= text($site->id) ?>"<?= $site->id === $shellSite->id ? ' selected' : '' ?>>
@@ -89,7 +89,7 @@ $initials = $displayName !== '' ? mb_strtoupper(mb_substr($displayName, 0, 2)) :
                     <?= text($initials) ?>
                 </span>
                 <form action="/admin/logout" method="post">
-                    <input type="hidden" name="_csrf" value="<?= text($shellCsrf) ?>">
+                    <input type="hidden" name="_csrf" value="<?= text($shellCsrf) ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
                     <button class="admin-button admin-button--secondary" type="submit" title="Выйти">
                         <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-logout"></use></svg>
                         <span>Выйти</span>

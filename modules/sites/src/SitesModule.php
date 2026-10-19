@@ -23,11 +23,13 @@ final class SitesModule implements ModuleInterface
     {
         $db = $core->runtime()->database();
         $sites = new SiteRepository($db);
-        $selector = new AdminSiteSelector($sites);
         $auth = new AuthService(
             new UserRepository($db),
             new LoginAttemptRepository($db),
         );
+        $access = new \Core\Site\SiteAccessRepository($db);
+        $userId = (int) ($auth->user()['id'] ?? 0);
+        $selector = new AdminSiteSelector($sites, $access, $userId);
         $view = (new AdminPhpRendererFactory(
             $core->runtime()->rootPath(),
             $auth,
@@ -36,13 +38,16 @@ final class SitesModule implements ModuleInterface
         ))->create();
         $controller = new SitesController(
             $auth,
-            new SitesManagementRepository($db),
+            new SitesManagementRepository($db, $userId),
             $selector,
             new SiteResolver($sites, Config::string('APP_URL', 'http://localhost')),
             $view,
+            $access,
         );
         $invalidate = new DeliveryInvalidatingHandler($core->delivery());
 
+        $core->permissions()->define('sites.access.manage', 'Назначение доступа пользователей к сайтам', ['superadmin']);
+        $core->permissions()->define('sites.create', 'Создание сайтов', ['superadmin']);
         $core->permissions()->define(
             'sites.manage',
             'Manage sites and domains',
@@ -63,6 +68,7 @@ final class SitesModule implements ModuleInterface
         };
 
         $routes = $core->routes();
+        $routes->post('/admin/sites/{id:\\d+}/access', 'sites.access', [$controller, 'access']);
         $routes->post('/admin/sites/select', 'sites.select', [$controller, 'select']);
         $routes->get('/admin/sites', 'sites.index', [$controller, 'index']);
         $routes->get('/admin/sites/create', 'sites.create', [$controller, 'createForm']);
