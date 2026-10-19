@@ -36,13 +36,13 @@ $initials = $displayName !== '' ? mb_strtoupper(mb_substr($displayName, 0, 2)) :
         </a>
 
         <nav class="admin-nav" aria-label="Основная навигация">
-            <a class="admin-nav__item<?= $shellActive === 'dashboard' ? ' admin-nav__item--active' : '' ?>" href="/admin"<?= $shellActive === 'dashboard' ? ' aria-current="page"' : '' ?>>
+            <a class="admin-nav__item<?= $shellActive === 'dashboard' ? ' admin-nav__item--active' : '' ?>" href="/admin" aria-label="Обзор" title="Обзор"<?= $shellActive === 'dashboard' ? ' aria-current="page"' : '' ?>>
                 <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-home"></use></svg>
                 <span class="admin-nav__label">Обзор</span>
             </a>
             <?php foreach ($shellNavigation as $item): ?>
                 <?php $active = $shellActive === $item->code; ?>
-                <a class="admin-nav__item<?= $active ? ' admin-nav__item--active' : '' ?>" href="<?= text($item->path) ?>"<?= $active ? ' aria-current="page"' : '' ?>>
+                <a class="admin-nav__item<?= $active ? ' admin-nav__item--active' : '' ?>" href="<?= text($item->path) ?>" aria-label="<?= text($item->label) ?>" title="<?= text($item->label) ?>"<?= $active ? ' aria-current="page"' : '' ?>>
                     <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-<?= text($item->icon) ?>"></use></svg>
                     <span class="admin-nav__label"><?= text($item->label) ?></span>
                 </a>
@@ -50,7 +50,7 @@ $initials = $displayName !== '' ? mb_strtoupper(mb_substr($displayName, 0, 2)) :
         </nav>
 
         <div class="admin-sidebar__footer">
-            <button class="admin-sidebar__button" type="button" data-admin-collapse aria-pressed="false">
+            <button class="admin-sidebar__button" type="button" data-admin-collapse aria-pressed="false" aria-label="Свернуть меню" title="Свернуть меню">
                 <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-collapse"></use></svg>
                 <span class="admin-sidebar__label">Свернуть</span>
             </button>
@@ -78,7 +78,7 @@ $initials = $displayName !== '' ? mb_strtoupper(mb_substr($displayName, 0, 2)) :
                 </div>
             <?php endif; ?>
 
-            <button class="admin-search-trigger" type="button" data-command-open aria-haspopup="dialog">
+            <button class="admin-search-trigger" type="button" data-command-open aria-haspopup="dialog" aria-label="Поиск и команды">
                 <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-search"></use></svg>
                 <span class="admin-search-trigger__label">Поиск и команды…</span>
                 <span class="admin-kbd">Ctrl K</span>
