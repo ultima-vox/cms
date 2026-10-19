@@ -33,7 +33,8 @@ def request(client, path, data=None, expected=200, headers=None):
     body = response.read().decode('utf-8')
     allowed = expected if isinstance(expected, tuple) else (expected,)
     if response.code not in allowed:
-        raise AssertionError(f'{path}: expected {expected}, received {response.code}; {body[:500]}')
+        detail = re.search(r'<div class="installer-result is-error">(.*?)</div>', body, re.S)
+        raise AssertionError(f'{path}: expected {expected}, received {response.code}; {detail.group(1) if detail else body[:500]}')
     return body, response.headers
 
 

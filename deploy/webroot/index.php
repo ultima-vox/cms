@@ -9,4 +9,12 @@ if (preg_match('~(?:^/app(?:/|$)|(?:^|/)\.)~i', $path) || str_contains($path, "\
     exit;
 }
 
+// The development router must use the actual webroot assets, including installation probes.
+if (PHP_SAPI === 'cli-server' && str_starts_with($path, '/assets/')) {
+    $asset = realpath(__DIR__ . $path);
+    if ($asset !== false && str_starts_with($asset, __DIR__ . '/assets/') && is_file($asset)) {
+        return false;
+    }
+}
+
 return require __DIR__ . '/app/public/index.php';
