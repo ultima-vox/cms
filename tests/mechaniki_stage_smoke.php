@@ -113,6 +113,21 @@ try {
     if ((int) $versions->fetchColumn() !== 56) {
         throw new RuntimeException('Mechaniki published page versions are incomplete.');
     }
+    $formCount = $db->prepare(
+        <<<'SQL'
+        SELECT COUNT(*)
+        FROM document_versions v
+        JOIN documents d ON d.id = v.document_id
+        WHERE d.site_id = :site_id
+          AND v.status = 'published'
+          AND v.content LIKE '%<form%'
+          AND v.content NOT LIKE '%<form inert%'
+        SQL
+    );
+    $formCount->execute(['site_id' => $siteId]);
+    if ((int) $formCount->fetchColumn() !== 0) {
+        throw new RuntimeException('Enabled forms were imported into staging.');
+    }
 
     $output = [];
     exec($command . ' 2>&1', $output, $code);
