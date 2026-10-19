@@ -6,9 +6,37 @@ namespace UltimaVox\Modules\Documents\Repository;
 
 use PDO;
 use RuntimeException;
+use Core\Content\FolderRepository;
+use UltimaVox\Modules\Documents\Admin\DocumentListQuery;
 
 final readonly class DocumentManagementRepository
 {
+    private const LIST_SELECT = <<<'SQL'
+SELECT
+    d.id,
+    d.code,
+    d.folder_id,
+    d.name,
+    d.is_active,
+    d.created_at,
+    d.updated_at,
+    published.id AS published_version_id,
+    published.version AS published_version,
+    draft.id AS draft_version_id,
+    draft.version AS draft_version
+FROM documents d
+LEFT JOIN document_versions published ON published.id = (
+    SELECT id FROM document_versions
+    WHERE document_id = d.id AND status = 'published'
+    ORDER BY version DESC, id DESC LIMIT 1
+)
+LEFT JOIN document_versions draft ON draft.id = (
+    SELECT id FROM document_versions
+    WHERE document_id = d.id AND status = 'draft'
+    ORDER BY version DESC, id DESC LIMIT 1
+)
+SQL;
+
     public function __construct(
         private PDO $db,
         private int $siteId,
@@ -21,39 +49,62 @@ final readonly class DocumentManagementRepository
     /** @return list<array<string, mixed>> */
     public function all(): array
     {
-        $statement = $this->db->prepare(
-            <<<'SQL'
-            SELECT
-                d.id,
-                d.code,
-                d.folder_id,
-                d.name,
-                d.is_active,
-                d.created_at,
-                d.updated_at,
-                published.id AS published_version_id,
-                published.version AS published_version,
-                draft.id AS draft_version_id,
-                draft.version AS draft_version
-            FROM documents d
-            LEFT JOIN document_versions published ON published.id = (
-                SELECT id FROM document_versions
-                WHERE document_id = d.id AND status = 'published'
-                ORDER BY version DESC, id DESC LIMIT 1
-            )
-            LEFT JOIN document_versions draft ON draft.id = (
-                SELECT id FROM document_versions
-                WHERE document_id = d.id AND status = 'draft'
-                ORDER BY version DESC, id DESC LIMIT 1
-            )
-            WHERE d.site_id = :site_id
-            ORDER BY d.name, d.id
-            SQL
-        );
+        $statement = $this->db->prepare(self::LIST_SELECT . ' WHERE d.site_id = :site_id ORDER BY d.name, d.id');
         $statement->execute(['site_id' => $this->siteId]);
         $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
 
         return is_array($rows) ? $rows : [];
+    }
+
+    /** @return array{rows: list<array<string, mixed>>, total: int, page: int, pages: int, per_page: int} */
+    public function page(DocumentListQuery $query): array
+    {
+        (new FolderRepository($this->db, $this->siteId, 'documents'))->assertFolder($query->folderId);
+        $where = ['d.site_id = :site_id'];
+        $params = ['site_id' => $this->siteId];
+        if (!$query->allFolders) {
+            if ($query->folderId === null) {
+                $where[] = 'd.folder_id IS NULL';
+            } else {
+                $where[] = 'd.folder_id = :folder_id';
+                $params['folder_id'] = $query->folderId;
+            }
+        }
+        if ($query->search !== '') {
+            // Search means a literal substring: %, _ and ! are not wildcards.
+            $pattern = '%' . strtr($query->search, ['!' => '!!', '%' => '!%', '_' => '!_']) . '%';
+            $where[] = "(LOWER(d.name) LIKE LOWER(:search_name) ESCAPE '!' OR LOWER(d.code) LIKE LOWER(:search_code) ESCAPE '!')";
+            $params['search_name'] = $pattern;
+            $params['search_code'] = $pattern;
+        }
+        if ($query->status !== '') {
+            $status = $query->status === 'draft' ? 'draft' : 'published';
+            $exists = "EXISTS (SELECT 1 FROM document_versions v WHERE v.document_id = d.id AND v.status = :version_status)";
+            $where[] = ($query->status === 'unpublished' ? 'NOT ' : '') . $exists;
+            $params['version_status'] = $status;
+        }
+        $condition = ' WHERE ' . implode(' AND ', $where);
+        $count = $this->db->prepare('SELECT COUNT(*) FROM documents d' . $condition);
+        $count->execute($params);
+        $total = (int) $count->fetchColumn();
+        $pages = max(1, (int) ceil($total / $query->perPage));
+        $page = min($query->page, $pages);
+        $order = match ($query->sort) {
+            'name_desc' => 'd.name DESC, d.id DESC',
+            'code' => 'd.code, d.id',
+            'updated' => 'd.updated_at DESC, d.id DESC',
+            default => 'd.name, d.id',
+        };
+        $statement = $this->db->prepare(self::LIST_SELECT . $condition . ' ORDER BY ' . $order . ' LIMIT :limit OFFSET :offset');
+        foreach ($params as $key => $value) {
+            $statement->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $statement->bindValue(':limit', $query->perPage, PDO::PARAM_INT);
+        $statement->bindValue(':offset', ($page - 1) * $query->perPage, PDO::PARAM_INT);
+        $statement->execute();
+
+        return ['rows' => $statement->fetchAll(PDO::FETCH_ASSOC), 'total' => $total,
+            'page' => $page, 'pages' => $pages, 'per_page' => $query->perPage];
     }
 
     /** @return array<string, mixed>|null */

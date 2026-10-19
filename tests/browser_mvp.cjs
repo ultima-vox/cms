@@ -21,6 +21,19 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
                 assert(field.x >= bounds.x && field.x + field.width <= bounds.x + bounds.width + 1, `Upload control escapes panel at ${width}px`);
             }
         }
+        await page.goto(base + '/admin/documents?folder=all');
+        await page.getByLabel('Название или код').fill('Browser list');
+        await page.getByLabel('Публикация', {exact: true}).selectOption('unpublished');
+        await page.getByLabel('Сортировка', {exact: true}).selectOption('code');
+        await Promise.all([page.waitForURL(url => url.searchParams.get('q') === 'Browser list'), page.getByRole('button', {name: 'Применить', exact: true}).click()]);
+        assert.equal(await page.locator('tbody tr').count(), 25);
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Document list overflow at ${width}px`);
+        await page.screenshot({path: `/tmp/cms-layout-documents-${width}.png`, fullPage: true});
+        await Promise.all([page.waitForURL(url => url.searchParams.get('page') === '2'), page.getByRole('link', {name: 'Далее', exact: true}).click()]);
+        assert.equal(await page.locator('tbody tr').count(), 1);
+        assert.equal(await page.getByLabel('Название или код').inputValue(), 'Browser list');
+        assert.equal(await page.getByLabel('Публикация', {exact: true}).inputValue(), 'unpublished');
+        assert.equal(new URL(page.url()).searchParams.get('folder'), 'all');
         const failed = [];
         page.on('response', response => { if (response.status() >= 400) failed.push(response.url()); });
         await page.goto(base + '/mechaniki');

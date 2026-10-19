@@ -83,3 +83,9 @@ The default icon is `module`, so installing a module never requires a Core patch
 5. Deep domain editors may keep specialized layout CSS, but their controls should use the shared form/table/status primitives.
 
 Presentation migrations must remain behavior-neutral unless a PR explicitly documents an API or workflow change.
+
+## Lists and filters
+
+Use `.admin-list-filters` and `.admin-list-pagination` for responsive list controls. Filters use GET and retain their current folder in a hidden field; applying changed filters starts from page one. Pagination links preserve the search, status, sort, page size and folder. Empty filtered results must explain how to recover, rather than claim the module has no data.
+
+The Documents module owns its validated list query and SQL; Core has no document-specific list API. SQL selects only the current page, with a stable ID tie-breaker. The current sizes are 25/50/100, literal substring search matches name/code, and publication/draft filters can overlap when published content has a newer draft. Shared visuals do not require a generic metadata-driven form engine or JavaScript table framework.
