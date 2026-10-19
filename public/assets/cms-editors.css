@@ -1,0 +1,11 @@
+.uv-cm-editor { border: 1px solid var(--admin-border, #cbd5e1); border-radius: 8px; overflow: hidden; }
+.uv-cm-editor .cm-editor { min-height: 300px; max-height: 70vh; font-size: 14px; }
+.uv-cm-editor .cm-scroller { overflow: auto; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.uv-cm-editor .cm-focused { outline: 2px solid #64748b; outline-offset: -2px; }
+.uv-cm-toolbar, .uv-tiptap-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.uv-cm-toolbar button, .uv-tiptap-toolbar button { border: 1px solid #94a3b8; border-radius: 6px; padding: 6px 12px; background: transparent; color: inherit; cursor: pointer; }
+.uv-cm-toolbar button:focus-visible, .uv-tiptap-toolbar button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.uv-cm-status { font-size: 0.85rem; }
+.uv-cm-original { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; opacity: 0 !important; pointer-events: none !important; }
+.uv-tiptap-editor .tiptap { min-height: 250px; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; }
+.uv-tiptap-editor .tiptap:focus-visible { outline: 2px solid #64748b; }
