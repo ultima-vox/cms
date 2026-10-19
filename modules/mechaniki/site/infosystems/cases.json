@@ -1,0 +1,46 @@
+{
+  "code": "mechaniki_cases",
+  "name": "Истории ремонтов",
+  "schema_version": 1,
+  "records": [
+    {
+      "slug": "case-001",
+      "name": "Skoda Octavia",
+      "year": "2017 год",
+      "symptom": "Горит Check Engine, неровный холостой ход",
+      "cause": "Неисправность катушки зажигания",
+      "work": "Диагностика, замена катушки и проверка работы двигателя",
+      "price_label": "6 800 ₽",
+      "duration": "2 часа",
+      "is_demo": true,
+      "source": "demo-static-frontend",
+      "sorting": 10
+    },
+    {
+      "slug": "case-002",
+      "name": "Ford Focus",
+      "year": "2015 год",
+      "symptom": "Шум при движении и переключении передач",
+      "cause": "Износ подшипника механической коробки",
+      "work": "Снятие коробки, замена подшипника и масла, контрольная проверка",
+      "price_label": "32 000 ₽",
+      "duration": "2 дня",
+      "is_demo": true,
+      "source": "demo-static-frontend",
+      "sorting": 20
+    },
+    {
+      "slug": "case-003",
+      "name": "Hyundai Solaris",
+      "year": "2019 год",
+      "symptom": "Периодически не включается ближний свет",
+      "cause": "Повреждение контакта в разъёме",
+      "work": "Проверка цепи питания, восстановление контакта, проверка света",
+      "price_label": "4 500 ₽",
+      "duration": "1,5 часа",
+      "is_demo": true,
+      "source": "demo-static-frontend",
+      "sorting": 30
+    }
+  ]
+}

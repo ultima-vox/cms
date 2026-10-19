@@ -33,11 +33,11 @@ if args.expect_unsafe:
 else:
     paths = ['/app', '/app/', '/app/composer.json', '/%61pp/composer.json', '/app%2fcomposer.json',
              '/app/.env', '/app/.env.example', '/app/vendor/autoload.php', '/app/public/index.php',
-             '/app/storage/logs/private-proof.txt', '/.env', '/.env.example', '/.htaccess']
+             '/app/storage/logs/private-proof.txt', '/app/modules/mechaniki/site/activate.php', '/.env', '/.env.example', '/.htaccess']
     if layout == 'public':
         # These live outside DocumentRoot. A fallback/redirect may exist pre-install;
         # require the installed app to return its actual 404 rather than private data.
-        paths += ['/composer.json', '/composer.lock', '/vendor/autoload.php', '/storage/logs/private-proof.txt']
+        paths += ['/composer.json', '/composer.lock', '/vendor/autoload.php', '/storage/logs/private-proof.txt', '/modules/mechaniki/site/activate.php']
     for path in paths:
         status, body = get(path)
         allowed = (302, 403, 404) if args.before_install and layout == 'public' else (403, 404)
