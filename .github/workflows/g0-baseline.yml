@@ -1,0 +1,97 @@
+name: G0 content baseline
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  content-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: postgres:16
+            driver: pgsql
+            port: 5432
+            health: pg_isready -U cms -d cms_g0_perf
+          - image: mysql:8.0
+            driver: mysql
+            port: 3306
+            client: mysql
+            health: mysqladmin ping -h127.0.0.1 -pcms
+          - image: mysql:8.4
+            driver: mysql
+            port: 3306
+            client: mysql
+            health: mysqladmin ping -h127.0.0.1 -pcms
+          - image: mariadb:10.11
+            driver: mysql
+            port: 3306
+            client: mariadb
+            health: mariadb-admin ping -h127.0.0.1 -pcms
+          - image: mariadb:11.4
+            driver: mysql
+            port: 3306
+            client: mariadb
+            health: mariadb-admin ping -h127.0.0.1 -pcms
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          POSTGRES_DB: cms_g0_perf
+          POSTGRES_USER: cms
+          POSTGRES_PASSWORD: cms
+          MYSQL_ROOT_PASSWORD: cms
+          MYSQL_DATABASE: cms_g0_perf
+          MYSQL_USER: cms
+          MYSQL_PASSWORD: cms
+        ports: ['5432:5432', '3306:3306']
+        options: >-
+          --health-cmd="${{ matrix.health }}"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      APP_ENV: testing
+      APP_DEBUG: false
+      APP_URL: http://g0-primary.test
+      DB_DRIVER: ${{ matrix.driver }}
+      DB_HOST: 127.0.0.1
+      DB_PORT: ${{ matrix.port }}
+      DB_NAME: cms_g0_perf
+      DB_USER: cms
+      DB_PASS: cms
+      G0_DISPOSABLE: '1'
+      G0_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pdo_mysql, dom, mbstring, zip
+          coverage: none
+      - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
+      - name: Configure only the disposable legacy server for trigger fixtures
+        if: matrix.driver == 'mysql'
+        run: docker exec -e MYSQL_PWD=cms "${{ job.services.database.id }}" ${{ matrix.client }} -uroot -e "SET GLOBAL log_bin_trust_function_creators=1;"
+      - name: Install clean schema through existing migration pipeline
+        run: |
+          php bin/console migrate
+          php bin/console modules:migrate --all
+          php bin/console extensions:sync
+      - name: Record runner metadata
+        run: |
+          mkdir -p /tmp/g0-content-baseline
+          lscpu > /tmp/g0-content-baseline/cpu.txt
+          free -b > /tmp/g0-content-baseline/memory.txt
+          df -B1 . /tmp > /tmp/g0-content-baseline/filesystem.txt
+          php -v > /tmp/g0-content-baseline/php.txt
+      - name: Measure real Content 1k/10k dispatches and site boundaries
+        run: python3 tools/g0_content_baseline.py /tmp/g0-content-baseline
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: g0-content-baseline-${{ strategy.job-index }}
+          path: /tmp/g0-content-baseline/
+          if-no-files-found: error
+          retention-days: 90
