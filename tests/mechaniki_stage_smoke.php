@@ -208,7 +208,10 @@ try {
     }
 } finally {
     $restore = $db->prepare('UPDATE installed_modules SET is_enabled = :enabled WHERE code = :code');
-    $restore->execute(['enabled' => $moduleEnabled, 'code' => 'mechaniki']);
+    $restore->execute([
+        'enabled' => in_array($moduleEnabled, [true, 1, '1', 't', 'true'], true) ? 1 : 0,
+        'code' => 'mechaniki',
+    ]);
     if ($siteId !== null) {
         foreach (['nodes', 'documents', 'infosystems', 'site_domains', 'layouts'] as $table) {
             $delete = $db->prepare('DELETE FROM ' . $table . ' WHERE site_id = :site_id');
