@@ -206,6 +206,41 @@ try {
     if ((int) $itemQuery->fetchColumn() !== 103) {
         throw new RuntimeException('Repeat Infosystem activation duplicated items.');
     }
+
+    // Prove the public page receives real item data and uses the registered
+    // site-owned view rather than a leftover Documents HTML fragment.
+    $core = new \Core\Extension\Core(new \Core\Extension\Api\RuntimeApi($db, $root));
+    (new \Core\Extension\ModuleLoader($root))->load($core);
+    $core->freeze();
+    foreach ([
+        '/services/podveska' => ['infosystem.item', 'Ремонт подвески'],
+        '/problems/stuk' => ['infosystem.item', 'Стук на неровностях'],
+        '/prices' => ['infosystem.list', 'Диагностика АКПП'],
+    ] as $route => $expectation) {
+        $nodeQuery = $db->prepare(
+            'SELECT * FROM nodes WHERE site_id = :site_id AND path = :path'
+        );
+        $nodeQuery->execute(['site_id' => $siteId, 'path' => $route]);
+        $node = $nodeQuery->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($node) || (string) $node['page_type'] !== $expectation[0]) {
+            throw new RuntimeException('Invalid dynamic page type at ' . $route);
+        }
+        $config = is_string($node['page_config'])
+            ? json_decode($node['page_config'], true, flags: JSON_THROW_ON_ERROR)
+            : $node['page_config'];
+        $pageType = $core->pages()->definition((string) $node['page_type']);
+        $context = new \Core\Page\PageExecutionContext(
+            new \Core\Http\Request('GET', $route, $route, [], [], ['HTTP_HOST' => 'ru.rewired.ru'], []),
+            new \Core\Site\SiteContext($siteId, 'mechaniki-stage-smoke', 'Mechaniki', 'ru.rewired.ru'),
+            $node,
+            $pageType->validateConfiguration($config),
+            new \Core\View\Render\RenderContext(),
+        );
+        $html = $pageType->executor->execute($context)->value();
+        if (!str_contains($html, $expectation[1])) {
+            throw new RuntimeException('Infosystem page rendered no expected content at ' . $route);
+        }
+    }
 } finally {
     $restore = $db->prepare('UPDATE installed_modules SET is_enabled = :enabled WHERE code = :code');
     $restore->execute([
