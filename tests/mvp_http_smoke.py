@@ -90,6 +90,25 @@ assert 'Проверить обновления' in updates
 request(client, '/admin/updates/check', {'_csrf': 'invalid'}, expected=419)
 request(client, '/admin/updates/apply', {'_csrf': 'invalid'}, expected=419)
 request(public, '/admin/updates', expected=302)
+assert 'Готовность сервера' in updates and 'История обновлений' in updates
+# Permissions apply independently of module management and CSRF validation.
+query("DELETE FROM role_permissions WHERE permission_id = (SELECT id FROM permissions WHERE code = 'updates.apply') AND role_id = (SELECT id FROM roles WHERE code = 'superadmin')")
+request(client, '/admin/updates')
+request(client, '/admin/updates/apply', {'_csrf': 'invalid'}, expected=403)
+query("DELETE FROM role_permissions WHERE permission_id = (SELECT id FROM permissions WHERE code = 'updates.view') AND role_id = (SELECT id FROM roles WHERE code = 'superadmin')")
+request(client, '/admin/updates', expected=403)
+request(client, '/admin/updates/check', {'_csrf': 'invalid'}, expected=403)
+body, _ = request(client, '/admin/modules')
+csrf = token(body)
+request(client, '/admin/modules/sync', {'_csrf': csrf}, expected=302)
+request(client, '/admin/modules/updater/disable', {'_csrf': csrf}, expected=302)
+body, _ = request(client, '/admin')
+assert 'href="/admin/updates"' not in body
+request(client, '/admin/updates', expected=404)
+request(client, '/admin/modules/updater/enable', {'_csrf': csrf}, expected=302)
+request(client, '/admin/updates')
+print('Updater HTTP OK: independent permissions and standard module enable/disable')
+
 _, headers = request(client, '/assets/admin.css')
 assert 'text/css' in headers.get('Content-Type', '')
 root_id = query("SELECT id FROM nodes WHERE site_id = 1 AND path = '/'")

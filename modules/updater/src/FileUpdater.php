@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace UltimaVox\Modules\Updater;
 
+use PDO;
+use Core\MigrationRunner;
+use Core\Extension\ModuleMigrationCoordinator;
+use Core\Extension\ModuleManager;
 use RuntimeException;
 use Throwable;
 use ZipArchive;
 
 final readonly class FileUpdater
 {
-    public function __construct(private string $root)
+    public function __construct(private string $root, private ?PDO $db = null)
     {
     }
 
@@ -42,14 +46,19 @@ final readonly class FileUpdater
             throw new RuntimeException('Другое обновление уже выполняется.');
         }
         $requestLock = null;
+        $resumeRequest = false;
         $backup = $updates . '/backup-' . gmdate('Ymd-His') . '-' . bin2hex(random_bytes(4));
         $journal = [];
         $zipPath = $updates . '/download-' . bin2hex(random_bytes(8)) . '.zip';
         $zip = new ZipArchive();
         $opened = false;
         $changed = false;
+        $transaction = null;
+        $commitAttempted = false;
+        $metadata = ['from' => '', 'to' => $offer['version'], 'started_at' => gmdate(DATE_ATOM)];
         try {
             $current = $this->current();
+            $metadata['from'] = $current['version'];
             if (version_compare($offer['version'], $current['version'], '<=')) {
                 throw new RuntimeException('Эта версия уже установлена или устарела.');
             }
@@ -71,8 +80,11 @@ final readonly class FileUpdater
             }
             $oldSchema = $current['schema']; $newSchema = $incoming['schema'];
             ksort($oldSchema); ksort($newSchema);
-            if ($oldSchema !== $newSchema) {
-                throw new RuntimeException('Релиз меняет схему БД. Эта версия обновлялки устанавливает только обновления без миграций.');
+            foreach ($oldSchema as $path => $checksum) {
+                if (($newSchema[$path] ?? null) !== $checksum) throw new RuntimeException('Релиз изменяет или удаляет существующую миграцию: ' . $path);
+            }
+            if ($oldSchema !== $newSchema && $this->db === null) {
+                throw new RuntimeException('Обновление схемы требует подключения к БД.');
             }
             $actualSchema = [];
             foreach ($incoming['files'] as $name => $hash) {
@@ -109,6 +121,8 @@ final readonly class FileUpdater
                     throw new RuntimeException('Архив содержит недопустимую запись.');
                 }
             }
+            $resumeRequest = class_exists(\Core\Http\DeploymentGuard::class) && \Core\Http\DeploymentGuard::held($this->root);
+            if ($resumeRequest) \Core\Http\DeploymentGuard::release($this->root);
             $requestLock = fopen($updates . '/requests.lock', 'c');
             if ($requestLock === false || !flock($requestLock, LOCK_EX | LOCK_NB)) {
                 throw new RuntimeException('Сайт обрабатывает запросы. Повторите обновление через несколько секунд.');
@@ -139,7 +153,13 @@ final readonly class FileUpdater
                 if ($old !== null) $this->write($backup . '/' . $index . '.bak', $old);
                 $journal[] = ['target' => $target, 'backup' => $old !== null ? $index . '.bak' : null, 'mode' => $old !== null ? (fileperms($target) & 0777) : 0644];
             }
-            $this->write($backup . '/journal.json', json_encode(['status' => 'prepared', 'files' => $journal], JSON_THROW_ON_ERROR));
+            if ($this->db !== null) {
+                if ($this->db->inTransaction()) throw new RuntimeException('Обновление нельзя запускать внутри другой транзакции.');
+                $this->db->beginTransaction();
+                $transaction = (string) $this->db->query('SELECT pg_current_xact_id()')->fetchColumn();
+            }
+            $metadata['db_transaction'] = $transaction;
+            $this->write($backup . '/journal.json', json_encode($metadata + ['status' => 'prepared', 'files' => $journal], JSON_THROW_ON_ERROR));
             $this->write($updates . '/maintenance.json', json_encode(['backup' => basename($backup)], JSON_THROW_ON_ERROR));
             $changed = true;
             foreach ($plan as $target => $source) {
@@ -155,11 +175,24 @@ final readonly class FileUpdater
                 }
                 if (function_exists('opcache_invalidate')) @opcache_invalidate($target, true);
             }
-            $this->write($backup . '/journal.json', json_encode(['status' => 'complete', 'files' => $journal], JSON_THROW_ON_ERROR));
+            if ($this->db !== null) {
+                (new MigrationRunner($this->db, $this->root . '/database/migrations'))->migrate();
+                (new ModuleMigrationCoordinator($this->db, $this->root))->migrateEnabled();
+                (new ModuleManager($this->db, $this->root))->sync();
+                $commitAttempted = true;
+                $this->db->commit();
+            }
+            $this->write($backup . '/journal.json', json_encode($metadata + ['status' => 'complete', 'files' => $journal], JSON_THROW_ON_ERROR));
             if (function_exists('opcache_reset')) @opcache_reset();
             if (!unlink($updates . '/maintenance.json')) throw new RuntimeException('Не снят режим обслуживания.');
             return $backup;
         } catch (Throwable $exception) {
+            if ($commitAttempted) {
+                // A lost DB connection during COMMIT has an unknown outcome. Keep maintenance
+                // and let recovery consult PostgreSQL's durable transaction status.
+                throw new RuntimeException('Не удалось завершить обновление. Запустите bin/update-recover.php для проверки результата транзакции.', 0, $exception);
+            }
+            if ($this->db?->inTransaction()) $this->db->rollBack();
             if ($changed) {
                 $rollbackFailed = false;
                 foreach (array_reverse($journal) as $entry) {
@@ -172,6 +205,7 @@ final readonly class FileUpdater
                         if (function_exists('opcache_invalidate')) @opcache_invalidate($entry['target'], true);
                     } catch (Throwable) { $rollbackFailed = true; }
                 }
+                $this->write($backup . '/journal.json', json_encode($metadata + ['status' => $rollbackFailed ? 'recovery_required' : 'rolled_back', 'error' => $exception->getMessage(), 'files' => $journal], JSON_THROW_ON_ERROR));
                 if (!$rollbackFailed && is_file($updates . '/maintenance.json')) unlink($updates . '/maintenance.json');
                 if ($rollbackFailed) {
                     throw new RuntimeException('Ошибка отката. Сохраните резервную копию ' . basename($backup) . ' и восстановите файлы вручную.', 0, $exception);
@@ -182,6 +216,7 @@ final readonly class FileUpdater
             if ($opened) $zip->close();
             if (is_file($zipPath)) unlink($zipPath);
             if (is_resource($requestLock)) { flock($requestLock, LOCK_UN); fclose($requestLock); }
+            if ($resumeRequest) \Core\Http\DeploymentGuard::enter($this->root);
             flock($lock, LOCK_UN); fclose($lock);
         }
     }

@@ -22,21 +22,12 @@ if (PHP_SAPI === 'cli-server') {
 
 $rootPath = dirname(__DIR__);
 
-// Coordinate code replacement across PHP workers sharing this installation.
-$updateDirectory = $rootPath . '/storage/updates';
-if (!is_dir($updateDirectory)) @mkdir($updateDirectory, 0755, true);
-if (is_file($updateDirectory . '/maintenance.json')) {
+// Acquire a request lease before loading any code that deployment can replace.
+require_once $rootPath . '/core/Http/DeploymentGuard.php';
+if (!Core\Http\DeploymentGuard::enter($rootPath)) {
     http_response_code(503);
-    header('Retry-After: 30');
-    exit('Обновление сайта не завершено. Требуется восстановление из резервной копии в storage/updates.');
-}
-if (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) !== '/admin/updates/apply') {
-    $requestLock = @fopen($updateDirectory . '/requests.lock', 'c');
-    if ($requestLock === false || !flock($requestLock, LOCK_SH | LOCK_NB)) {
-        http_response_code(503);
-        header('Retry-After: 10');
-        exit('Сайт обновляется. Повторите запрос через несколько секунд.');
-    }
+    header('Retry-After: 10');
+    exit('Сайт обновляется или ожидает восстановления. Повторите запрос позже.');
 }
 
 require $rootPath . '/vendor/autoload.php';

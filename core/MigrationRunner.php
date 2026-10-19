@@ -20,7 +20,8 @@ final class MigrationRunner
     public function migrate(): array
     {
         $this->ensureTrackingSchema();
-        $this->db->query("SELECT pg_advisory_lock(hashtext('ultima_vox_cms_migrations'))");
+        $outer = $this->db->inTransaction();
+        $this->db->query("SELECT " . ($outer ? 'pg_advisory_xact_lock' : 'pg_advisory_lock') . "(hashtext('ultima_vox_cms_migrations'))");
 
         try {
             $files = glob($this->migrationsPath . '/*.sql');
@@ -63,7 +64,7 @@ final class MigrationRunner
 
             return $applied;
         } finally {
-            $this->db->query("SELECT pg_advisory_unlock(hashtext('ultima_vox_cms_migrations'))");
+            if (!$outer) $this->db->query("SELECT pg_advisory_unlock(hashtext('ultima_vox_cms_migrations'))");
         }
     }
 
@@ -80,7 +81,9 @@ final class MigrationRunner
 
     private function applyMigration(string $name, string $sql, string $checksum): void
     {
-        $this->db->beginTransaction();
+        $owned = !$this->db->inTransaction();
+        if ($owned) $this->db->beginTransaction();
+        else $this->db->exec('SAVEPOINT core_migration');
 
         try {
             $this->db->exec($sql);
@@ -93,10 +96,12 @@ final class MigrationRunner
                 'checksum' => $checksum,
             ]);
 
-            $this->db->commit();
+            if ($owned) $this->db->commit();
+            else $this->db->exec('RELEASE SAVEPOINT core_migration');
         } catch (Throwable $exception) {
             if ($this->db->inTransaction()) {
-                $this->db->rollBack();
+                if ($owned) $this->db->rollBack();
+                else $this->db->exec('ROLLBACK TO SAVEPOINT core_migration');
             }
 
             throw $exception;
