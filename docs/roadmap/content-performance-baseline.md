@@ -73,22 +73,22 @@ PDO-счётчик находится только в test probe; reflection з�
 
 ## Измеренный прогон 19 октября 2026
 
-[G0 workflow39253441363](https://github.com/ultima-vox/cms/actions/runs/39253441363), все пять jobs — success. Source head `a65fd6294dec03faf0cc604e07286f8420a69f3f`, фактически проверенный PR merge checkout `e0e47b35cefca934f80ed7c2b18d33d29f0fd484`. [Постоянный JSON snapshot](baselines/content-v1-2026-10-19.json) содержит summary, SHA, artifact digest и metadata; исходные 2000 raw samples доступны в workflow artifacts с retention90 дней. Самостоятельно пересчитаны nearest-rank summaries всех raw samples, проверены cache states/status и одинаковый fixture descriptor на пяти СУБД. Обычные [CI39253441325](https://github.com/ultima-vox/cms/actions/runs/39253441325) и [MVP39253441259](https://github.com/ultima-vox/cms/actions/runs/39253441259) также success.
+[G0 workflow39255173595](https://github.com/ultima-vox/cms/actions/runs/39255173595), все пять jobs — success. Source head `8a5e7477b2e32875bbfcf6a9d8519d515631adac`, фактически проверенный PR merge checkout `8b4c76b7ddb5687dc4d5f61bb1c6be71f5880f81`. [Постоянный JSON snapshot](baselines/content-v1-2026-10-19.json) содержит summary, SHA, artifact digest и metadata; исходные 2000 raw samples доступны в workflow artifacts с retention 90 дней. Пересчитаны nearest-rank summaries всех raw samples, проверены cache states/status и одинаковый fixture descriptor на пяти СУБД. Обычные [CI39255173589](https://github.com/ultima-vox/cms/actions/runs/39255173589) и [MVP39255173645](https://github.com/ultima-vox/cms/actions/runs/39255173645) также success.
 
-В исходном зафиксированном прогоне exec self-check задавал READ COMMITTED всем соединениям. Это не штатный default legacy СУБД. В последующем probe self-check заменён на DO, а фактический уровень isolation добавлен в environment; старый snapshot сохраняет точный provenance и не выдаётся за прогон изменённого probe.
+Измеритель сохраняет default isolation: PostgreSQL — read committed; все четыре legacy jobs — REPEATABLE-READ. Первоначальный preflight, задававший READ COMMITTED всем соединениям, заменён на безвредный DO; эта таблица и snapshot содержат **исправленный** прогон. Его результаты не смешиваются с предварительными измерениями.
 
-PostgreSQL16.15 / PHP8.4.26 / CLI, 128M, OPcache CLI off. В этой таблице только primary PG job; другие СУБД — в JSON. Это application dispatch, не HTTP latency.
+PostgreSQL 16.15 / PHP 8.4.26 / CLI, 128M, OPcache CLI off. В таблице только primary PG job; остальные СУБД — в JSON. Это application dispatch, не HTTP latency.
 
 | Сценарий | Cold p50/p95, мс | Warm p50/p95, мс | SQL cold/warm | Peak allocated cold/warm, MiB |
 | --- | --- | --- | --- | --- |
-| public-document | 31.33 / 33.25 | 22.49 / 22.86 | 15 / 9 | 4 / 4 |
-| public-infosystem-list | 58.09 / 59.75 | 22.54 / 23.21 | 17 / 9 | 6 / 4 |
-| admin-documents-page | 47.46 / 48.49 | 47.64 / 49.53 | 37 / 37 | 4 / 4 |
-| admin-infosystem-items-page | 55.86 / 57.96 | 56.33 / 60.05 | 39 / 39 | 4 / 4 |
-| admin-structure-tree | 48.23 / 49.64 | 48.30 / 49.99 | 35 / 35 | 8 / 8 |
+| public-document | 31.02 / 31.99 | 22.36 / 22.80 | 15 / 9 | 4 / 4 |
+| public-infosystem-list | 58.36 / 60.31 | 22.39 / 23.95 | 17 / 9 | 6 / 4 |
+| admin-documents-page | 47.07 / 48.86 | 47.09 / 48.73 | 37 / 37 | 4 / 4 |
+| admin-infosystem-items-page | 55.53 / 56.78 | 55.25 / 56.70 | 39 / 39 | 4 / 4 |
+| admin-structure-tree | 47.61 / 48.97 | 47.64 / 48.85 | 35 / 35 | 8 / 8 |
 
 Четыре isolation checks прошли на каждой СУБД: primary/secondary cache HIT с верным контентом, foreign document/IS ID404. Публичные draft/inactive markers не появились. Все 2000 измеренных dispatch прошли с200 в пределах128M; это не утверждение о будущих модулях или пользовательском коде.
 
-Вывод для UX: дерево1000 узлов возвращает **759030 байт HTML** целиком (около741KiB), при этом server dispatch p95 около50мс в PG job. Серверное время само по себе не доказывает удобство: большой DOM и поиск нужного узла нужно проверить в браузере. Существующая #128 должна учитывать объём ответа, сворачивание ветвей/сохранение контекста и измерение DOM/render на390/1024/1440. Не объявлять необходимость тяжёлой frontend-виртуализации без browser measurements.
+Вывод для UX: дерево 1000 узлов возвращает **759030 байт HTML** целиком (около741KiB), при этом server dispatch p95 около49мс в PG job. Серверное время само по себе не доказывает удобство: большой DOM и поиск нужного узла нужно проверить в браузере. Существующая #128 должна учитывать объём ответа, сворачивание ветвей/сохранение контекста и измерение DOM/render на390/1024/1440. Не объявлять необходимость тяжёлой frontend-виртуализации без browser measurements.
 
-На прогретой публичной странице остаётся9 SQL executions до/вокруг cache hit — это baseline для последующего профилирования bootstrap, не доказательство конкретного N+1 или разрешение переносить доменную логику в Core. У административных списков37/39 SQL executions. Не оптимизировать их вслепую и не сравнивать времена СУБД как рейтинг: jobs работают на отдельных shared runners.
+На прогретой публичной странице остаётся9 SQL executions до/вокруг cache hit — это baseline для последующего профилирования bootstrap, не доказательство конкретного N+1 или разрешение переносить доменную логику в Core. У административных списков37/39 SQL executions. Не оптимизировать их вслепую и не сравнивать времена СУБД как рейтинг: jobs работают на отдельных shared runners. В MySQL8.4 public IS cold p95 около147мс при тёплом p95 около12мс; raw samples с этим разбросом сохранены, результат не удалялся и не заменялся повтором ради более красивой цифры.
