@@ -323,3 +323,6 @@ print('Multisite folders HTTP OK: hierarchy, equal codes, independent layouts, d
 
 # Enough isolated documents to exercise real list pagination in the browser.
 query("INSERT INTO documents(site_id,code,name) SELECT 1, 'browser-list-' || n, 'Browser list ' || lpad(n::text,2,'0') FROM generate_series(1,26) AS n")
+
+# Dedicated fixtures for bounded infosystem list browser checks.
+query("INSERT INTO infosystems(site_id,code,name,field_schema,is_active) SELECT 1, 'browser-list-' || n, 'Browser catalog ' || n, '[]'::jsonb, FALSE FROM generate_series(1,26) n")

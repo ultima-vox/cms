@@ -37,9 +37,13 @@ final class InfosystemController
 
         try { $browser = $this->folders->browser($request->query['folder'] ?? null, '/admin/infosystems'); }
         catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
+        $query = InfosystemListQuery::fromQuery($request->query, $browser['selected'], $browser['all']);
+        $page = $this->infosystems->page($query);
         return Response::html($this->view->render('admin/infosystems/index.php', [
             'folder_browser' => $browser,
-            'infosystems' => $this->folders->filter($this->infosystems->all(), $browser),
+            'infosystems' => $page['rows'],
+            'list_query' => $query,
+            'listing' => $page,
             'deleted' => isset($request->query['deleted']),
         ]));
     }

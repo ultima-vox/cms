@@ -10,6 +10,15 @@ use Throwable;
 
 final class InfosystemManagementRepository
 {
+    private const LIST_SELECT = <<'SQL'
+SELECT i.*,
+                (SELECT COUNT(*) FROM infosystem_groups g WHERE g.infosystem_id=i.id) AS group_count,
+                (SELECT COUNT(*) FROM infosystem_items item WHERE item.infosystem_id=i.id) AS item_count,
+                (SELECT COUNT(*) FROM node_module_bindings b JOIN nodes n ON n.id=b.node_id
+                 WHERE b.module_code='infosystem' AND b.binding_code='primary' AND b.target_key=i.code AND n.site_id=i.site_id) AS node_count
+            FROM infosystems i
+SQL;
+
     public function __construct(
         private readonly PDO $db,
         private readonly int $siteId = 1,
@@ -22,19 +31,58 @@ final class InfosystemManagementRepository
     /** @return list<array<string, mixed>> */
     public function all(): array
     {
-        $statement = $this->db->prepare(
-            <<<'SQL'
-            SELECT i.*,
-                (SELECT COUNT(*) FROM infosystem_groups g WHERE g.infosystem_id=i.id) AS group_count,
-                (SELECT COUNT(*) FROM infosystem_items item WHERE item.infosystem_id=i.id) AS item_count,
-                (SELECT COUNT(*) FROM node_module_bindings b JOIN nodes n ON n.id=b.node_id
-                 WHERE b.module_code='infosystem' AND b.binding_code='primary' AND b.target_key=i.code AND n.site_id=i.site_id) AS node_count
-            FROM infosystems i WHERE i.site_id=:site_id ORDER BY i.name,i.id
-            SQL
-        );
+        $statement = $this->db->prepare(self::LIST_SELECT . ' WHERE i.site_id=:site_id ORDER BY i.name,i.id');
         $statement->execute(['site_id' => $this->siteId]);
 
         return $statement->fetchAll();
+    }
+
+    /** @return array{rows: list<array<string, mixed>>, total: int, page: int, pages: int, per_page: int} */
+    public function page(\UltimaVox\Modules\Infosystem\Admin\InfosystemListQuery $query): array
+    {
+        (new \Core\Content\FolderRepository($this->db, $this->siteId, 'infosystems'))->assertFolder($query->folderId);
+        $where = ['i.site_id = :site_id'];
+        $params = ['site_id' => $this->siteId];
+        if (!$query->allFolders) {
+            if ($query->folderId === null) {
+                $where[] = 'i.folder_id IS NULL';
+            } else {
+                $where[] = 'i.folder_id = :folder_id';
+                $params['folder_id'] = $query->folderId;
+            }
+        }
+        if ($query->search !== '') {
+            // Search means a literal substring: %, _ and ! are not wildcards.
+            $pattern = '%' . strtr($query->search, ['!' => '!!', '%' => '!%', '_' => '!_']) . '%';
+            $where[] = "(LOWER(i.name) LIKE LOWER(:search_name) ESCAPE '!' OR LOWER(i.code) LIKE LOWER(:search_code) ESCAPE '!')";
+            $params['search_name'] = $pattern;
+            $params['search_code'] = $pattern;
+        }
+        if ($query->status !== '') {
+            $where[] = 'i.is_active = :is_active';
+            $params['is_active'] = $query->status === 'active' ? '1' : '0';
+        }
+        $condition = ' WHERE ' . implode(' AND ', $where);
+        $count = $this->db->prepare('SELECT COUNT(*) FROM infosystems i' . $condition);
+        $count->execute($params);
+        $total = (int) $count->fetchColumn();
+        $pages = max(1, (int) ceil($total / $query->perPage));
+        $page = min($query->page, $pages);
+        $order = match ($query->sort) {
+            'name_desc' => 'i.name DESC, i.id DESC',
+            'code' => 'i.code, i.id',
+            default => 'i.name, i.id',
+        };
+        $statement = $this->db->prepare(self::LIST_SELECT . $condition . ' ORDER BY ' . $order . ' LIMIT :limit OFFSET :offset');
+        foreach ($params as $key => $value) {
+            $statement->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $statement->bindValue(':limit', $query->perPage, PDO::PARAM_INT);
+        $statement->bindValue(':offset', ($page - 1) * $query->perPage, PDO::PARAM_INT);
+        $statement->execute();
+
+        return ['rows' => $statement->fetchAll(PDO::FETCH_ASSOC), 'total' => $total,
+            'page' => $page, 'pages' => $pages, 'per_page' => $query->perPage];
     }
 
     /** @return array<string, mixed>|null */
