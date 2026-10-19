@@ -8,7 +8,7 @@ use Core\Repository\SiteRepository;
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 $root = dirname(__DIR__);
-$layout = file_get_contents($root . '/templates/layouts/mechaniki.php');
+$layout = file_get_contents($root . '/templates/layouts/mechaniki-live.php');
 $config = file_get_contents($root . '/public/assets/mechaniki/site-config.js');
 if (!is_string($layout) || !is_string($config)
     || !str_contains($layout, '$page->execute()')
@@ -85,7 +85,7 @@ try {
         JOIN layouts l ON l.id = n.layout_id AND l.site_id = n.site_id
         WHERE n.site_id = :site_id
           AND n.page_type = 'documents.page'
-          AND l.code = 'mechaniki'
+          AND l.code = 'mechaniki-live'
           AND n.status = 'published'
         SQL
     );
