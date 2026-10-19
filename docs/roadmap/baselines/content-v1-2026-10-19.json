@@ -1,0 +1,998 @@
+{
+  "schema": 1,
+  "date": "2026-10-19",
+  "status": "completed",
+  "source_head": "a65fd6294dec03faf0cc604e07286f8420a69f3f",
+  "tested_merge_commit": "e0e47b35cefca934f80ed7c2b18d33d29f0fd484",
+  "workflow_run": 39253441363,
+  "workflow_url": "https://github.com/ultima-vox/cms/actions/runs/39253441363",
+  "protocol": {
+    "dataset": "Content-v1: primary 1000 nodes / 999 published documents / 10000 IS items; secondary 2 nodes / 1 document / 20 IS items",
+    "concurrency": 1,
+    "samples_per_state": 40,
+    "warmup_requests": 5,
+    "percentiles": "nearest rank ceil(p*n); 40 samples, descriptive CI observations only",
+    "cold": "Fresh PHP process; remove only fixture application file-cache before every request",
+    "warm": "Fresh PHP process; preserve application cache after five warmups per scenario",
+    "timing_scope": "Application construction/run, routing/render/send to output buffer; PDO connect, autoloader initial load and session open excluded",
+    "process_wall_scope": "Whole PHP subprocess including connect, SQL-counter self-check, autoload and session setup",
+    "sql_scope": "PDO exec/query and prepared execute calls during application dispatch; transaction methods/internal server statements not counted",
+    "memory_scope": "PHP allocated peak after reset immediately before dispatch; includes resident worker baseline, separately reports delta",
+    "not_reset": [
+      "DB buffer cache",
+      "OS filesystem cache",
+      "generated layout template files"
+    ],
+    "limitations": [
+      "CLI Application dispatch, not network HTTP/FPM/Apache/FASTPANEL latency",
+      "Instrumented PDO overhead included",
+      "No concurrent load",
+      "Shared CI runner, no approved latency threshold",
+      "No Commerce/localization measurement"
+    ]
+  },
+  "fixture_counts": {
+    "primary": {
+      "nodes": 1000,
+      "documents": 999,
+      "items": 10000
+    },
+    "secondary": {
+      "nodes": 2,
+      "documents": 1,
+      "items": 20
+    }
+  },
+  "fixture_descriptor": {
+    "version": "Content-v1",
+    "counts": {
+      "primary": {
+        "nodes": 1000,
+        "documents": 999,
+        "items": 10000
+      },
+      "secondary": {
+        "nodes": 2,
+        "documents": 1,
+        "items": 20
+      }
+    },
+    "publication": "i%5 draft; i%7 inactive; others published; fixed past publish_at",
+    "properties": [
+      "kind",
+      "capacity",
+      "featured"
+    ],
+    "groups_per_site": 20,
+    "primary_sections": 10,
+    "document_payload": "content x128",
+    "item_payload": "item content x48"
+  },
+  "databases": [
+    {
+      "artifact": {
+        "id": 12186556091,
+        "name": "g0-content-baseline-0",
+        "digest": "sha256:6983754e0ac953e6abf04e90dcdf843a48deb22c851cb473e1b98b05543119a7"
+      },
+      "php_environment": {
+        "php": "8.4.26",
+        "sapi": "cli",
+        "db_server": "16.15 (Debian 16.15-1.pgdg13+2)",
+        "pdo_driver": "pgsql",
+        "memory_limit": "128M",
+        "opcache_cli": "0",
+        "jit": "1235"
+      },
+      "runner": {
+        "os": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "cpu": "x86_64",
+        "logical_cpus": 4,
+        "python": "3.12.3"
+      },
+      "fixture_sha256": "10575bbc43d4e0eb8f01ce50e27b9a9587c2324d26d7fefdfed458f409b72c1c",
+      "isolation_checks": [
+        {
+          "case": "primary-host-warm-cache",
+          "status": 200,
+          "page_hits": 1
+        },
+        {
+          "case": "secondary-host-warm-cache",
+          "status": 200,
+          "page_hits": 1
+        },
+        {
+          "case": "foreign-document-id",
+          "status": 404
+        },
+        {
+          "case": "foreign-infosystem-id",
+          "status": 404
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "public-document",
+          "uri": "/section-10/page-0500",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 31.332741, "p95": 33.253527, "min": 30.600894, "max": 33.818647},
+                "process_wall_ms": {"p50": 88.6969159999964, "p95": 92.49945199999843, "min": 87.29748100000023, "max": 95.62953899999371},
+                "sql_executions": {"p50": 15, "p95": 15, "min": 15, "max": 15},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 1342, "p95": 1342, "min": 1342, "max": 1342}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 22.493273, "p95": 22.860459, "min": 21.98957, "max": 23.547556},
+                "process_wall_ms": {"p50": 79.33028299999734, "p95": 81.01127600000524, "min": 78.01283799999936, "max": 81.47736300000474},
+                "sql_executions": {"p50": 9, "p95": 9, "min": 9, "max": 9},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 1342, "p95": 1342, "min": 1342, "max": 1342}
+              }
+            }
+          }
+        },
+        {
+          "name": "public-infosystem-list",
+          "uri": "/news",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 58.086442, "p95": 59.74948, "min": 56.608987, "max": 62.850375},
+                "process_wall_ms": {"p50": 115.79376099999905, "p95": 118.0323499999929, "min": 114.58228299999718, "max": 125.67307699999475},
+                "sql_executions": {"p50": 17, "p95": 17, "min": 17, "max": 17},
+                "peak_allocated_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "peak_delta_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "body_bytes": {"p50": 3410, "p95": 3410, "min": 3410, "max": 3410}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 22.53762, "p95": 23.206841, "min": 21.713579, "max": 26.685796},
+                "process_wall_ms": {"p50": 79.48313900000414, "p95": 82.7917839999941, "min": 77.87169600000254, "max": 92.3463839999954},
+                "sql_executions": {"p50": 9, "p95": 9, "min": 9, "max": 9},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 3410, "p95": 3410, "min": 3410, "max": 3410}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-documents-page",
+          "uri": "/admin/documents?folder=all&q=PRIMARY_CONTENT&per_page=25",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 47.458525, "p95": 48.492878, "min": 46.415685, "max": 48.998786},
+                "process_wall_ms": {"p50": 104.96339899999896, "p95": 106.73278299999822, "min": 103.61580699999706, "max": 113.97363199999688},
+                "sql_executions": {"p50": 37, "p95": 37, "min": 37, "max": 37},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 29254, "p95": 29254, "min": 29254, "max": 29254}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 47.638702, "p95": 49.53112, "min": 45.828136, "max": 50.994685},
+                "process_wall_ms": {"p50": 106.3596749999931, "p95": 108.49661999999682, "min": 102.46793700000012, "max": 112.8103249999981},
+                "sql_executions": {"p50": 37, "p95": 37, "min": 37, "max": 37},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 29254, "p95": 29254, "min": 29254, "max": 29254}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-infosystem-items-page",
+          "uri": "/admin/infosystems/1/items?per_page=25",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 55.856815, "p95": 57.959146, "min": 54.494609, "max": 70.030607},
+                "process_wall_ms": {"p50": 113.76450000000204, "p95": 116.7663039999951, "min": 111.35478600000681, "max": 134.59659000000102},
+                "sql_executions": {"p50": 39, "p95": 39, "min": 39, "max": 39},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 23508, "p95": 23508, "min": 23508, "max": 23508}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 56.334669, "p95": 60.046976, "min": 54.780174, "max": 68.027372},
+                "process_wall_ms": {"p50": 114.54532999999856, "p95": 119.7918870000052, "min": 112.57636400000592, "max": 127.17576000000008},
+                "sql_executions": {"p50": 39, "p95": 39, "min": 39, "max": 39},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 23508, "p95": 23508, "min": 23508, "max": 23508}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-structure-tree",
+          "uri": "/admin/structure",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 48.228468, "p95": 49.6395, "min": 46.761022, "max": 62.533651},
+                "process_wall_ms": {"p50": 106.9666550000079, "p95": 109.34468100001027, "min": 104.93465500000809, "max": 122.11328799999421},
+                "sql_executions": {"p50": 35, "p95": 35, "min": 35, "max": 35},
+                "peak_allocated_bytes": {"p50": 8388608, "p95": 8388608, "min": 8388608, "max": 8388608},
+                "peak_delta_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "body_bytes": {"p50": 759030, "p95": 759030, "min": 759030, "max": 759030}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 48.296002, "p95": 49.98994, "min": 47.094316, "max": 51.568692},
+                "process_wall_ms": {"p50": 107.38731099999654, "p95": 109.63577499998678, "min": 104.45230299998798, "max": 111.64460099999474},
+                "sql_executions": {"p50": 35, "p95": 35, "min": 35, "max": 35},
+                "peak_allocated_bytes": {"p50": 8388608, "p95": 8388608, "min": 8388608, "max": 8388608},
+                "peak_delta_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "body_bytes": {"p50": 759030, "p95": 759030, "min": 759030, "max": 759030}
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "artifact": {
+        "id": 12187265049,
+        "name": "g0-content-baseline-1",
+        "digest": "sha256:746180b198f7513b7fb1bb41be5c359a3782d0fbb7ed0d73a5d401e844f5f556"
+      },
+      "php_environment": {
+        "php": "8.4.26",
+        "sapi": "cli",
+        "db_server": "8.0.46",
+        "pdo_driver": "mysql",
+        "memory_limit": "128M",
+        "opcache_cli": "0",
+        "jit": "1235"
+      },
+      "runner": {
+        "os": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "cpu": "x86_64",
+        "logical_cpus": 4,
+        "python": "3.12.3"
+      },
+      "fixture_sha256": "10575bbc43d4e0eb8f01ce50e27b9a9587c2324d26d7fefdfed458f409b72c1c",
+      "isolation_checks": [
+        {
+          "case": "primary-host-warm-cache",
+          "status": 200,
+          "page_hits": 1
+        },
+        {
+          "case": "secondary-host-warm-cache",
+          "status": 200,
+          "page_hits": 1
+        },
+        {
+          "case": "foreign-document-id",
+          "status": 404
+        },
+        {
+          "case": "foreign-infosystem-id",
+          "status": 404
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "public-document",
+          "uri": "/section-10/page-0500",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 24.849635, "p95": 29.139419, "min": 23.957207, "max": 32.313618},
+                "process_wall_ms": {"p50": 77.38198300000931, "p95": 81.77101600000469, "min": 74.75106199999004, "max": 92.86364599999786},
+                "sql_executions": {"p50": 15, "p95": 15, "min": 15, "max": 15},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 1342, "p95": 1342, "min": 1342, "max": 1342}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 18.811636, "p95": 19.225525, "min": 18.473016, "max": 24.445369},
+                "process_wall_ms": {"p50": 69.58583299999077, "p95": 71.14583100000971, "min": 68.28395600000192, "max": 75.78940199999806},
+                "sql_executions": {"p50": 9, "p95": 9, "min": 9, "max": 9},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 1342, "p95": 1342, "min": 1342, "max": 1342}
+              }
+            }
+          }
+        },
+        {
+          "name": "public-infosystem-list",
+          "uri": "/news",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 49.05154, "p95": 53.580064, "min": 46.601268, "max": 63.4822},
+                "process_wall_ms": {"p50": 101.28455400000291, "p95": 108.60977599999444, "min": 95.8245949999963, "max": 114.71847300001059},
+                "sql_executions": {"p50": 17, "p95": 17, "min": 17, "max": 17},
+                "peak_allocated_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "peak_delta_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "body_bytes": {"p50": 3410, "p95": 3410, "min": 3410, "max": 3410}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 18.873112, "p95": 19.316947, "min": 18.493405, "max": 22.673533},
+                "process_wall_ms": {"p50": 70.52312800000493, "p95": 72.59011999998677, "min": 68.94283200000473, "max": 79.70091100000332},
+                "sql_executions": {"p50": 9, "p95": 9, "min": 9, "max": 9},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 3410, "p95": 3410, "min": 3410, "max": 3410}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-documents-page",
+          "uri": "/admin/documents?folder=all&q=PRIMARY_CONTENT&per_page=25",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 29.960998, "p95": 32.14905, "min": 29.162675, "max": 36.967934},
+                "process_wall_ms": {"p50": 81.75045900000555, "p95": 85.15326500000242, "min": 79.65460400001234, "max": 90.62779799999987},
+                "sql_executions": {"p50": 37, "p95": 37, "min": 37, "max": 37},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 29254, "p95": 29254, "min": 29254, "max": 29254}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 29.785996, "p95": 30.508095, "min": 28.961865, "max": 30.959884},
+                "process_wall_ms": {"p50": 81.7280290000042, "p95": 83.39038699999435, "min": 79.77486900000486, "max": 90.57516000000021},
+                "sql_executions": {"p50": 37, "p95": 37, "min": 37, "max": 37},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 29254, "p95": 29254, "min": 29254, "max": 29254}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-infosystem-items-page",
+          "uri": "/admin/infosystems/1/items?per_page=25",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 71.174838, "p95": 72.683504, "min": 69.865274, "max": 95.617605},
+                "process_wall_ms": {"p50": 123.5895810000045, "p95": 126.48450099999309, "min": 120.49345699999492, "max": 149.7395800000021},
+                "sql_executions": {"p50": 39, "p95": 39, "min": 39, "max": 39},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 23507, "p95": 23507, "min": 23507, "max": 23507}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 71.134493, "p95": 72.623631, "min": 70.285196, "max": 73.116107},
+                "process_wall_ms": {"p50": 123.4487060000049, "p95": 125.65866299999584, "min": 121.62689400000204, "max": 130.6608729999965},
+                "sql_executions": {"p50": 39, "p95": 39, "min": 39, "max": 39},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 23507, "p95": 23507, "min": 23507, "max": 23507}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-structure-tree",
+          "uri": "/admin/structure",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 32.53446, "p95": 33.948785, "min": 31.815713, "max": 38.098647},
+                "process_wall_ms": {"p50": 84.87296699999547, "p95": 88.62932799999612, "min": 82.70378499999254, "max": 91.76532600000087},
+                "sql_executions": {"p50": 35, "p95": 35, "min": 35, "max": 35},
+                "peak_allocated_bytes": {"p50": 8388608, "p95": 8388608, "min": 8388608, "max": 8388608},
+                "peak_delta_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "body_bytes": {"p50": 759030, "p95": 759030, "min": 759030, "max": 759030}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 32.680851, "p95": 33.588828, "min": 31.909568, "max": 36.288644},
+                "process_wall_ms": {"p50": 85.51768799999593, "p95": 88.7966580000068, "min": 82.82928399999889, "max": 92.67414899998982},
+                "sql_executions": {"p50": 35, "p95": 35, "min": 35, "max": 35},
+                "peak_allocated_bytes": {"p50": 8388608, "p95": 8388608, "min": 8388608, "max": 8388608},
+                "peak_delta_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "body_bytes": {"p50": 759030, "p95": 759030, "min": 759030, "max": 759030}
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "artifact": {
+        "id": 12186477079,
+        "name": "g0-content-baseline-2",
+        "digest": "sha256:1fa90efe34d4886db57a2609e4951d5b0689c666bd453bfb674ddb102f112bd0"
+      },
+      "php_environment": {
+        "php": "8.4.26",
+        "sapi": "cli",
+        "db_server": "8.4.11",
+        "pdo_driver": "mysql",
+        "memory_limit": "128M",
+        "opcache_cli": "0",
+        "jit": "1235"
+      },
+      "runner": {
+        "os": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "cpu": "x86_64",
+        "logical_cpus": 4,
+        "python": "3.12.3"
+      },
+      "fixture_sha256": "10575bbc43d4e0eb8f01ce50e27b9a9587c2324d26d7fefdfed458f409b72c1c",
+      "isolation_checks": [
+        {
+          "case": "primary-host-warm-cache",
+          "status": 200,
+          "page_hits": 1
+        },
+        {
+          "case": "secondary-host-warm-cache",
+          "status": 200,
+          "page_hits": 1
+        },
+        {
+          "case": "foreign-document-id",
+          "status": 404
+        },
+        {
+          "case": "foreign-infosystem-id",
+          "status": 404
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "public-document",
+          "uri": "/section-10/page-0500",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 24.061026, "p95": 25.174536, "min": 23.245102, "max": 25.839489},
+                "process_wall_ms": {"p50": 75.66150699999241, "p95": 77.15372700000955, "min": 74.11964599999976, "max": 84.93899900000201},
+                "sql_executions": {"p50": 15, "p95": 15, "min": 15, "max": 15},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 1342, "p95": 1342, "min": 1342, "max": 1342}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 18.7316, "p95": 19.062419, "min": 18.327516, "max": 19.242866},
+                "process_wall_ms": {"p50": 70.42699000000141, "p95": 71.36084300000789, "min": 67.8510689999996, "max": 71.7371859999929},
+                "sql_executions": {"p50": 9, "p95": 9, "min": 9, "max": 9},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 1342, "p95": 1342, "min": 1342, "max": 1342}
+              }
+            }
+          }
+        },
+        {
+          "name": "public-infosystem-list",
+          "uri": "/news",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 48.289144, "p95": 50.074517, "min": 46.237525, "max": 54.000512},
+                "process_wall_ms": {"p50": 100.64937100000293, "p95": 103.970070999992, "min": 96.35865799999976, "max": 109.62598099999354},
+                "sql_executions": {"p50": 17, "p95": 17, "min": 17, "max": 17},
+                "peak_allocated_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "peak_delta_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "body_bytes": {"p50": 3410, "p95": 3410, "min": 3410, "max": 3410}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 18.751805, "p95": 19.001725, "min": 18.294735, "max": 21.695162},
+                "process_wall_ms": {"p50": 70.36357500000179, "p95": 72.20866500000511, "min": 68.84379800000318, "max": 74.79294099999834},
+                "sql_executions": {"p50": 9, "p95": 9, "min": 9, "max": 9},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 3410, "p95": 3410, "min": 3410, "max": 3410}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-documents-page",
+          "uri": "/admin/documents?folder=all&q=PRIMARY_CONTENT&per_page=25",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 28.83502, "p95": 30.297919, "min": 27.679029, "max": 33.601885},
+                "process_wall_ms": {"p50": 81.03742699999827, "p95": 82.9954400000048, "min": 79.11501899999962, "max": 90.34973400000013},
+                "sql_executions": {"p50": 37, "p95": 37, "min": 37, "max": 37},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 29254, "p95": 29254, "min": 29254, "max": 29254}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 28.488443, "p95": 29.404206, "min": 27.734754, "max": 32.039845},
+                "process_wall_ms": {"p50": 81.19923200000301, "p95": 83.00932699999919, "min": 79.49993399999755, "max": 85.92890199999204},
+                "sql_executions": {"p50": 37, "p95": 37, "min": 37, "max": 37},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 29254, "p95": 29254, "min": 29254, "max": 29254}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-infosystem-items-page",
+          "uri": "/admin/infosystems/1/items?per_page=25",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 65.803241, "p95": 67.093295, "min": 64.141449, "max": 67.842825},
+                "process_wall_ms": {"p50": 118.52696500000093, "p95": 121.65674799999238, "min": 115.16312899999548, "max": 122.86167099999545},
+                "sql_executions": {"p50": 39, "p95": 39, "min": 39, "max": 39},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 23507, "p95": 23507, "min": 23507, "max": 23507}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 65.621709, "p95": 66.803957, "min": 63.454064, "max": 78.905361},
+                "process_wall_ms": {"p50": 117.71380700000122, "p95": 120.20835000001284, "min": 115.50658100000533, "max": 134.30294799999842},
+                "sql_executions": {"p50": 39, "p95": 39, "min": 39, "max": 39},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 23507, "p95": 23507, "min": 23507, "max": 23507}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-structure-tree",
+          "uri": "/admin/structure",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 31.062061, "p95": 31.83141, "min": 30.428507, "max": 38.635462},
+                "process_wall_ms": {"p50": 83.90509299999849, "p95": 86.49902300000178, "min": 81.61633400000312, "max": 92.4450889999946},
+                "sql_executions": {"p50": 35, "p95": 35, "min": 35, "max": 35},
+                "peak_allocated_bytes": {"p50": 8388608, "p95": 8388608, "min": 8388608, "max": 8388608},
+                "peak_delta_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "body_bytes": {"p50": 759030, "p95": 759030, "min": 759030, "max": 759030}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 30.86346, "p95": 31.864482, "min": 30.4181, "max": 34.913993},
+                "process_wall_ms": {"p50": 83.9230170000036, "p95": 86.5468519999979, "min": 81.79702099999986, "max": 90.70506599999817},
+                "sql_executions": {"p50": 35, "p95": 35, "min": 35, "max": 35},
+                "peak_allocated_bytes": {"p50": 8388608, "p95": 8388608, "min": 8388608, "max": 8388608},
+                "peak_delta_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "body_bytes": {"p50": 759030, "p95": 759030, "min": 759030, "max": 759030}
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "artifact": {
+        "id": 12186397823,
+        "name": "g0-content-baseline-3",
+        "digest": "sha256:b80926f545ea52a455f689f9e1e250f5914431d99c2a1d7b390a9423184aec1c"
+      },
+      "php_environment": {
+        "php": "8.4.26",
+        "sapi": "cli",
+        "db_server": "10.11.19-MariaDB-ubu2204",
+        "pdo_driver": "mysql",
+        "memory_limit": "128M",
+        "opcache_cli": "0",
+        "jit": "1235"
+      },
+      "runner": {
+        "os": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "cpu": "x86_64",
+        "logical_cpus": 4,
+        "python": "3.12.3"
+      },
+      "fixture_sha256": "10575bbc43d4e0eb8f01ce50e27b9a9587c2324d26d7fefdfed458f409b72c1c",
+      "isolation_checks": [
+        {
+          "case": "primary-host-warm-cache",
+          "status": 200,
+          "page_hits": 1
+        },
+        {
+          "case": "secondary-host-warm-cache",
+          "status": 200,
+          "page_hits": 1
+        },
+        {
+          "case": "foreign-document-id",
+          "status": 404
+        },
+        {
+          "case": "foreign-infosystem-id",
+          "status": 404
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "public-document",
+          "uri": "/section-10/page-0500",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 23.641169, "p95": 24.275952, "min": 23.077818, "max": 25.678104},
+                "process_wall_ms": {"p50": 72.91624799999852, "p95": 77.86193199999758, "min": 70.90829999999926, "max": 80.70479999999947},
+                "sql_executions": {"p50": 15, "p95": 15, "min": 15, "max": 15},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 1342, "p95": 1342, "min": 1342, "max": 1342}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 18.466446, "p95": 19.018797, "min": 18.156075, "max": 23.070771},
+                "process_wall_ms": {"p50": 67.70602799999637, "p95": 69.80518999999674, "min": 65.32499799999414, "max": 74.56251199999997},
+                "sql_executions": {"p50": 9, "p95": 9, "min": 9, "max": 9},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 1342, "p95": 1342, "min": 1342, "max": 1342}
+              }
+            }
+          }
+        },
+        {
+          "name": "public-infosystem-list",
+          "uri": "/news",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 43.688552, "p95": 44.610652, "min": 42.323006, "max": 51.290174},
+                "process_wall_ms": {"p50": 93.41180799999904, "p95": 96.42340499999591, "min": 91.06311600000083, "max": 100.70278400000632},
+                "sql_executions": {"p50": 17, "p95": 17, "min": 17, "max": 17},
+                "peak_allocated_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "peak_delta_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "body_bytes": {"p50": 3410, "p95": 3410, "min": 3410, "max": 3410}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 18.467787, "p95": 18.942664, "min": 18.177024, "max": 22.406541},
+                "process_wall_ms": {"p50": 67.26309000001152, "p95": 69.9094449999933, "min": 65.26719900000444, "max": 71.89634200000228},
+                "sql_executions": {"p50": 9, "p95": 9, "min": 9, "max": 9},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 3410, "p95": 3410, "min": 3410, "max": 3410}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-documents-page",
+          "uri": "/admin/documents?folder=all&q=PRIMARY_CONTENT&per_page=25",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 28.072689, "p95": 29.051579, "min": 27.619282, "max": 29.547121},
+                "process_wall_ms": {"p50": 77.83096100000364, "p95": 81.75492400000905, "min": 76.00045300000602, "max": 81.99041900000736},
+                "sql_executions": {"p50": 37, "p95": 37, "min": 37, "max": 37},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 29254, "p95": 29254, "min": 29254, "max": 29254}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 28.047071, "p95": 29.240328, "min": 27.514954, "max": 32.019002},
+                "process_wall_ms": {"p50": 78.00571399999967, "p95": 81.56932299999653, "min": 76.10495800000194, "max": 83.94548399999735},
+                "sql_executions": {"p50": 37, "p95": 37, "min": 37, "max": 37},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 29254, "p95": 29254, "min": 29254, "max": 29254}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-infosystem-items-page",
+          "uri": "/admin/infosystems/1/items?per_page=25",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 62.782883, "p95": 64.202193, "min": 61.864659, "max": 65.408827},
+                "process_wall_ms": {"p50": 112.90613900000324, "p95": 115.04290900001024, "min": 110.23000299999808, "max": 126.94843100000242},
+                "sql_executions": {"p50": 39, "p95": 39, "min": 39, "max": 39},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 23507, "p95": 23507, "min": 23507, "max": 23507}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 63.365261, "p95": 64.705855, "min": 62.360706, "max": 78.15757},
+                "process_wall_ms": {"p50": 114.21714099999747, "p95": 116.59272300001078, "min": 111.88151300000015, "max": 128.93413599999803},
+                "sql_executions": {"p50": 39, "p95": 39, "min": 39, "max": 39},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 23507, "p95": 23507, "min": 23507, "max": 23507}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-structure-tree",
+          "uri": "/admin/structure",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 31.620857, "p95": 32.590712, "min": 30.623456, "max": 36.438614},
+                "process_wall_ms": {"p50": 84.0194390000022, "p95": 86.04960400001005, "min": 81.7472659999936, "max": 90.8720949999946},
+                "sql_executions": {"p50": 35, "p95": 35, "min": 35, "max": 35},
+                "peak_allocated_bytes": {"p50": 8388608, "p95": 8388608, "min": 8388608, "max": 8388608},
+                "peak_delta_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "body_bytes": {"p50": 759030, "p95": 759030, "min": 759030, "max": 759030}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 31.793094, "p95": 33.090925, "min": 30.882072, "max": 39.61886},
+                "process_wall_ms": {"p50": 84.22768100000155, "p95": 89.16724499999873, "min": 82.4255160000007, "max": 93.61610799999198},
+                "sql_executions": {"p50": 35, "p95": 35, "min": 35, "max": 35},
+                "peak_allocated_bytes": {"p50": 8388608, "p95": 8388608, "min": 8388608, "max": 8388608},
+                "peak_delta_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "body_bytes": {"p50": 759030, "p95": 759030, "min": 759030, "max": 759030}
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "artifact": {
+        "id": 12186224158,
+        "name": "g0-content-baseline-4",
+        "digest": "sha256:b4951b29426d01f4989f67b32c8a121e4a61985556aaeb2499b4252c9bd70bea"
+      },
+      "php_environment": {
+        "php": "8.4.26",
+        "sapi": "cli",
+        "db_server": "11.4.13-MariaDB-ubu2404",
+        "pdo_driver": "mysql",
+        "memory_limit": "128M",
+        "opcache_cli": "0",
+        "jit": "1235"
+      },
+      "runner": {
+        "os": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "cpu": "x86_64",
+        "logical_cpus": 4,
+        "python": "3.12.3"
+      },
+      "fixture_sha256": "10575bbc43d4e0eb8f01ce50e27b9a9587c2324d26d7fefdfed458f409b72c1c",
+      "isolation_checks": [
+        {
+          "case": "primary-host-warm-cache",
+          "status": 200,
+          "page_hits": 1
+        },
+        {
+          "case": "secondary-host-warm-cache",
+          "status": 200,
+          "page_hits": 1
+        },
+        {
+          "case": "foreign-document-id",
+          "status": 404
+        },
+        {
+          "case": "foreign-infosystem-id",
+          "status": 404
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "public-document",
+          "uri": "/section-10/page-0500",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 25.434148, "p95": 26.339042, "min": 24.090557, "max": 26.679544},
+                "process_wall_ms": {"p50": 78.80665500000106, "p95": 80.38159899999897, "min": 75.96821799999987, "max": 80.83627599999943},
+                "sql_executions": {"p50": 15, "p95": 15, "min": 15, "max": 15},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 1342, "p95": 1342, "min": 1342, "max": 1342}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 19.135878, "p95": 20.811068, "min": 18.369966, "max": 26.348609},
+                "process_wall_ms": {"p50": 71.52984500000059, "p95": 83.06499100000053, "min": 67.59415799999857, "max": 87.10033299999509},
+                "sql_executions": {"p50": 9, "p95": 9, "min": 9, "max": 9},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 1342, "p95": 1342, "min": 1342, "max": 1342}
+              }
+            }
+          }
+        },
+        {
+          "name": "public-infosystem-list",
+          "uri": "/news",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 48.723351, "p95": 51.996956, "min": 47.037839, "max": 53.471124},
+                "process_wall_ms": {"p50": 100.43037200000526, "p95": 105.1793490000037, "min": 97.11266899999771, "max": 106.55306700000011},
+                "sql_executions": {"p50": 17, "p95": 17, "min": 17, "max": 17},
+                "peak_allocated_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "peak_delta_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "body_bytes": {"p50": 3410, "p95": 3410, "min": 3410, "max": 3410}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 18.905441, "p95": 19.921186, "min": 18.307441, "max": 21.410621},
+                "process_wall_ms": {"p50": 70.05756799999574, "p95": 75.73547299999461, "min": 67.91565999999705, "max": 78.5635140000096},
+                "sql_executions": {"p50": 9, "p95": 9, "min": 9, "max": 9},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 3410, "p95": 3410, "min": 3410, "max": 3410}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-documents-page",
+          "uri": "/admin/documents?folder=all&q=PRIMARY_CONTENT&per_page=25",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 28.641212, "p95": 30.61759, "min": 27.680466, "max": 36.349362},
+                "process_wall_ms": {"p50": 80.43799800000784, "p95": 84.16261800000768, "min": 78.1628430000012, "max": 92.3789600000049},
+                "sql_executions": {"p50": 37, "p95": 37, "min": 37, "max": 37},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 29254, "p95": 29254, "min": 29254, "max": 29254}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 28.269124, "p95": 29.420803, "min": 27.554007, "max": 34.538648},
+                "process_wall_ms": {"p50": 79.18316100000311, "p95": 82.11885000000052, "min": 77.34781899999632, "max": 87.56771299999855},
+                "sql_executions": {"p50": 37, "p95": 37, "min": 37, "max": 37},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 29254, "p95": 29254, "min": 29254, "max": 29254}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-infosystem-items-page",
+          "uri": "/admin/infosystems/1/items?per_page=25",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 66.616978, "p95": 69.430879, "min": 64.799612, "max": 90.921857},
+                "process_wall_ms": {"p50": 118.38065599999936, "p95": 124.2383309999866, "min": 115.90664599999911, "max": 147.63981299999784},
+                "sql_executions": {"p50": 39, "p95": 39, "min": 39, "max": 39},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 23507, "p95": 23507, "min": 23507, "max": 23507}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 66.466005, "p95": 67.957815, "min": 65.200978, "max": 72.035815},
+                "process_wall_ms": {"p50": 117.72712799999852, "p95": 122.45199899999193, "min": 115.95039999998846, "max": 126.95322800000497},
+                "sql_executions": {"p50": 39, "p95": 39, "min": 39, "max": 39},
+                "peak_allocated_bytes": {"p50": 4194304, "p95": 4194304, "min": 4194304, "max": 4194304},
+                "peak_delta_bytes": {"p50": 2097152, "p95": 2097152, "min": 2097152, "max": 2097152},
+                "body_bytes": {"p50": 23507, "p95": 23507, "min": 23507, "max": 23507}
+              }
+            }
+          }
+        },
+        {
+          "name": "admin-structure-tree",
+          "uri": "/admin/structure",
+          "states": {
+            "cold": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 30.975408, "p95": 32.157282, "min": 30.264856, "max": 41.466339},
+                "process_wall_ms": {"p50": 83.08744699999693, "p95": 85.69021200000293, "min": 80.74871399999495, "max": 95.84708600000624},
+                "sql_executions": {"p50": 35, "p95": 35, "min": 35, "max": 35},
+                "peak_allocated_bytes": {"p50": 8388608, "p95": 8388608, "min": 8388608, "max": 8388608},
+                "peak_delta_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "body_bytes": {"p50": 759030, "p95": 759030, "min": 759030, "max": 759030}
+              }
+            },
+            "warm": {
+              "sample_count": 40,
+              "summary": {
+                "dispatch_ms": {"p50": 31.31072, "p95": 32.557952, "min": 30.025674, "max": 33.013842},
+                "process_wall_ms": {"p50": 83.94230400000424, "p95": 86.04183200000648, "min": 81.07331299999032, "max": 87.11049599999399},
+                "sql_executions": {"p50": 35, "p95": 35, "min": 35, "max": 35},
+                "peak_allocated_bytes": {"p50": 8388608, "p95": 8388608, "min": 8388608, "max": 8388608},
+                "peak_delta_bytes": {"p50": 6291456, "p95": 6291456, "min": 6291456, "max": 6291456},
+                "body_bytes": {"p50": 759030, "p95": 759030, "min": 759030, "max": 759030}
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

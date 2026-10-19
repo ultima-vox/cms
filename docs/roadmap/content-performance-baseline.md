@@ -70,3 +70,23 @@ PDO-счётчик находится только в test probe; reflection з�
 Артефакты workflow: `g0-content-baseline-0` … `-4`, по одному `report.json` с summary и raw samples плюс metadata runner. Наличие артефакта само по себе не означает success: читать `status`, job conclusion и diagnostics. Ошибка корректности/изоляции/инструментации прерывает job; неуспешный отчёт также сохраняется. Медленный результат не скрывается произвольным порогом или повтором до зелёного.
 
 Для завершения #105 ещё нужны review результатов и утверждение реалистичных бюджетов, согласование области CLI/HTTP и отдельные human editor walkthrough. Частичный browser UI baseline описан в PR130: три сценария на 390/1024/1440, реальные screenshots и automation actions. Подменять human usability количеством автоматизированных click нельзя. G1 остаётся заблокирован до приёмки G0 и устранения его критических дефектов.
+
+## Измеренный прогон 19 октября 2026
+
+[G0 workflow39253441363](https://github.com/ultima-vox/cms/actions/runs/39253441363), все пять jobs — success. Source head `a65fd6294dec03faf0cc604e07286f8420a69f3f`, фактически проверенный PR merge checkout `e0e47b35cefca934f80ed7c2b18d33d29f0fd484`. [Постоянный JSON snapshot](baselines/content-v1-2026-10-19.json) содержит summary, SHA, artifact digest и metadata; исходные 2000 raw samples доступны в workflow artifacts с retention90 дней. Самостоятельно пересчитаны nearest-rank summaries всех raw samples, проверены cache states/status и одинаковый fixture descriptor на пяти СУБД. Обычные [CI39253441325](https://github.com/ultima-vox/cms/actions/runs/39253441325) и [MVP39253441259](https://github.com/ultima-vox/cms/actions/runs/39253441259) также success.
+
+PostgreSQL16.15 / PHP8.4.26 / CLI, 128M, OPcache CLI off. В этой таблице только primary PG job; другие СУБД — в JSON. Это application dispatch, не HTTP latency.
+
+| Сценарий | Cold p50/p95, мс | Warm p50/p95, мс | SQL cold/warm | Peak allocated cold/warm, MiB |
+| --- | --- | --- | --- | --- |
+| public-document | 31.33 / 33.25 | 22.49 / 22.86 | 15 / 9 | 4 / 4 |
+| public-infosystem-list | 58.09 / 59.75 | 22.54 / 23.21 | 17 / 9 | 6 / 4 |
+| admin-documents-page | 47.46 / 48.49 | 47.64 / 49.53 | 37 / 37 | 4 / 4 |
+| admin-infosystem-items-page | 55.86 / 57.96 | 56.33 / 60.05 | 39 / 39 | 4 / 4 |
+| admin-structure-tree | 48.23 / 49.64 | 48.30 / 49.99 | 35 / 35 | 8 / 8 |
+
+Четыре isolation checks прошли на каждой СУБД: primary/secondary cache HIT с верным контентом, foreign document/IS ID404. Публичные draft/inactive markers не появились. Все 2000 измеренных dispatch прошли с200 в пределах128M; это не утверждение о будущих модулях или пользовательском коде.
+
+Вывод для UX: дерево1000 узлов возвращает **759030 байт HTML** целиком (около741KiB), при этом server dispatch p95 около50мс в PG job. Серверное время само по себе не доказывает удобство: большой DOM и поиск нужного узла нужно проверить в браузере. Существующая #128 должна учитывать объём ответа, сворачивание ветвей/сохранение контекста и измерение DOM/render на390/1024/1440. Не объявлять необходимость тяжёлой frontend-виртуализации без browser measurements.
+
+На прогретой публичной странице остаётся9 SQL executions до/вокруг cache hit — это baseline для последующего профилирования bootstrap, не доказательство конкретного N+1 или разрешение переносить доменную логику в Core. У административных списков37/39 SQL executions. Не оптимизировать их вслепую и не сравнивать времена СУБД как рейтинг: jobs работают на отдельных shared runners.
