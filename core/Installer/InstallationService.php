@@ -56,6 +56,7 @@ final readonly class InstallationService
         if (!$checker->requiredPassed($checker->checks())) {
             throw new RuntimeException('Сервер не прошёл обязательную проверку окружения.');
         }
+        (new HostingProbe($this->rootPath))->verify($url);
         $environment = [
             'APP_ENV' => 'production', 'APP_DEBUG' => 'false', 'APP_URL' => $url,
             'DB_DRIVER' => $config->driver, 'DB_HOST' => $config->host, 'DB_PORT' => (string) $config->port,

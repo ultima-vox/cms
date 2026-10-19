@@ -1,6 +1,7 @@
 """Verify that Apache itself protects static private files, before/after install."""
 import argparse
 import os
+from pathlib import Path
 import urllib.error
 import urllib.request
 
@@ -42,6 +43,8 @@ else:
         allowed = (302, 403, 404) if args.before_install and layout == 'public' else (403, 404)
         assert status in allowed, f'{path}: expected denial, got {status}'
         assert b'CMS_PRIVATE_PROOF' not in body and b'"require"' not in body, f'Private contents exposed at {path}'
+    assets = Path('/tmp/cms-apache') / ('public/assets' if layout == 'public' else 'assets')
+    assert not list(assets.glob('cms-install-probe-*.txt')), 'Installer left a public control file'
     status, body = get('/assets/installer.css')
     assert status == 200 and len(body) > 100, 'Apache did not serve public assets'
     print(f'APACHE PRIVATE FILES OK: {layout}, {len(paths)} paths denied, static assets available')
