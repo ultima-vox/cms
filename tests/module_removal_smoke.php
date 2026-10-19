@@ -17,6 +17,8 @@ if (($argv[1] ?? '') === '--worker') {
         if ($auth->login((string) getenv('G0_FIXTURE_EMAIL'), (string) getenv('G0_FIXTURE_PASSWORD'), '127.0.0.1') !== Core\Security\LoginStatus::Success) {
             throw new RuntimeException('Removal fixture authentication failed.');
         }
+        (new Core\Site\AdminSiteSelector(new Core\Repository\SiteRepository($db), new Core\Site\SiteAccessRepository($db), (int) $auth->user()['id']))
+            ->select((int) getenv('G0_FIXTURE_SITE'));
     }
     ob_start();
     (new Core\Application($root))->run(new Core\Http\Request('GET', $path, $path, [], [], $_SERVER, []));
@@ -115,7 +117,7 @@ final class G0IndependentFixture implements \Core\Extension\ModuleInterface {
 FIXTURE);
         foreach (['/health', '/admin/login', '/admin', '/admin/structure', '/admin/layouts', '/admin/modules', '/admin/structure/' . $editorNode . '/edit', '/'] as $path) {
             foreach ($path === '/' ? ['a', 'b'] : ['a'] as $variant) {
-                $env = array_merge(getenv(), ['G0_FIXTURE_EMAIL' => $email, 'G0_FIXTURE_PASSWORD' => $password]);
+                $env = array_merge(getenv(), ['G0_FIXTURE_EMAIL' => $email, 'G0_FIXTURE_PASSWORD' => $password, 'G0_FIXTURE_SITE' => (string) $sites[$variant]]);
                 $process = proc_open([PHP_BINARY, __FILE__, '--worker', $root, 'g0-' . $suffix . '-' . $variant . '.test', $path], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $source, $env);
                 if (!is_resource($process)) throw new RuntimeException('Cannot start a fresh removal worker.');
                 $stdout = stream_get_contents($pipes[1]); fclose($pipes[1]);

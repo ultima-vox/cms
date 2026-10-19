@@ -15,8 +15,8 @@ def verify_page_editor_handoff(request, query):
     node = re.search(r'/structure/(\d+)/', page_path).group(1)
     body, _ = request(headers['Location'])
     editor = DocumentPage(body).link('Редактировать содержимое')
-    query = parse_qs(urlsplit(editor).query)
-    assert query == {'_page': [node], '_page_site': ['1']}
+    context_query = parse_qs(urlsplit(editor).query)
+    assert context_query == {'_page': [node], '_page_site': ['1']}
     edit_path = urlsplit(editor).path
     assert re.fullmatch(r'/admin/documents/\d+/edit', edit_path)
     body, _ = request(editor)
