@@ -122,7 +122,7 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
     await page.locator('[data-tab="seo"]').click();
     assert.equal(await page.locator('textarea[name="meta_description"]').isVisible(), true);
     await page.locator('[data-tab="description"]').click();
-    const contentEditor = page.locator('textarea[data-rich-editor="content"]').locator('..').locator('..');
+    const contentEditor = page.locator('.uv-rich').filter({has: page.locator('textarea[data-rich-editor="content"]')});
     await contentEditor.locator('[data-editor-mode="preview"]').click();
     assert.equal(await contentEditor.locator('iframe[title^="Предпросмотр"]').isVisible(), true);
     assert.equal(await page.locator('textarea[data-rich-editor="content"]').inputValue(), '<p>HTML source remains editable</p>');
