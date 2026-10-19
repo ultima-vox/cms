@@ -123,6 +123,7 @@
         overlay.innerHTML = highlight(textarea.value, language.value);
         textarea.classList.add('uv-rich__textarea');
         textarea.id ||= 'uv-rich-' + name;
+        const target = textarea.parentNode;
         sourceArea.append(overlay);
         sourceArea.append(textarea);
         source.append(language, sourceArea);
@@ -132,7 +133,6 @@
         preview.setAttribute('sandbox', 'allow-same-origin');
         views.append(source, visual, preview);
         host.append(toolbar, views, notes);
-        const target = textarea.parentNode;
         target.append(host);
 
         const syncOverlay = () => { overlay.innerHTML = highlight(textarea.value, language.value); };
@@ -254,7 +254,9 @@
             img.alt = alt;
             img.loading = 'lazy';
             img.style.maxWidth = '100%';
-            doc.getSelection()?.getRangeAt(0)?.insertNode(img);
+            const selection = doc.getSelection();
+            if (selection && selection.rangeCount > 0) selection.getRangeAt(0).insertNode(img);
+            else doc.body.append(img);
             dirtyVisual = true;
         });
         extra('Таблица', 'Вставить таблицу 3×3', () => {
@@ -272,7 +274,9 @@
                 tbody.append(tr);
             }
             table.append(tbody);
-            doc.getSelection()?.getRangeAt(0)?.insertNode(table);
+            const selection = doc.getSelection();
+            if (selection && selection.rangeCount > 0) selection.getRangeAt(0).insertNode(table);
+            else doc.body.append(table);
             dirtyVisual = true;
         });
         formatting.setAttribute('aria-label', 'Форматирование');
