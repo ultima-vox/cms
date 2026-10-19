@@ -332,6 +332,39 @@
       "image": "https://mechaniki.ru/upload/shop_5/6/4/9/group_649/group_649.jpg",
       "price_hint": "от 700 ₽",
       "source_file": "pages/services/zamena-masla/zamena-masla-v-akpp.html"
+    },
+    {
+      "path": "/services/zamena-masla/zamena-masla-v-dvigatele",
+      "item_path": "/zamena-masla/zamena-masla-v-dvigatele",
+      "group": "zamena-masla",
+      "slug": "zamena-masla-v-dvigatele",
+      "name": "Замена масла в двигателе в Зеленограде",
+      "lead": "Уточним допуск масла, объём и расходные материалы по вашему двигателю. Стоимость самой замены и материалов обсудим отдельно.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/4/9/group_649/group_649.jpg",
+      "price_hint": "от 700 ₽",
+      "source_file": "pages/services/zamena-masla/zamena-masla-v-dvigatele.html"
+    },
+    {
+      "path": "/services/zamena-masla/zamena-masla-v-mkpp",
+      "item_path": "/zamena-masla/zamena-masla-v-mkpp",
+      "group": "zamena-masla",
+      "slug": "zamena-masla-v-mkpp",
+      "name": "Замена масла в МКПП в Зеленограде",
+      "lead": "Уточним требования к маслу для вашей механической коробки и историю обслуживания. Если есть шум или трудности переключения, начнём с обсуждения симптомов.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/4/9/group_649/group_649.jpg",
+      "price_hint": "от 600 ₽",
+      "source_file": "pages/services/zamena-masla/zamena-masla-v-mkpp.html"
+    },
+    {
+      "path": "/services/zapravka-kondiczionera",
+      "item_path": "/zapravka-kondiczionera",
+      "group": null,
+      "slug": "zapravka-kondiczionera",
+      "name": "Диагностика и заправка кондиционера в Зеленограде",
+      "lead": "Если воздух недостаточно холодный, одной заправки может быть мало. Проверим работу системы и обсудим необходимое обслуживание.",
+      "image": "/assets/mechaniki/workshop.webp",
+      "price_hint": null,
+      "source_file": "pages/services/zapravka-kondiczionera.html"
     }
   ]
 }
