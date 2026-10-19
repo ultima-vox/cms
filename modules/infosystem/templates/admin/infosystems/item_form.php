@@ -68,7 +68,10 @@ echo $view->render('admin/_header.php', [
                         ? ' aria-invalid="true" aria-describedby="property-error-' . text($code) . '"'
                         : '';
                     ?>
-                    <?php if ($type === 'textarea'): ?>
+                    <?php if ($type === 'money'): ?>
+                        <?php $moneyInput = !empty($properties_are_input) ? (is_scalar($value) ? (string) $value : '') : \UltimaVox\Modules\Infosystem\MoneyValue::format($value); ?>
+                        <label class="admin-field"><span class="admin-field__label"><?= text($field['name'] ?? '') ?><?= $required ? ' *' : '' ?></span><input class="admin-input" type="text" inputmode="decimal" data-money-input name="properties[<?= text($code) ?>]"<?= $errorAttributes ?> value="<?= text($moneyInput) ?>" maxlength="32" placeholder="1 234.56"<?= $required ? ' required' : '' ?>><span class="admin-field__hint">Сумма в основной валюте, например 100.05. До двух знаков после точки или запятой.</span><?php if ($fieldError !== null): ?><span class="admin-field__hint" id="property-error-<?= text($code) ?>" role="alert"><?= text($fieldError) ?></span><?php endif; ?></label>
+                    <?php elseif ($type === 'textarea'): ?>
                         <label class="admin-field admin-field--wide"><span class="admin-field__label"><?= text($field['name'] ?? '') ?><?= $required ? ' *' : '' ?></span><textarea class="admin-textarea admin-textarea--small" name="properties[<?= text($code) ?>]"<?= $errorAttributes ?><?= $required ? ' required' : '' ?>><?= text(is_scalar($value) ? $value : '') ?></textarea><?php if ($fieldError !== null): ?><span class="admin-field__hint" id="property-error-<?= text($code) ?>" role="alert"><?= text($fieldError) ?></span><?php endif; ?></label>
                     <?php elseif ($type === 'boolean'): ?>
                         <label class="admin-check"><input type="hidden" name="properties[<?= text($code) ?>]" value="0"><input type="checkbox" name="properties[<?= text($code) ?>]"<?= $errorAttributes ?> value="1"<?= $value ? ' checked' : '' ?>><span><?= text($field['name'] ?? '') ?></span><?php if ($fieldError !== null): ?><span class="admin-field__hint" id="property-error-<?= text($code) ?>" role="alert"><?= text($fieldError) ?></span><?php endif; ?></label>
@@ -100,5 +103,5 @@ echo $view->render('admin/_header.php', [
 </div>
 <?= $view->render('admin/_footer.php', [
     'admin_active' => $adminActive,
-    'admin_scripts' => ['/assets/code-formatter.js', '/assets/infosystem-editor.js'],
+    'admin_scripts' => ['/assets/code-formatter.js', '/assets/infosystem-editor.js', '/assets/infosystem-money.js'],
 ]) ?>

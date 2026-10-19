@@ -537,6 +537,7 @@ final class InfosystemController
             'infosystem' => $system,
             'item' => $form,
             'field_errors' => $fieldErrors,
+            'properties_are_input' => $status === 422,
             'page_return' => $pageReturn,
             'fields' => is_array($system['field_schema'] ?? null) ? $system['field_schema'] : [],
             'groups' => $this->flattenGroups($this->infosystems->groups((int) $system['id'])),
@@ -622,7 +623,7 @@ final class InfosystemController
             throw new RuntimeException('Некорректные дополнительные свойства.');
         }
         $schema = is_array($system['field_schema'] ?? null) ? $system['field_schema'] : [];
-        $properties = $this->fieldSchema->normalizeProperties($schema, $propertiesInput);
+        $properties = $this->fieldSchema->normalizeEditorProperties($schema, $propertiesInput);
         $publishAt = trim((string) ($input['publish_at'] ?? ''));
 
         return [

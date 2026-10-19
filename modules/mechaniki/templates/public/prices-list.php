@@ -17,7 +17,7 @@
 ?>
 <tr data-catalog-row data-category="<?= text((string) ($p['category'] ?? '')) ?>" data-search="<?= text((string) $item['name']) ?>">
 <th scope="row"><a href="<?= url($href) ?>"><?= text((string) $item['name']) ?></a></th>
-<td class="ip-price-value" data-label="Стоимость"><?= text((string) ($p['price_label'] ?? 'По запросу')) ?></td>
+<td class="ip-price-value" data-label="Стоимость"><?= text(\UltimaVox\Modules\Mechaniki\PriceLabel::fromProperties($p)) ?></td>
 <td><button class="ip-row-book" type="button" data-book>Записаться</button></td></tr>
 <?php endforeach; ?>
 </tbody></table></div></div></div></section>

@@ -8,7 +8,7 @@ use RuntimeException;
 
 final class FieldSchema
 {
-    private const TYPES = ['text', 'textarea', 'number', 'boolean', 'select', 'date'];
+    private const TYPES = ['text', 'textarea', 'number', 'money', 'boolean', 'select', 'date'];
 
     /** @return list<array<string, mixed>> */
     public function decode(string $json): array
@@ -80,6 +80,27 @@ final class FieldSchema
         return $result;
     }
 
+    /** Editor amounts are in major units; repository/JSON amounts remain integer minor units.
+     * @param list<array<string, mixed>> $schema
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public function normalizeEditorProperties(array $schema, array $input): array
+    {
+        foreach ($schema as $field) {
+            if ($field['type'] !== 'money') {
+                continue;
+            }
+            $code = (string) $field['code'];
+            try {
+                $input[$code] = MoneyValue::parse($input[$code] ?? null);
+            } catch (\InvalidArgumentException $exception) {
+                throw new PropertyValidationException($code, $exception->getMessage());
+            }
+        }
+        return $this->normalizeProperties($schema, $input);
+    }
+
     /** @param list<array<string, mixed>> $schema
      *  @param array<string, mixed> $input
      *  @return array<string, mixed>
@@ -95,6 +116,12 @@ final class FieldSchema
 
             if ($type === 'boolean') {
                 $value = $raw === '1' || $raw === 1 || $raw === true || $raw === 'on';
+            } elseif ($type === 'money') {
+                try {
+                    $value = MoneyValue::minor($raw);
+                } catch (\InvalidArgumentException $exception) {
+                    throw new PropertyValidationException($code, $exception->getMessage());
+                }
             } elseif ($type === 'number') {
                 if ($raw === null || $raw === '') {
                     $value = null;

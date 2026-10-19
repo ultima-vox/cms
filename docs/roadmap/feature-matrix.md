@@ -164,3 +164,11 @@ PR140 добавляет проверенную локальную синхро�
 ## G1: capability editor links (#149)
 
 Core0.5.0 / Extension API1.1.0 — additive optional page-editor capability; [contract](../architecture/core-module-boundary.md#g1-pagecontent-editor-handoff-149). Documents1.4.0 и Infosystem1.3.0 требуют Core>=0.5 / API^1.0 (совместимость API1.x). Прямой переход и проверенный обратный контекст реализованы отдельно от WYSIWYG/preview/autosave. Полная production приёмка остаётся NO-GO.
+
+### G1 delta: monetary property editing
+
+Infosystem `money` properties accept major-unit editor input (`100.05`, `1 234,56`) and store exact integer minor units in JSON. `MoneyValue`, `FieldSchema::normalizeEditorProperties`, the item/filter templates and `infosystem-money.js` own parsing, comma normalization and grouping; ordinary approximate `number` properties retain their existing contract. Two decimal places, nonnegative amounts, maximum `999 999 999 999.99`; malformed grouping, exponent notation, excess precision and overflow are rejected rather than rounded.
+
+New owner migrations `004_money_editor.sql` / `mysql/002_money_editor.sql` update only the original `mechaniki_prices.amount_minor` field definition with its original name/type. Item amounts, custom fields, permissions and publication state are not rewritten. Mechaniki 1.3 requires Infosystem ^1.4; its price views use the current amount/currency/from flag, with textual fallback for entries without an amount. Custom renamed price fields require deliberate schema selection rather than a guessed conversion.
+
+Evidence: `tests/infosystem_money_smoke.php` (exact values, PG/MySQL/MariaDB JSON persistence, populated schema upgrade, repeat execution and site isolation), `tests/infosystem_money_smoke.cjs` (immediate comma replacement, caret, grouping), `tests/infosystem_property_http.py` (real create/update/422, atomic rejection, correction and existing security guards), `tests/browser_mvp.cjs` (money editing at 1440/1024/390px). Production release gates remain open; these checks do not prove deployment to FASTPANEL.

@@ -38,7 +38,7 @@ $definitions = [
     'mechaniki_prices' => [
         ['code' => 'category', 'name' => 'Категория', 'type' => 'text', 'filterable' => true],
         ['code' => 'price_label', 'name' => 'Стоимость текстом', 'type' => 'text'],
-        ['code' => 'amount_minor', 'name' => 'Стоимость в копейках', 'type' => 'number'],
+        ['code' => 'amount_minor', 'name' => 'Стоимость, ₽', 'type' => 'money'],
         ['code' => 'currency', 'name' => 'Валюта', 'type' => 'select', 'options' => ['RUB']],
         ['code' => 'is_from', 'name' => 'Цена от', 'type' => 'boolean'],
         ['code' => 'service_href', 'name' => 'Ссылка на услугу', 'type' => 'text'],

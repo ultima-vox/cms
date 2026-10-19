@@ -191,7 +191,7 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
     const propertyFixture = JSON.parse(require('node:fs').readFileSync('/tmp/cms-property-browser.json', 'utf8'));
     for (const width of [1440, 1024, 390]) {
         await page.setViewportSize({width, height: 1000});
-        for (const [code, invalid, corrected] of [['event_date', '2026-02-31', '2024-02-29'], ['amount', '1e309', '-1250.5']]) {
+        for (const [code, invalid, corrected] of [['event_date', '2026-02-31', '2024-02-29'], ['amount', '1e309', '-1250.5'], ['price', '100.005', '35000,50']]) {
             await page.goto(base + propertyFixture.edit + '#main');
             await page.locator('[data-tab="properties"]').click();
             const field = page.locator(`[name="properties[${code}]"]`);
@@ -209,11 +209,20 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
             assert.equal(await page.locator(`#property-error-${code}[role="alert"]`).isVisible(), true);
             assert.equal(await field.evaluate(input => input === document.activeElement), true);
             await field.fill(corrected);
+            if (code === 'price') {
+                assert.equal(await field.inputValue(), '35000.50', 'Comma was not normalized during input');
+                await field.blur();
+                assert.equal(await field.inputValue(), '35 000.50', 'Thousands grouping was not applied');
+            }
             await Promise.all([
                 page.waitForURL(url => url.pathname.endsWith('/edit') && url.searchParams.get('saved') === '1'),
                 page.getByRole('button', {name: 'Сохранить', exact: true}).click(),
             ]);
             assert.equal(await page.locator('[aria-invalid="true"]').count(), 0);
+            if (code === 'price') {
+                await page.locator('[data-tab="properties"]').click();
+                assert.equal(await field.inputValue(), '35 000.50', 'Saved ruble amount changed');
+            }
         }
     }
     await page.goto(base + '/admin/updates');
