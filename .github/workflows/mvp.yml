@@ -61,9 +61,9 @@ jobs:
       - name: Fresh browser installation and editing journey
         run: |
           if [ "$MVP_LAYOUT" = webroot ]; then
-            php -S 127.0.0.1:8086 -t /tmp/cms-webroot /tmp/cms-webroot/index.php > /tmp/cms-mvp-server.log 2>&1 &
+            INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8086 PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8086 -t /tmp/cms-webroot /tmp/cms-webroot/index.php > /tmp/cms-mvp-server.log 2>&1 &
           else
-            php -S 127.0.0.1:8086 -t /tmp/cms-public/public /tmp/cms-public/public/index.php > /tmp/cms-mvp-server.log 2>&1 &
+            INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8086 PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8086 -t /tmp/cms-public/public /tmp/cms-public/public/index.php > /tmp/cms-mvp-server.log 2>&1 &
           fi
           SERVER_PID=$!
           trap 'kill "$SERVER_PID"' EXIT

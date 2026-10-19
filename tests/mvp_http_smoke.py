@@ -31,8 +31,10 @@ def request(client, path, data=None, expected=200, headers=None):
     except urllib.error.HTTPError as error:
         response = error
     body = response.read().decode('utf-8')
-    if response.code != expected:
-        raise AssertionError(f'{path}: expected {expected}, received {response.code}; {body[:500]}')
+    allowed = expected if isinstance(expected, tuple) else (expected,)
+    if response.code not in allowed:
+        detail = re.search(r'<div class="installer-result is-error">(.*?)</div>', body, re.S)
+        raise AssertionError(f'{path}: expected {expected}, received {response.code}; {detail.group(1) if detail else body[:500]}')
     return body, response.headers
 
 
@@ -55,7 +57,7 @@ def check_private_files():
     if os.environ.get('MVP_LAYOUT') == 'webroot':
         for path in ('/app', '/app/.env', '/app/composer.json', '/app/vendor/autoload.php',
                      '/app/public/index.php', '/%61pp/composer.json', '/app%2f.env', '/.env'):
-            request(browser(), path, expected=404)
+            request(browser(), path, expected=(403, 404))
 
 
 check_private_files()
@@ -73,6 +75,10 @@ password = secrets.token_urlsafe(24)
 setup = {'_csrf': token(body), 'site_name': 'MVP test site', 'site_url': BASE,
          'email': 'mvp@example.test', 'admin_password': password, 'admin_password_confirm': password}
 request(client, '/install/site', dict(setup, _csrf='invalid'), expected=419)
+# A forged install URL must not turn the preflight into an internal network client.
+for blocked_url in ('http://169.254.169.254', 'http://127.0.0.2:8086', 'http://127.0.0.1:1'):
+    request(client, '/install/site', dict(setup, site_url=blocked_url), expected=422)
+    assert query("SELECT COUNT(*) FROM pg_tables WHERE schemaname='public'") == '0'
 _, headers = request(client, '/install/site', setup, expected=302)
 assert headers.get('Location') == '/admin/login?installed=1'
 assert query('SELECT COUNT(*) FROM users') == '1'

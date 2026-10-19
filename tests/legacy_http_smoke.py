@@ -22,7 +22,8 @@ def request(path, data=None, expected=200):
     except urllib.error.HTTPError as error:
         response = error
     body = response.read().decode()
-    assert response.code == expected, f'{path}: {response.code}, {body[:600]}'
+    detail = re.search(r'<div class="installer-result is-error">(.*?)</div>', body, re.S)
+    assert response.code == expected, f'{path}: {response.code}, {detail.group(1) if detail else body[:600]}'
     return body, response.headers
 
 def token(body):
