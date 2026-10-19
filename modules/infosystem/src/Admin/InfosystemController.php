@@ -413,6 +413,11 @@ final class InfosystemController
 
         try {
             $data = $this->itemData($request->post, $system);
+            $data = (new LegacyRichContentGuard(new \Core\Content\HtmlSanitizer()))->reconcile(
+                $existing,
+                $request->post,
+                $data,
+            );
             $this->infosystems->saveItem($itemId, $infosystemId, $data['group_id'], $data);
             $this->audit($request, 'infosystem_item.update', 'infosystem_item', $itemId, ['infosystem_id' => $infosystemId]);
             return Response::redirect('/admin/infosystems/' . $infosystemId . '/items/' . $itemId . '/edit?saved=1');
