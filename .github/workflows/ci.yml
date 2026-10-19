@@ -470,7 +470,7 @@ jobs:
           unzip -q /tmp/legacy-webroot.zip -d /tmp/legacy-webroot
       - name: Fresh shared-hosting installation and editor journey
         run: |
-          env -u APP_ENV -u APP_URL -u DB_DRIVER -u DB_HOST -u DB_PORT -u DB_NAME -u DB_USER -u DB_PASS php -S 127.0.0.1:8089 -t /tmp/legacy-webroot /tmp/legacy-webroot/index.php > /tmp/legacy-http.log 2>&1 &
+          env -u APP_ENV -u APP_URL -u DB_DRIVER -u DB_HOST -u DB_PORT -u DB_NAME -u DB_USER -u DB_PASS INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8089 PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8089 -t /tmp/legacy-webroot /tmp/legacy-webroot/index.php > /tmp/legacy-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill "$SERVER_PID"' EXIT
           for n in $(seq 1 30); do
@@ -532,7 +532,7 @@ jobs:
       - name: Install and edit through Apache with actual htaccess rules
         run: |
           if [ "$MVP_LAYOUT" = webroot ]; then DOCUMENT_ROOT=/var/www/cms; else DOCUMENT_ROOT=/var/www/cms/public; fi
-          docker run --detach --name cms-apache --network host -e CMS_DOCUMENT_ROOT="$DOCUMENT_ROOT" -v /tmp/cms-apache:/var/www/cms cms-apache
+          docker run --detach --name cms-apache --network host -e INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8086 -e CMS_DOCUMENT_ROOT="$DOCUMENT_ROOT" -v /tmp/cms-apache:/var/www/cms cms-apache
           trap 'docker logs cms-apache > /tmp/cms-apache.log 2>&1; docker rm -f cms-apache' EXIT
           docker exec cms-apache chown -R www-data:www-data /var/www/cms
           for n in $(seq 1 30); do
@@ -546,18 +546,34 @@ jobs:
       - name: Prove negative Apache fixture detects private file exposure
         if: matrix.layout == 'webroot'
         run: |
-          sed 's/AllowOverride All/AllowOverride None/' tests/fixtures/apache/site.conf > /tmp/apache-unsafe.conf
-          docker run --detach --name cms-apache-unsafe --network host -e CMS_DOCUMENT_ROOT=/var/www/cms -v /tmp/cms-apache:/var/www/cms:ro -v /tmp/apache-unsafe.conf:/etc/apache2/sites-available/000-default.conf:ro cms-apache
+          sed 's/AllowOverride All/AllowOverride None\n        FallbackResource \/index.php/' tests/fixtures/apache/site.conf > /tmp/apache-unsafe.conf
+          mkdir /tmp/cms-apache-unsafe
+          unzip -q /tmp/apache-hosting.zip -d /tmp/cms-apache-unsafe
+          PGPASSWORD=cms psql -h 127.0.0.1 -U cms -d postgres -c 'CREATE DATABASE cms_apache_unsafe;'
+          docker run --detach --name cms-apache-unsafe --network host -e INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8086 -e CMS_DOCUMENT_ROOT=/var/www/cms -v /tmp/cms-apache-unsafe:/var/www/cms -v /tmp/apache-unsafe.conf:/etc/apache2/sites-available/000-default.conf:ro cms-apache
           trap 'docker logs cms-apache-unsafe > /tmp/cms-apache-unsafe.log 2>&1; docker rm -f cms-apache-unsafe' EXIT
+          docker exec cms-apache-unsafe chown -R www-data:www-data /var/www/cms
           for n in $(seq 1 30); do
             if curl --silent --output /dev/null "$MVP_URL/app/composer.json"; then break; fi
             sleep 1
           done
           python3 tests/apache_private_files_smoke.py --expect-unsafe
+          python3 tests/installer_hosting_http_smoke.py
           if python3 tests/apache_private_files_smoke.py; then
             echo 'Protection test incorrectly accepted unsafe hosting'
             exit 1
           fi
+      - name: Reject redirects without following the supplied destination
+        if: matrix.layout == 'webroot'
+        run: |
+          sed '/Options FollowSymLinks/a\        RedirectMatch 302 ^/assets/cms-install-probe- http://169.254.169.254/' tests/fixtures/apache/site.conf > /tmp/apache-redirect.conf
+          docker run --detach --name cms-apache-redirect --network host -e INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8086 -e CMS_DOCUMENT_ROOT=/var/www/cms -v /tmp/cms-apache-unsafe:/var/www/cms -v /tmp/apache-redirect.conf:/etc/apache2/sites-available/000-default.conf:ro cms-apache
+          trap 'docker logs cms-apache-redirect > /tmp/cms-apache-redirect.log 2>&1; docker rm -f cms-apache-redirect' EXIT
+          for n in $(seq 1 30); do
+            if curl --silent --output /dev/null "$MVP_URL/install"; then break; fi
+            sleep 1
+          done
+          EXPECTED_PROBE_ERROR='URL не возвращает контрольный файл' python3 tests/installer_hosting_http_smoke.py
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
