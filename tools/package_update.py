@@ -11,11 +11,8 @@ import zipfile
 root = pathlib.Path(__file__).resolve().parent.parent
 output = pathlib.Path(sys.argv[1])
 version = os.environ['CMS_VERSION']
-folders = ('core', 'modules', 'templates', 'public', 'database', 'installer', 'deploy', 'vendor', 'bin', 'sites/mechaniki')
+folders = ('core', 'modules', 'templates', 'public', 'database', 'installer', 'deploy', 'vendor', 'bin')
 paths = sorted(p for folder in folders for p in (root / folder).rglob('*') if p.is_file() and not p.is_symlink())
-# Site packages contain only versioned source and declarative content, never credentials.
-if any(p.suffix not in ('.php', '.html', '.json', '.md') for p in paths if p.is_relative_to(root / 'sites/mechaniki')):
-    raise SystemExit('Unexpected file type in sites/mechaniki packaging.')
 paths += [root / p for p in ('composer.json', 'composer.lock')]
 files = {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
 schema = {k: v for k, v in files.items() if k.endswith('.sql') and (k.startswith('database/migrations/') or '/migrations/' in k)}
