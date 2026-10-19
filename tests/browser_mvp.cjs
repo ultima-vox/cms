@@ -109,7 +109,8 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
     assert.equal(await page.locator('[name="fields[0][name]"]').inputValue(), 'Поле CSP');
     // HostCMS-style group browser and tabbed editor.
     await page.goto(base + "/admin/infosystems/" + fixtures.infosystem);
-    assert.equal(await page.locator(".is-browser__list").count(), 1);
+    assert.equal(await page.locator(".content-section").count(), 1);
+    assert.equal(await page.locator(".is-browser__list, .admin-empty").count(), 1);
     assert.equal(await page.locator(".is-breadcrumbs").count(), 1);
     await page.getByRole("link", {name: /Новый элемент/}).click();
     assert.equal(await page.locator('[data-tab="main"]').getAttribute("aria-selected"), "true");
