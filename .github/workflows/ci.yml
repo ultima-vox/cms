@@ -71,6 +71,11 @@ jobs:
           ! grep -n '"twig/twig"' composer.json composer.lock
           ! grep -R -n 'name: Legacy/admin T[w]ig syntax check' .github/workflows bin
 
+      - name: Module ownership guard
+        run: |
+          python3 tools/check_core_boundaries.py
+          python3 tests/core_boundaries_check_test.py
+
       - name: Infosystem legacy content architecture check
         run: |
           ! grep -R -n "include_content\|node:.*:content\|context->node.*content" modules/infosystem/src
@@ -189,6 +194,9 @@ jobs:
           test "$editor_code_edit" = "0"
         env:
           PGPASSWORD: cms
+
+      - name: Physical module removal and fresh-process isolation
+        run: php tests/module_removal_smoke.php
 
       - name: Database health check
         run: php bin/console health
@@ -457,6 +465,7 @@ jobs:
           php bin/console health
           php tests/database_driver_smoke.php
           php tests/document_list_smoke.php
+          php tests/module_removal_smoke.php
           php tests/content_folders_smoke.php
           php tests/mysql_update_smoke.php
           php tests/mysql_migration_failure_smoke.php
