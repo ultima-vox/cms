@@ -31,6 +31,12 @@ final readonly class DatabaseConnector
             $pdo->query('SELECT 1')->fetchColumn();
             if ($config->driver === 'mysql') $pdo->exec("SET time_zone = '+00:00'");
 
+            if ($config->driver === 'mysql') {
+                $logging = $pdo->query('SELECT @@GLOBAL.log_bin AS enabled, @@GLOBAL.log_bin_trust_function_creators AS trusted')->fetch(PDO::FETCH_ASSOC);
+                if (!empty($logging['enabled']) && empty($logging['trusted'])) {
+                    throw new RuntimeException('На сервере MySQL включён binary log, но создание триггеров обычным пользователем запрещено. Попросите провайдера разрешить log_bin_trust_function_creators либо выберите PostgreSQL. База ещё не изменена.');
+                }
+            }
             return $pdo;
         } catch (PDOException $exception) {
             throw new RuntimeException(

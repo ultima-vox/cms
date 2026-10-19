@@ -45,12 +45,12 @@ for path in ['/admin', '/admin/documents', '/admin/infosystems', '/admin/layouts
     request(path)
 body, _ = request('/admin/documents/create')
 _, headers = request('/admin/documents', {'_csrf': token(body), '_site_id': '1', 'code': 'legacy-http',
-    'name': 'Legacy document', 'content': '<p>Legacy content</p>', 'save_mode': 'publish'}, 303)
+    'name': 'Legacy document', 'content': '<p>Legacy content</p>', 'save_mode': 'publish'}, 302)
 edit = headers.get('Location')
 body, _ = request(edit)
 assert 'Legacy document' in body and 'Legacy content' in body
 body, _ = request('/admin/documents')
-request('/admin/folders/documents', {'_csrf': token(body), '_site_id': '1', 'name': 'Legacy folder'}, 303)
+request('/admin/folders/documents', {'_csrf': token(body), '_site_id': '1', 'name': 'Legacy folder'}, 302)
 body, _ = request('/admin/documents')
 assert 'Legacy folder' in body and 'Legacy document' in body
 request('/admin/folders/documents', {'_csrf': 'invalid', 'name': 'Rejected'}, 419)

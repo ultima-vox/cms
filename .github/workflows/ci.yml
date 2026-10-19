@@ -442,6 +442,8 @@ jobs:
           extensions: pdo_mysql, dom, mbstring, zip
           coverage: none
       - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
+      - name: Configure disposable database fixture for non-SUPER trigger creation
+        run: docker exec -e MYSQL_PWD=cms "${{ job.services.database.id }}" ${{ matrix.client }} -uroot -e "SET GLOBAL log_bin_trust_function_creators=1;"
       - name: Legacy schema, metadata and repository contracts
         run: |
           php bin/console migrate
