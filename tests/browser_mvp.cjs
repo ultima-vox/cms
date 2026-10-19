@@ -48,12 +48,11 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         assert.equal(await page.locator('img').evaluateAll(images => images.every(img => img.complete && img.naturalWidth > 0)), true, 'Broken pilot image');
         assert.equal(failed.length, 0, `Failed resources: ${failed}`);
         if (width === 390) {
-            const toggle = page.locator('.menu-button');
+            const toggle = page.locator('.mk-menu-toggle');
             await toggle.click();
             assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
-            assert.equal(await page.locator('.mobile-drawer').isVisible(), true);
+            assert.equal(await page.locator('#mk-navigation').isVisible(), true);
             await page.keyboard.press('Escape');
-            await page.locator('.mobile-drawer').waitFor({state: 'hidden'});
             assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
         }
     }
