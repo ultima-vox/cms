@@ -307,25 +307,27 @@ $winner = $delivery->publishRenderedStatic(
 $shortContext = new RenderContext();
 $shortContext->cacheFor(3600);
 $short = new RenderResult('short lived', $shortContext);
-$readExpiry = $delivery->publishRenderedStatic(78, '/read-expiry', $short, $delivery->beginStaticGeneration());
-$pruneExpiry = $delivery->publishRenderedStatic(78, '/prune-expiry', $short, $delivery->beginStaticGeneration(), 'html');
+$readGeneration = $delivery->beginStaticGeneration();
+$readExpiry = $delivery->publishRenderedStatic(78, '/read-expiry', $short, $readGeneration);
+$pruneGeneration = $delivery->beginStaticGeneration();
+$pruneExpiry = $delivery->publishRenderedStatic(78, '/prune-expiry', $short, $pruneGeneration, 'html');
 if ($delivery->readStatic(78, '/read-expiry') !== 'short lived') {
     throw new RuntimeException('Fresh managed static output was not readable.');
 }
 // Expiry does not change tags or the generation fence. Locate the two managed
 // records by their actual output keys, preserving the rest of the fixture.
-$expiryKeys = array_map(
-    static fn (string $file): string => 'static:' . substr($file, strlen($root . '/static/')),
-    [$readExpiry, $pruneExpiry],
-);
+$expiryKeys = [
+    'static:' . substr($readExpiry, strlen($root . '/static/')) => $readGeneration['started_at'] + 3600,
+    'static:' . substr($pruneExpiry, strlen($root . '/static/')) => $pruneGeneration['started_at'] + 3600,
+];
 $expired = 0;
 foreach (glob($root . '/cache/static-index/keys/*/*.json') ?: [] as $metadataFile) {
     $metadata = json_decode((string) file_get_contents($metadataFile), true, flags: JSON_THROW_ON_ERROR);
-    if (!in_array($metadata['key'] ?? null, $expiryKeys, true)) {
+    if (!array_key_exists($metadata['key'] ?? '', $expiryKeys)) {
         continue;
     }
-    if (!is_int($metadata['expires_at'] ?? null) || $metadata['expires_at'] <= time()) {
-        throw new RuntimeException('Expiry fixture was not initially fresh.');
+    if (($metadata['expires_at'] ?? null) !== $expiryKeys[$metadata['key']] || $metadata['expires_at'] <= time()) {
+        throw new RuntimeException('Managed output did not preserve its render-start TTL.');
     }
     $metadata['expires_at'] = 0;
     if (file_put_contents($metadataFile, json_encode($metadata, JSON_THROW_ON_ERROR)) === false) {
