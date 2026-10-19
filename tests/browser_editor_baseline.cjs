@@ -102,6 +102,14 @@ let browser;
         await navigation();
         finish();
 
+        start('format-document-source');
+        await page.goto(base + documentUrl);
+        const sourceEditor = page.locator('textarea[name=content]');
+        await fill(sourceEditor, '<section><div><p>Тест</p></div></section>');
+        const formatButton = page.getByRole('button', {name: 'Форматировать код без сохранения'});
+        await click(formatButton);
+        assert.match(await sourceEditor.inputValue(), /<section>\n\s+<div>\n\s+<p>Тест<\/p>/);
+        finish();
         start('create-document-page');
         await page.goto(base + '/admin/structure');
         await Promise.all([

@@ -163,4 +163,4 @@ PR140 добавляет проверенную локальную синхро�
 
 ## G1: capability editor links (#149)
 
-Core0.5.0 / Extension API1.1.0 — additive optional page-editor capability; [contract](../architecture/core-module-boundary.md#g1-pagecontent-editor-handoff-149). Documents1.4.0 и Infosystem1.3.0 требуют Core>=0.5 / API^1.1. Прямой переход и проверенный обратный контекст реализованы отдельно от WYSIWYG/preview/autosave. Полная production приёмка остаётся NO-GO.
+Core0.5.0 / Extension API1.1.0 — additive optional page-editor capability; [contract](../architecture/core-module-boundary.md#g1-pagecontent-editor-handoff-149). Documents1.4.0 и Infosystem1.3.0 требуют Core>=0.5 / API^1.0 (совместимость API1.x). Прямой переход и проверенный обратный контекст реализованы отдельно от WYSIWYG/preview/autosave. Полная production приёмка остаётся NO-GO.

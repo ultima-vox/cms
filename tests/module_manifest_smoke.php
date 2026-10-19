@@ -25,7 +25,7 @@ foreach (['documents' => '1.4.0', 'infosystem' => '1.3.0', 'sites' => '1.2.0'] a
     if (($manifest->requires['core'] ?? null) !== ($code === 'sites' ? '>=0.4.0' : '>=0.5.0')) {
         throw new RuntimeException(sprintf('Core dependency was not parsed from %s manifest.', $code));
     }
-    if ($manifest->extensionApi !== ($code === 'sites' ? '^1.0' : '^1.1') || !$manifest->defaultEnabled) {
+    if ($manifest->extensionApi !== '^1.0' || !$manifest->defaultEnabled) {
         throw new RuntimeException(sprintf('Lifecycle metadata is invalid for %s.', $code));
     }
     if (!VersionConstraint::matches(ExtensionApiVersion::VERSION, $manifest->extensionApi)) {

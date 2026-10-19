@@ -407,7 +407,7 @@ final class InfosystemManagementRepository
         $this->assertBelongsToSite($infosystemId);
         $path = $this->itemPath($infosystemId, $groupId, (string) $data['slug']);
         $properties = json_encode(
-            $data['properties'],
+            $data['properties'] === [] ? (object) [] : $data['properties'],
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
 

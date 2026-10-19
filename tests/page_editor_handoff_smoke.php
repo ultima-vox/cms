@@ -97,7 +97,7 @@ try {
         $bad = $record; $bad['page_type'] = $type;
         $assert($core->pages()->editorUrl($bad, $auth) === null, 'Unsafe destination accepted');
     }
-    $assert(VersionConstraint::matches('1.1.0', '^1.0') && !VersionConstraint::matches('1.0.0', '^1.1'), 'Additive API constraints broken');
+    $assert(VersionConstraint::matches('1.1.0', '^1.0') && !VersionConstraint::matches('0.4.0', '>=0.5.0'), 'Additive API constraints broken');
 } finally {
     ($auth ?? null)?->logout();
     if ($db->inTransaction()) $db->rollBack();

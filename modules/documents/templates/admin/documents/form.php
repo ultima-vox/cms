@@ -9,6 +9,7 @@ $title = $isCreate ? 'Новый документ' : 'Редактировани
 echo $view->render('admin/_header.php', [
     'admin_active' => $adminActive,
     'admin_title' => $title,
+    'admin_styles' => ['/assets/code-formatter.css'],
 ]);
 ?>
 <div class="admin-dashboard">
@@ -76,7 +77,7 @@ echo $view->render('admin/_header.php', [
             <?php endif; ?>
             <label class="admin-field admin-field--wide">
                 <span class="admin-field__label">HTML</span>
-                <textarea class="admin-textarea" name="content" rows="20"><?= text($document['content'] ?? '') ?></textarea>
+                <textarea class="admin-textarea" name="content" rows="20" data-code-format data-code-language="html"><?= text($document['content'] ?? '') ?></textarea>
                 <span class="admin-field__hint">При каждом сохранении создаётся новая версия. Опубликованная версия не изменяется на месте.</span>
             </label>
         </section>
@@ -113,4 +114,4 @@ echo $view->render('admin/_header.php', [
         </section>
     <?php endif; ?>
 </div>
-<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive]) ?>
+<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive, 'admin_scripts' => ['/assets/code-formatter.js']]) ?>

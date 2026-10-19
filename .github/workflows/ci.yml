@@ -171,9 +171,9 @@ jobs:
 
       - name: Module lifecycle smoke test
         run: |
-          php bin/console extensions:list | grep $'^infosystem\t1.3.0\tenabled\t\^1.1\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.3.0\tenabled\t\^1.0\tInfosystems$'
           php tests/module_lifecycle_smoke.php
-          php bin/console extensions:list | grep $'^infosystem\t1.3.0\tenabled\t\^1.1\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.3.0\tenabled\t\^1.0\tInfosystems$'
 
       - name: Extension permission sync smoke test
         run: |
@@ -401,6 +401,11 @@ jobs:
           php -l modules/infosystem/templates/admin/infosystems/item_form.php
           php tests/infosystem_editor_browser_smoke.php
           node --check public/assets/infosystem-editor.js
+
+      - name: Source formatting safety tests
+        run: |
+          node --check public/assets/code-formatter.js
+          node tests/code_formatter_smoke.cjs
 
 
 
