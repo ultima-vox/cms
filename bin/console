@@ -13,6 +13,10 @@ use Core\Extension\ModuleMigrationRunner;
 use Core\Extension\ModulePackageLifecycle;
 use Core\Extension\ModulePackagePurger;
 use Core\MigrationRunner;
+use Core\Repository\NodeRepository;
+use Core\Repository\SiteRepository;
+use Core\Routing\PermalinkMigrationPlanner;
+use Core\Site\SiteContext;
 use Core\View\PhpTemplateLinter;
 use Dotenv\Dotenv;
 
@@ -23,6 +27,34 @@ Dotenv::createImmutable($rootPath)->safeLoad();
 $command = $argv[1] ?? 'help';
 
 switch ($command) {
+    case 'urls:plan':
+        if (count($argv) < 3 || count($argv) > 4) {
+            fwrite(STDERR, "Usage: php bin/console urls:plan <site-code> [clean|html]\n");
+            exit(1);
+        }
+        try {
+            $db = Database::connection();
+            $record = (new SiteRepository($db))->findActiveByCode($argv[2]);
+            if ($record === null) {
+                throw new RuntimeException('Unknown or inactive site.');
+            }
+            $site = new SiteContext(
+                (int) $record['id'],
+                (string) $record['code'],
+                (string) $record['name'],
+                (string) ($record['host'] ?? ''),
+                $record['settings'],
+            );
+            $style = $argv[3] ?? $site->staticPermalinkStyle();
+            $plan = (new PermalinkMigrationPlanner())->plan((new NodeRepository($db))->pathsForSite($site->id), $style);
+            $plan = ['site_id' => $site->id, 'site_code' => $site->code] + $plan;
+            fwrite(STDOUT, json_encode($plan, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+            exit($plan['valid'] ? 0 : 2);
+        } catch (Throwable $exception) {
+            fwrite(STDERR, $exception->getMessage() . "\n");
+            exit(1);
+        }
+
     case 'static:prune':
         if (count($argv) !== 2) {
             fwrite(STDERR, "Usage: php bin/console static:prune\n");
@@ -334,6 +366,7 @@ switch ($command) {
         fwrite(
             STDOUT,
             "Ultima Vox CMS\n\nCommands:\n" .
+            "  urls:plan <site> [clean|html]  Audit Structure URL migration without applying it\n" .
             "  static:prune               Remove expired managed static snapshots\n" .
             "  static:publish <site> <path> [clean|html]  Generate one published page snapshot\n" .
             "  migrate                    Apply pending Core SQL migrations\n" .

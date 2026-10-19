@@ -22,6 +22,7 @@ use Core\Repository\LoginAttemptRepository;
 use Core\Repository\NodeRepository;
 use Core\Repository\SiteRepository;
 use Core\Repository\UserRepository;
+use Core\Routing\PermalinkMigrationPlanner;
 use Core\Security\AuthService;
 use Core\Site\SiteResolver;
 use Core\View\PhpRenderer;
@@ -170,6 +171,27 @@ try {
     $assertRejected(fn () => $application->publishStatic($sites[0]['code'], '/about', 'clean'));
     if (is_file($first)) {
         throw new RuntimeException('Unpublished page retained its older output variant.');
+    }
+    // The audit is site-scoped and includes nodes that currently cannot be published.
+    $paths = (new NodeRepository($db))->pathsForSite($sites[0]['id']);
+    if (count($paths) !== 2 || !in_array($sites[0]['node'], array_map('intval', array_column($paths, 'id')), true)) {
+        throw new RuntimeException('URL audit lost draft nodes or leaked another site.');
+    }
+    $insertIndex = $db->prepare(
+        "INSERT INTO nodes (site_id, parent_id, name, slug, path, status, publish_at, page_type)
+         SELECT site_id, parent_id, 'Future index', 'index', '/index', 'draft', CURRENT_TIMESTAMP + INTERVAL '1 day', 'documents.page'
+         FROM nodes WHERE id = :id RETURNING id",
+    );
+    $insertIndex->execute(['id' => $sites[0]['node']]);
+    $indexNodeId = (int) $insertIndex->fetchColumn();
+    $beforeAudit = (new NodeRepository($db))->pathsForSite($sites[0]['id']);
+    $audit = (new PermalinkMigrationPlanner())->plan($beforeAudit, 'html');
+    if ($audit['valid'] || $audit['nodes_checked'] !== 3
+        || !in_array($indexNodeId, array_merge(...array_column($audit['conflicts'], 'node_ids')), true)) {
+        throw new RuntimeException('URL audit ignored a conflicting future/draft page.');
+    }
+    if ($beforeAudit !== (new NodeRepository($db))->pathsForSite($sites[0]['id'])) {
+        throw new RuntimeException('URL planning changed Structure paths.');
     }
     $assertRejected(fn () => $siteManagement->update($sites[1]['id'], 'two', true, 'invalid'));
     $assertRejected(fn () => $siteManagement->create('Bad policy', 'bad-policy-' . $suffix, 'invalid'));
