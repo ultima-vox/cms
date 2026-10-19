@@ -31,7 +31,7 @@ foreach (['public', 'webroot'] as $layout) {
     $hashes = array_map(static fn ($v) => hash('sha256', $v), $old);
     put($root . '/release.json', json_encode(['version' => '0.1.1', 'layout' => $layout, 'files' => $hashes, 'schema' => ['database/migrations/001.sql' => hash('sha256', 'schema')]]));
     $updater = new FileUpdater($root);
-    $new = ['core/state.php' => 'new-code', 'public/assets/site.css' => 'new-css', 'database/migrations/001.sql' => 'schema'];
+    $new = ['core/state.php' => 'new-code', 'public/assets/site.css' => 'new-css', 'database/migrations/001.sql' => 'schema', 'sites/mechaniki/activate.php' => '<?php echo "site package";'];
     [$bytes, $offer] = bundle($new);
     reject(fn () => $updater->apply($bytes, array_replace($offer, ['sha256' => str_repeat('0', 64)])), 'Invalid hash accepted');
     [$bad, $badOffer] = bundle($new, extra: ['../outside' => 'bad']);
@@ -53,9 +53,14 @@ foreach (['public', 'webroot'] as $layout) {
     reject(fn () => $updater->apply($bad, $badOffer), 'Write failure accepted');
     check(file_get_contents($root . '/core/state.php') === 'old-code', 'Code rollback failed');
     check(!is_file($root . '/storage/updates/maintenance.json'), 'Rollback left maintenance mode');
+    [$forbiddenSite, $forbiddenOffer] = bundle($new + ['sites/private/config.php' => 'forbidden']);
+    reject(fn () => $updater->apply($forbiddenSite, $forbiddenOffer), 'Non-allowlisted site package accepted');
+    [$secretSite, $secretOffer] = bundle($new + ['sites/mechaniki/.env' => 'secrets']);
+    reject(fn () => $updater->apply($secretSite, $secretOffer), 'Site .env accepted');
     $backup = $updater->apply($bytes, $offer);
     check(is_file($backup . '/journal.json'), 'Backup absent');
     check(file_get_contents($root . '/core/state.php') === 'new-code', 'Code did not update');
+    check(is_file($root . '/sites/mechaniki/activate.php'), 'Packaged site activation was not installed');
     check(!file_exists($root . '/core/obsolete.php'), 'Obsolete file remains');
     check(file_get_contents($root . '/public/assets/site.css') === 'new-css', 'CSS did not update');
     if ($layout === 'webroot') check(file_get_contents($directory . '/assets/site.css') === 'new-css', 'Webroot CSS mirror stale');
