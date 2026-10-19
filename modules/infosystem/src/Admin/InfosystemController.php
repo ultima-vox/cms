@@ -24,6 +24,7 @@ final class InfosystemController
         private readonly AuditLogRepository $audit,
         private readonly AdminPhpRenderer $view,
         private readonly \Core\Content\FolderRepository $folders,
+        private readonly SiteStylesheetResolver $siteStyles,
     ) {
     }
 
@@ -189,7 +190,6 @@ final class InfosystemController
     /** @param array<string, string> $variables */
     public function createGroupForm(Request $request, array $variables = []): Response
     {
-        unset($request);
         if (($denied = $this->requirePermission()) !== null) {
             return $denied;
         }
@@ -199,7 +199,12 @@ final class InfosystemController
             return $system;
         }
 
-        return $this->groupFormResponse($system, null);
+        $parentId = $this->nullablePositiveInt($request->query['parent_id'] ?? null);
+        if ($parentId !== null && $this->infosystems->findGroup($infosystemId, $parentId) === null) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
+        }
+
+        return $this->groupFormResponse($system, ['parent_id' => $parentId]);
     }
 
     /** @param array<string, string> $variables */
@@ -325,7 +330,6 @@ final class InfosystemController
     /** @param array<string, string> $variables */
     public function createItemForm(Request $request, array $variables = []): Response
     {
-        unset($request);
         if (($denied = $this->requirePermission()) !== null) {
             return $denied;
         }
@@ -335,7 +339,12 @@ final class InfosystemController
             return $system;
         }
 
-        return $this->itemFormResponse($system, null);
+        $groupId = $this->nullablePositiveInt($request->query['group_id'] ?? null);
+        if ($groupId !== null && $this->infosystems->findGroup($infosystemId, $groupId) === null) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
+        }
+
+        return $this->itemFormResponse($system, ['group_id' => $groupId]);
     }
 
     /** @param array<string, string> $variables */
@@ -458,6 +467,7 @@ final class InfosystemController
             'csrf_token' => Csrf::token(),
             'error' => $error,
             'saved' => $saved,
+            'editor_styles' => $this->siteStyles->resolve(),
         ]), $status);
     }
 

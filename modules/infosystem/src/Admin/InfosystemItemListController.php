@@ -35,13 +35,49 @@ final class InfosystemItemListController
             return Response::html('<h1>404 Not Found</h1>', 404);
         }
 
-        $items = $this->search->search($infosystemId, 1, 25);
+        $groupId = $this->nullablePositiveInt($request->query['group_id'] ?? null) ?? 0;
+        $groups = $this->infosystems->groups($infosystemId);
+        $selected = null;
+        $lookup = [];
+        foreach ($groups as $group) {
+            $lookup[(int) $group['id']] = $group;
+            if ((int) $group['id'] === $groupId) {
+                $selected = $group;
+            }
+        }
+        if ($groupId !== 0 && $selected === null) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
+        }
+
+        $breadcrumbs = [];
+        $parentId = $groupId;
+        $visited = [];
+        while ($parentId > 0) {
+            if (isset($visited[$parentId]) || !isset($lookup[$parentId])) {
+                return Response::html('<h1>404 Not Found</h1>', 404);
+            }
+            $visited[$parentId] = true;
+            array_unshift($breadcrumbs, $lookup[$parentId]);
+            $parentId = (int) ($lookup[$parentId]['parent_id'] ?? 0);
+        }
+
+        $page = $this->positiveInt($request->query['page'] ?? null, 1);
+        $items = $this->search->search($infosystemId, $page, 25, null, $groupId);
+        $children = array_values(array_filter(
+            $groups,
+            static fn (array $group): bool => (int) ($group['parent_id'] ?? 0) === $groupId,
+        ));
 
         return Response::html($this->view->render('admin/infosystems/manage.php', [
             'infosystem' => $system,
-            'groups' => $this->flattenGroups($this->infosystems->groups($infosystemId)),
+            'groups' => $children,
+            'selected_group' => $selected,
+            'selected_group_id' => $groupId,
+            'breadcrumbs' => $breadcrumbs,
             'items' => $items['items'],
             'item_total' => $items['total'],
+            'page' => $items['page'],
+            'pages' => $items['pages'],
             'created' => isset($request->query['created']),
             'saved' => isset($request->query['saved']),
             'deleted' => isset($request->query['deleted']),

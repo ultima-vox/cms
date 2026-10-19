@@ -13,25 +13,49 @@ if (!empty($item['publish_at'])) {
 echo $view->render('admin/_header.php', [
     'admin_active' => $adminActive,
     'admin_title' => $itemId ? 'Редактирование элемента' : 'Новый элемент',
-    'admin_styles' => ['/assets/infosystems.css'],
+    'admin_styles' => ['/assets/infosystems.css', '/assets/infosystem-editor.css'],
 ]);
 ?>
 <div class="admin-dashboard">
-    <header class="admin-page-header"><div><p class="admin-eyebrow"><?= text($infosystem['code'] ?? '') ?></p><h1 class="admin-header__title"><?= text($itemId ? ($item['name'] ?? '') : 'Новый элемент') ?></h1><?php if (!empty($item['path'])): ?><p class="admin-page-header__description"><code><?= text($item['path']) ?></code></p><?php endif; ?></div><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?>">К инфосистеме</a></header>
+    <header class="admin-page-header"><div><p class="admin-eyebrow"><?= text($infosystem['code'] ?? '') ?></p><h1 class="admin-header__title"><?= text($itemId ? ($item['name'] ?? '') : 'Новый элемент') ?></h1><?php if (!empty($item['path'])): ?><p class="admin-page-header__description"><code><?= text($item['path']) ?></code></p><?php endif; ?></div><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?><?= (int) ($item['group_id'] ?? 0) > 0 ? '?group_id=' . (int) $item['group_id'] : '' ?>">К группе</a></header>
     <?php if (!empty($saved)): ?><div class="admin-notice">Элемент сохранён.</div><?php endif; ?>
     <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
 
     <form class="admin-form" method="post" action="<?= text($itemId ? '/admin/infosystems/' . $infosystemId . '/items/' . $itemId : '/admin/infosystems/' . $infosystemId . '/items') ?>">
         <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
+        <nav class="is-form-tabs" data-is-tabs aria-label="Разделы редактора">
+            <button type="button" data-tab="main" aria-controls="is-tab-main">Основные</button>
+            <button type="button" data-tab="description" aria-controls="is-tab-description">Описание</button>
+            <button type="button" data-tab="seo" aria-controls="is-tab-seo">SEO</button>
+            <button type="button" data-tab="properties" aria-controls="is-tab-properties">Доп. свойства</button>
+            <button type="button" data-tab="publish" aria-controls="is-tab-publish">Публикация</button>
+        </nav>
+        <div id="is-tab-main" data-tab-panel="main">
         <section class="admin-panel"><h2 class="admin-panel__title">Основное</h2><div class="admin-form__grid">
             <label class="admin-field admin-field--wide"><span class="admin-field__label">Название</span><input class="admin-input" name="name" required maxlength="255" value="<?= text($item['name'] ?? '') ?>"></label>
             <label class="admin-field"><span class="admin-field__label">Группа</span><select class="admin-select" name="group_id"><option value="">Корень инфосистемы</option><?php foreach ($groups as $group): ?><option value="<?= text($group['id'] ?? '') ?>"<?= (int) ($item['group_id'] ?? 0) === (int) ($group['id'] ?? 0) ? ' selected' : '' ?>><?= text($group['path'] ?? '') ?> — <?= text($group['name'] ?? '') ?></option><?php endforeach; ?></select></label>
             <label class="admin-field"><span class="admin-field__label">Slug</span><input class="admin-input" name="slug" required maxlength="255" pattern="[a-z0-9][a-z0-9-]*" value="<?= text($item['slug'] ?? '') ?>"></label>
-            <label class="admin-field admin-field--wide"><span class="admin-field__label">Краткое описание</span><textarea class="admin-textarea admin-textarea--small" name="description"><?= text($item['description'] ?? '') ?></textarea></label>
-            <label class="admin-field admin-field--wide"><span class="admin-field__label">Контент</span><textarea class="admin-textarea admin-textarea--content" name="content"><?= text($item['content'] ?? '') ?></textarea></label>
-            <label class="admin-field admin-field--wide"><span class="admin-field__label">Meta description</span><textarea class="admin-textarea admin-textarea--small" name="meta_description" maxlength="320"><?= text($item['meta_description'] ?? '') ?></textarea></label>
         </div></section>
 
+        </div>
+        <div id="is-tab-description" data-tab-panel="description">
+            <section class="admin-panel"><h2 class="admin-panel__title">Описание и содержание</h2>
+                <p class="admin-field__hint">Визуальный режим редактирует текст и разметку; исходный режим сохраняет существующий HTML без преобразования, пока вы его не изменили.</p>
+                <div class="admin-form__grid">
+            <div class="admin-field admin-field--wide"><label class="admin-field__label" for="is-description">Краткое описание</label><textarea id="is-description" class="admin-textarea admin-textarea--small" name="description" data-rich-editor="description" data-editor-style-list="<?= text(json_encode($editor_styles ?? [], JSON_THROW_ON_ERROR)) ?>"><?= text($item['description'] ?? '') ?></textarea></div>
+            <div class="admin-field admin-field--wide"><label class="admin-field__label" for="is-content">Контент</label><textarea id="is-content" class="admin-textarea admin-textarea--content" name="content" data-rich-editor="content" data-editor-style-list="<?= text(json_encode($editor_styles ?? [], JSON_THROW_ON_ERROR)) ?>"><?= text($item['content'] ?? '') ?></textarea></div>
+                </div>
+            </section>
+        </div>
+        <div id="is-tab-seo" data-tab-panel="seo">
+            <section class="admin-panel"><h2 class="admin-panel__title">Поисковая оптимизация</h2>
+                <p class="admin-field__hint">Настройки применяются к этой записи, независимо от её группы.</p>
+                <div class="admin-form__grid">
+            <label class="admin-field admin-field--wide"><span class="admin-field__label">Meta description</span><textarea class="admin-textarea admin-textarea--small" name="meta_description" maxlength="320"><?= text($item['meta_description'] ?? '') ?></textarea></label>
+                </div>
+            </section>
+        </div>
+        <div id="is-tab-properties" data-tab-panel="properties">
         <?php if (($fields ?? []) !== []): ?>
             <section class="admin-panel"><h2 class="admin-panel__title">Дополнительные свойства</h2><div class="admin-form__grid">
                 <?php foreach ($fields as $field): ?>
@@ -48,18 +72,25 @@ echo $view->render('admin/_header.php', [
                     <?php endif; ?>
                 <?php endforeach; ?>
             </div></section>
+        <?php else: ?>
+            <section class="admin-panel"><p class="admin-field__hint">Для этой инфосистемы дополнительные поля пока не настроены.</p></section>
         <?php endif; ?>
-
-        <section class="admin-panel"><h2 class="admin-panel__title">Публикация</h2><div class="admin-form__grid">
+        </div>
+        <div id="is-tab-publish" data-tab-panel="publish">
+            <section class="admin-panel"><h2 class="admin-panel__title">Публикация</h2><div class="admin-form__grid">
             <label class="admin-field"><span class="admin-field__label">Статус</span><select class="admin-select" name="status"><?php foreach (['draft','published','archived'] as $status): ?><option value="<?= text($status) ?>"<?= ($item['status'] ?? '') === $status ? ' selected' : '' ?>><?= text($status) ?></option><?php endforeach; ?></select></label>
             <label class="admin-field"><span class="admin-field__label">Опубликовать не раньше</span><input class="admin-input" type="datetime-local" name="publish_at" value="<?= text($publishValue) ?>"></label>
             <label class="admin-field"><span class="admin-field__label">Сортировка</span><input class="admin-input" type="number" min="0" name="sorting" value="<?= text($item['sorting'] ?? 0) ?>"></label>
             <label class="admin-check"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1"<?= !empty($item['is_active']) ? ' checked' : '' ?>><span>Элемент активен</span></label>
         </div></section>
 
+        </div>
         <div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?>">Отмена</a></div>
     </form>
 
     <?php if ($itemId): ?><section class="admin-danger-zone"><div><strong>Удаление элемента</strong><p>Действие необратимо.</p></div><form method="post" action="/admin/infosystems/<?= text($infosystemId) ?>/items/<?= text($itemId) ?>/delete" data-confirm="Удалить элемент?"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><button class="admin-button admin-button--danger" type="submit">Удалить</button></form></section><?php endif; ?>
 </div>
-<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive]) ?>
+<?= $view->render('admin/_footer.php', [
+    'admin_active' => $adminActive,
+    'admin_scripts' => ['/assets/infosystem-editor.js'],
+]) ?>

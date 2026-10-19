@@ -392,6 +392,15 @@ jobs:
       - name: Infosystem module facade smoke test
         run: php tests/infosystem_module_smoke.php
 
+      - name: Infosystem folder browser and rich editor smoke
+        run: |
+          php -l modules/infosystem/src/Admin/SiteStylesheetResolver.php
+          php -l modules/infosystem/templates/admin/infosystems/item_form.php
+          php tests/infosystem_editor_browser_smoke.php
+          node --check public/assets/infosystem-editor.js
+
+
+
       - name: Admin item search smoke test
         run: php tests/admin_search_smoke.php
 

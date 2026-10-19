@@ -24,6 +24,7 @@ use RuntimeException;
 use UltimaVox\Modules\Infosystem\Admin\InfosystemBindingController;
 use UltimaVox\Modules\Infosystem\Admin\InfosystemController;
 use UltimaVox\Modules\Infosystem\Admin\InfosystemItemListController;
+use UltimaVox\Modules\Infosystem\Admin\SiteStylesheetResolver;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemItemSearchRepository;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemRepository;
@@ -144,6 +145,10 @@ final class InfosystemModule implements ModuleInterface
             new AuditLogRepository($db, $core->sites()->adminId()),
             $adminView,
             new \Core\Content\FolderRepository($db, $siteId, 'infosystems'),
+            new SiteStylesheetResolver(
+                $core->runtime()->rootPath(),
+                new \Core\Repository\LayoutRepository($db, $siteId),
+            ),
         );
         $listController = new InfosystemItemListController(
             $auth,
