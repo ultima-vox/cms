@@ -58,6 +58,31 @@ final readonly class MechanikiModule implements ModuleInterface
             'modules/mechaniki/templates/public/faq-list.php',
         );
         $core->templates()->view(
+            'mechaniki.home.services',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/home-services.php',
+        );
+        $core->templates()->view(
+            'mechaniki.home.problems',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/home-problems.php',
+        );
+        $core->templates()->view(
+            'mechaniki.home.prices',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/home-prices.php',
+        );
+        $core->templates()->view(
+            'mechaniki.home.cases',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/home-cases.php',
+        );
+        $core->templates()->view(
+            'mechaniki.home.reviews',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/home-reviews.php',
+        );
+        $core->templates()->view(
             'mechaniki.service.item',
             'infosystem.item',
             'modules/mechaniki/templates/public/service-item.php',
