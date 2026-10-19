@@ -222,6 +222,116 @@
       "image": "https://mechaniki.ru/upload/shop_5/2/2/2/item_222/item_222.jpg",
       "price_hint": "от 500 ₽",
       "source_file": "pages/services/remont-vyxlopnoj-sistemy.html"
+    },
+    {
+      "path": "/services/rulevoe-upravlenie",
+      "item_path": "/rulevoe-upravlenie",
+      "group": null,
+      "slug": "rulevoe-upravlenie",
+      "name": "Рулевое управление в Зеленограде",
+      "lead": "Изменение усилия на руле, люфт или стук требуют осмотра. Опишите, как меняется управление и при каких условиях появляется проблема.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/5/group_655/small_group_655.jpeg",
+      "price_hint": "от 15 000 ₽",
+      "source_file": "pages/services/rulevoe-upravlenie.html"
+    },
+    {
+      "path": "/services/shumoizolyacziya-avto",
+      "item_path": "/shumoizolyacziya-avto",
+      "group": null,
+      "slug": "shumoizolyacziya-avto",
+      "name": "Шумоизоляция автомобиля в Зеленограде",
+      "lead": "Опишите, какой шум мешает и откуда он слышен. Выбор зоны обработки и материалов начинается с задачи, а посторонний технический шум сначала требует диагностики.",
+      "image": "https://mechaniki.ru/upload/shop_5/2/3/2/item_232/item_232.png",
+      "price_hint": "от 2 000 ₽",
+      "source_file": "pages/services/shumoizolyacziya-avto.html"
+    },
+    {
+      "path": "/services/sxod-razval",
+      "item_path": "/sxod-razval",
+      "group": null,
+      "slug": "sxod-razval",
+      "name": "Сход-развал в Зеленограде",
+      "lead": "Увод автомобиля или неравномерный износ шин требуют проверки. Перед регулировкой важно оценить состояние подвески и рулевых соединений.",
+      "image": "https://mechaniki.ru/upload/shop_5/2/2/6/item_226/item_226.jpg",
+      "price_hint": "от 1 200 ₽",
+      "source_file": "pages/services/sxod-razval.html"
+    },
+    {
+      "path": "/services/texnicheskoe-obsluzhivanie",
+      "item_path": "/texnicheskoe-obsluzhivanie",
+      "group": null,
+      "slug": "texnicheskoe-obsluzhivanie",
+      "name": "Техническое обслуживание автомобиля в Зеленограде",
+      "lead": "Подберём состав ТО по модели, пробегу и истории обслуживания. Обсудим масло, расходные материалы и проверки, которые нужны вашему автомобилю.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/4/9/group_649/group_649.jpg",
+      "price_hint": null,
+      "source_file": "pages/services/texnicheskoe-obsluzhivanie.html"
+    },
+    {
+      "path": "/services/tonirovka-avtomobilya",
+      "item_path": "/tonirovka-avtomobilya",
+      "group": null,
+      "slug": "tonirovka-avtomobilya",
+      "name": "Тонировка автомобиля в Зеленограде",
+      "lead": "Уточните модель, стёкла и желаемый результат. Перед работой нужно определить материал, состояние поверхности и необходимость удаления старой плёнки.",
+      "image": "https://mechaniki.ru/upload/shop_5/2/2/7/item_227/item_227.jpg",
+      "price_hint": "от 500 ₽",
+      "source_file": "pages/services/tonirovka-avtomobilya.html"
+    },
+    {
+      "path": "/services/tormoznaya-sistema",
+      "item_path": "/tormoznaya-sistema",
+      "group": null,
+      "slug": "tormoznaya-sistema",
+      "name": "Ремонт тормозной системы в Зеленограде",
+      "lead": "Шум, вибрация или изменение педали — повод проверить тормоза. Осмотрим механизмы и объясним необходимый объём ремонта.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/2/group_652/group_652.jpg",
+      "price_hint": "от 1 800 ₽",
+      "source_file": "pages/services/tormoznaya-sistema.html"
+    },
+    {
+      "path": "/services/tormoznaya-sistema/zamena-tormoznyx-diskov",
+      "item_path": "/tormoznaya-sistema/zamena-tormoznyx-diskov",
+      "group": "tormoznaya-sistema",
+      "slug": "zamena-tormoznyx-diskov",
+      "name": "Замена тормозных дисков в Зеленограде",
+      "lead": "Проверим тормозные диски вместе с колодками и механизмами. Обсудим, что требуется заменить и какие детали подходят автомобилю.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/2/group_652/group_652.jpg",
+      "price_hint": "от 1 800 ₽",
+      "source_file": "pages/services/tormoznaya-sistema/zamena-tormoznyx-diskov.html"
+    },
+    {
+      "path": "/services/tormoznaya-sistema/zamena-tormoznyx-kolodok",
+      "item_path": "/tormoznaya-sistema/zamena-tormoznyx-kolodok",
+      "group": "tormoznaya-sistema",
+      "slug": "zamena-tormoznyx-kolodok",
+      "name": "Замена тормозных колодок в Зеленограде",
+      "lead": "Осмотрим колодки, диски и тормозные механизмы. Перед заменой уточним детали и дополнительные операции, если они действительно нужны.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/2/group_652/group_652.jpg",
+      "price_hint": "от 600 ₽",
+      "source_file": "pages/services/tormoznaya-sistema/zamena-tormoznyx-kolodok.html"
+    },
+    {
+      "path": "/services/zamena-masla",
+      "item_path": "/zamena-masla",
+      "group": null,
+      "slug": "zamena-masla",
+      "name": "Замена масла в Зеленограде",
+      "lead": "Масло в двигателе и трансмиссии требует разных спецификаций и операций. Уточним нужный узел, данные автомобиля и историю обслуживания.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/4/9/group_649/group_649.jpg",
+      "price_hint": "от 700 ₽",
+      "source_file": "pages/services/zamena-masla.html"
+    },
+    {
+      "path": "/services/zamena-masla/zamena-masla-v-akpp",
+      "item_path": "/zamena-masla/zamena-masla-v-akpp",
+      "group": "zamena-masla",
+      "slug": "zamena-masla-v-akpp",
+      "name": "Замена масла в АКПП в Зеленограде",
+      "lead": "Для обслуживания АКПП важны тип коробки, спецификация жидкости и история работ. По этим данным обсудим подходящий состав операции.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/4/9/group_649/group_649.jpg",
+      "price_hint": "от 700 ₽",
+      "source_file": "pages/services/zamena-masla/zamena-masla-v-akpp.html"
     }
   ]
 }
