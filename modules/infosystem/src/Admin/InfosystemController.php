@@ -26,6 +26,7 @@ final class InfosystemController
         private readonly AdminPhpRenderer $view,
         private readonly \Core\Content\FolderRepository $folders,
         private readonly SiteStylesheetResolver $siteStyles,
+        private readonly \Core\Page\PageEditorNavigation $pageNavigation,
     ) {
     }
 
@@ -364,7 +365,8 @@ final class InfosystemController
             return Response::html('<h1>404 Not Found</h1>', 404);
         }
 
-        return $this->itemFormResponse($system, $item, null, 200, isset($request->query['saved']));
+        return $this->itemFormResponse($system, $item, null, 200, isset($request->query['saved']), pageReturn:
+            $this->pageNavigation->returnContext($request->query, '/admin/infosystems/' . $infosystemId . '/items/' . (int) $item['id'] . '/edit'));
     }
 
     /** @param array<string, string> $variables */
@@ -415,11 +417,13 @@ final class InfosystemController
             return Response::html('<h1>404 Not Found</h1>', 404);
         }
 
+        $pageReturn = $this->pageNavigation->returnContext($request->post, '/admin/infosystems/' . $infosystemId . '/items/' . $itemId . '/edit');
         try {
             $data = $this->itemData($request->post, $system);
             $this->infosystems->saveItem($itemId, $infosystemId, $data['group_id'], $data);
             $this->audit($request, 'infosystem_item.update', 'infosystem_item', $itemId, ['infosystem_id' => $infosystemId]);
-            return Response::redirect('/admin/infosystems/' . $infosystemId . '/items/' . $itemId . '/edit?saved=1');
+            return Response::redirect('/admin/infosystems/' . $infosystemId . '/items/' . $itemId . '/edit?saved=1'
+                . ($pageReturn !== null ? '&' . http_build_query($pageReturn['parameters'], '', '&', PHP_QUERY_RFC3986) : ''));
         } catch (Throwable $exception) {
             return $this->itemFormResponse(
                 $system,
@@ -427,6 +431,7 @@ final class InfosystemController
                 $exception->getMessage(),
                 422,
                 fieldErrors: $exception instanceof PropertyValidationException ? [$exception->fieldCode => $exception->getMessage()] : [],
+                pageReturn: $pageReturn,
             );
         }
     }
@@ -506,6 +511,7 @@ final class InfosystemController
         int $status = 200,
         bool $saved = false,
         array $fieldErrors = [],
+        ?array $pageReturn = null,
     ): Response {
         $form = array_merge([
             'id' => null,
@@ -531,6 +537,7 @@ final class InfosystemController
             'infosystem' => $system,
             'item' => $form,
             'field_errors' => $fieldErrors,
+            'page_return' => $pageReturn,
             'fields' => is_array($system['field_schema'] ?? null) ? $system['field_schema'] : [],
             'groups' => $this->flattenGroups($this->infosystems->groups((int) $system['id'])),
             'csrf_token' => Csrf::token(),

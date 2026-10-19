@@ -89,6 +89,7 @@ final readonly class DocumentsModule implements ModuleInterface
             isDefault: true,
             sorting: 10,
             description: 'Страница на основе опубликованной версии документа.',
+            editorLinkProvider: new DocumentsPageEditorLinkProvider($repository, $core->sites()->adminId()),
         ));
     }
 
@@ -115,6 +116,7 @@ final readonly class DocumentsModule implements ModuleInterface
             $adminView,
             new \Core\Content\FolderRepository($db, $siteId, 'documents'),
             $siteId,
+            new \Core\Page\PageEditorNavigation($core->pages(), new \Core\Repository\StructureRepository($db, $siteId), $auth, $siteId),
         );
         $gate = new PermissionGate($auth);
         $html = new HtmlSanitizingHandler(new HtmlSanitizer());

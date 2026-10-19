@@ -206,6 +206,14 @@ final class StructureController
     /** @param array<string, mixed>|null $node */
     private function formResponse(?array $node, ?string $error = null, int $status = 200): Response
     {
+        // Never resolve a link from rejected POST data; reload its persisted configuration.
+        $persisted = isset($node['id']) ? $this->structure->find((int) $node['id']) : null;
+        $editor = $persisted !== null ? $this->pages->editorUrl($persisted, $this->auth) : null;
+        if ($editor !== null) {
+            $editor .= '?' . http_build_query([
+                '_page' => (string) $persisted['id'], '_page_site' => (string) $persisted['site_id'],
+            ], '', '&', PHP_QUERY_RFC3986);
+        }
         $defaultPageType = $this->pages->default();
         $form = array_merge([
             'id' => null,
@@ -225,6 +233,7 @@ final class StructureController
 
         return Response::html($this->view->render('admin/structure/form.php', [
             'node' => $form,
+            'content_editor_url' => $editor,
             'nodes' => $this->flattenTree($this->structure->all()),
             'layouts' => $this->structure->layouts(),
             'page_types' => $this->pages->provisionableDefinitions(),

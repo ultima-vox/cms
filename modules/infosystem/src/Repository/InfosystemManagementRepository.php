@@ -390,6 +390,17 @@ final class InfosystemManagementRepository
         return $row;
     }
 
+    public function findItemIdByPath(int $infosystemId, string $path): ?int
+    {
+        if (!$this->belongsToSite($infosystemId)) {
+            return null;
+        }
+        $statement = $this->db->prepare('SELECT id FROM infosystem_items WHERE infosystem_id = :system AND path = :path LIMIT 1');
+        $statement->execute(['system' => $infosystemId, 'path' => $path]);
+        $id = $statement->fetchColumn();
+        return $id !== false ? (int) $id : null;
+    }
+
     /** @param array<string, mixed> $data */
     public function saveItem(?int $id, int $infosystemId, ?int $groupId, array $data): int
     {

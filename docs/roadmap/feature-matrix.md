@@ -97,8 +97,8 @@
 
 | Пакет / manifest | Версия | Default | Runtime requires кроме Core | Page/facade/routes |
 | --- | --- | --- | --- | --- |
-| [documents](../../modules/documents/module.json) | 1.3.1 (G1 #142; baseline 1.3.0) | on | нет; migration_after infosystem | documents.page (default), documents facade, /admin/documents |
-| [infosystem](../../modules/infosystem/module.json) | 1.2.1 (G1 #108; baseline 1.2.0) | on | нет | infosystem.list + infosystem.item (PR136), infosystems facade, /admin/infosystems |
+| [documents](../../modules/documents/module.json) | 1.4.0 (G1 #149; baseline 1.3.0) | on | нет; migration_after infosystem | documents.page (default), documents facade, /admin/documents |
+| [infosystem](../../modules/infosystem/module.json) | 1.3.0 (G1 #149; baseline 1.2.0) | on | нет | infosystem.list + infosystem.item (PR136), infosystems facade, /admin/infosystems |
 | [menu](../../modules/menu/module.json) | 1.1.0 | on | нет | menus facade, navigation source; admin editor отсутствует |
 | [menu-infosystem](../../modules/menu-infosystem/module.json) | 1.1.0 | off | menu ^1.0, infosystem ^1.0 | bridge navigation source, не отдельное хранилище |
 | [sites](../../modules/sites/module.json) | 1.2.0 | on | нет | /admin/sites; Core владеет site identity/access primitives |
@@ -160,3 +160,7 @@ PR140 добавляет проверенную локальную синхро�
 ## Наборы приёмки
 
 [Fixture profiles](../../tests/fixtures/g0/profiles.json) связывает реальный Content-v1 fixture с измеренным snapshot. Multilingual-corporate и commerce-site имеют статус blocked, явные зависимости #116–#119 и критерии будущих данных/проверок. Они не заселены и не считаются пройденными до появления владельцев доменов.
+
+## G1: capability editor links (#149)
+
+Core0.5.0 / Extension API1.1.0 — additive optional page-editor capability; [contract](../architecture/core-module-boundary.md#g1-pagecontent-editor-handoff-149). Documents1.4.0 и Infosystem1.3.0 требуют Core>=0.5 / API^1.1. Прямой переход и проверенный обратный контекст реализованы отдельно от WYSIWYG/preview/autosave. Полная production приёмка остаётся NO-GO.

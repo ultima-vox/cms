@@ -69,6 +69,11 @@ try {
         $db->prepare("INSERT INTO nodes(site_id,name,slug,path,title,status,page_type,page_config,layout_id) VALUES(:site,'Independent','','/','G0', 'published','g0.fixture','{}',(SELECT id FROM layouts WHERE site_id=:layout_site AND code='main'))")->execute(['site' => $id, 'layout_site' => $id]);
     }
     $user = $insertId('INSERT INTO users(email,password_hash,display_name) VALUES(:email,:hash,:name)', ['email' => $email, 'hash' => password_hash($password, PASSWORD_DEFAULT), 'name' => 'G0 fixture']);
+    $editorDoc = $insertId('INSERT INTO documents(site_id,code,name) VALUES(:site,:code,:name)', ['site' => $sites['a'], 'code' => 'g0-' . $suffix, 'name' => 'Editor removal']);
+    $rootStatement = $db->prepare("SELECT id FROM nodes WHERE site_id=:site AND path='/'");
+    $rootStatement->execute(['site' => $sites['a']]);
+    $editorNode = $insertId("INSERT INTO nodes(site_id,parent_id,name,slug,path,title,status,page_type,page_config) VALUES(:site,:parent,'Editor removal','editor','/editor','Editor','draft','documents.page',:config)",
+        ['site' => $sites['a'], 'parent' => (int) $rootStatement->fetchColumn(), 'config' => json_encode(['document' => 'g0-' . $suffix], JSON_THROW_ON_ERROR)]);
     $db->prepare("INSERT INTO user_roles(user_id,role_id) SELECT :user,id FROM roles WHERE code='superadmin'")->execute(['user' => $user]);
     $manifests = [];
     foreach (glob($source . '/modules/*/module.json') ?: [] as $file) {
@@ -108,7 +113,7 @@ final class G0IndependentFixture implements \Core\Extension\ModuleInterface {
     }
 }
 FIXTURE);
-        foreach (['/health', '/admin/login', '/admin', '/admin/structure', '/admin/layouts', '/admin/modules', '/'] as $path) {
+        foreach (['/health', '/admin/login', '/admin', '/admin/structure', '/admin/layouts', '/admin/modules', '/admin/structure/' . $editorNode . '/edit', '/'] as $path) {
             foreach ($path === '/' ? ['a', 'b'] : ['a'] as $variant) {
                 $env = array_merge(getenv(), ['G0_FIXTURE_EMAIL' => $email, 'G0_FIXTURE_PASSWORD' => $password]);
                 $process = proc_open([PHP_BINARY, __FILE__, '--worker', $root, 'g0-' . $suffix . '-' . $variant . '.test', $path], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $source, $env);
@@ -119,6 +124,11 @@ FIXTURE);
                 if ($exit !== 0 || $stderr !== '') throw new RuntimeException("Removal worker failed ($case, $path): " . $stderr);
                 $result = json_decode($stdout, true, flags: JSON_THROW_ON_ERROR);
                 if ($result['status'] !== 200) throw new RuntimeException("Removal case $case broke $path: " . $result['status']);
+                if ($path === '/admin/structure/' . $editorNode . '/edit') {
+                    $hasEditor = str_contains($result['body'], '/admin/documents/' . $editorDoc . '/edit?');
+                    if ($hasEditor === in_array('documents', $removed, true)) throw new RuntimeException('Editor capability outlived its owner or vanished while enabled.');
+                    if (!$hasEditor && !str_contains($result['body'], 'Редактор содержимого недоступен')) throw new RuntimeException('Missing owner has no clear UI state.');
+                }
                 if ($path === '/' && (!str_contains($result['body'], 'G0-SITE-' . $sites[$variant]) || str_contains($result['body'], 'G0-SITE-' . $sites[$variant === 'a' ? 'b' : 'a']))) throw new RuntimeException('Removal page crossed the site boundary.');
                 if ($path === '/admin') {
                     foreach (['documents' => '/admin/documents', 'infosystem' => '/admin/infosystems', 'sites' => '/admin/sites', 'updater' => '/admin/updates'] as $code => $route) {
@@ -134,6 +144,7 @@ FIXTURE);
 } finally {
     foreach ($sites as $id) {
         $db->prepare('DELETE FROM nodes WHERE site_id=:id')->execute(['id' => $id]);
+        $db->prepare('DELETE FROM documents WHERE site_id=:id')->execute(['id' => $id]);
         $db->prepare('DELETE FROM layouts WHERE site_id=:id')->execute(['id' => $id]);
         $db->prepare('DELETE FROM sites WHERE id=:id')->execute(['id' => $id]);
     }

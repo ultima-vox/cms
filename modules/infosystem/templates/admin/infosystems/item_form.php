@@ -18,11 +18,13 @@ echo $view->render('admin/_header.php', [
 ?>
 <div class="admin-dashboard">
     <header class="admin-page-header"><div><p class="admin-eyebrow"><?= text($infosystem['code'] ?? '') ?></p><h1 class="admin-header__title"><?= text($itemId ? ($item['name'] ?? '') : 'Новый элемент') ?></h1><?php if (!empty($item['path'])): ?><p class="admin-page-header__description"><code><?= text($item['path']) ?></code></p><?php endif; ?></div><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?><?= (int) ($item['group_id'] ?? 0) > 0 ? '?group_id=' . (int) $item['group_id'] : '' ?>">К группе</a></header>
+    <?php if ($page_return !== null): ?><a class="admin-button" href="<?= text($page_return['url']) ?>">К странице</a><?php endif; ?>
     <?php if (!empty($saved)): ?><div class="admin-notice">Элемент сохранён.</div><?php endif; ?>
     <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
 
     <form class="admin-form" method="post" action="<?= text($itemId ? '/admin/infosystems/' . $infosystemId . '/items/' . $itemId : '/admin/infosystems/' . $infosystemId . '/items') ?>">
         <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
+        <?php foreach ($page_return['parameters'] ?? [] as $key => $value): ?><input type="hidden" name="<?= text($key) ?>" value="<?= text($value) ?>"><?php endforeach; ?>
         <nav class="is-form-tabs" data-is-tabs aria-label="Разделы редактора">
             <button type="button" data-tab="main" aria-controls="is-tab-main">Основные</button>
             <button type="button" data-tab="description" aria-controls="is-tab-description">Описание</button>
@@ -91,7 +93,7 @@ echo $view->render('admin/_header.php', [
         </div></section>
 
         </div>
-        <div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?>">Отмена</a></div>
+        <div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="<?= text($page_return['url'] ?? ('/admin/infosystems/' . $infosystemId)) ?>">Отмена</a></div>
     </form>
 
     <?php if ($itemId): ?><section class="admin-danger-zone"><div><strong>Удаление элемента</strong><p>Действие необратимо.</p></div><form method="post" action="/admin/infosystems/<?= text($infosystemId) ?>/items/<?= text($itemId) ?>/delete" data-confirm="Удалить элемент?"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><button class="admin-button admin-button--danger" type="submit">Удалить</button></form></section><?php endif; ?>

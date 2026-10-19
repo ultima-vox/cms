@@ -164,6 +164,30 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
     assert.equal(await page.locator('textarea[data-rich-editor="content"]').inputValue(), '<p>HTML source remains editable</p>');
     await contentEditor.locator('[data-editor-mode="source"]').click();
     assert.equal(await page.locator('textarea[data-rich-editor="content"]').isVisible(), true);
+    const handoffFixture = JSON.parse(require('node:fs').readFileSync('/tmp/cms-page-editor-browser.json', 'utf8'));
+    for (const width of [1440, 1024, 390]) {
+        await page.setViewportSize({width, height: 1000});
+        for (const [settings, editor, isItem] of [[handoffFixture.page, handoffFixture.editor, false], [handoffFixture.is_page, handoffFixture.is_editor, true]]) {
+            await page.goto(base + settings);
+            for (const back of ['К странице', 'Отмена']) {
+                await page.getByRole('link', {name: 'Редактировать содержимое', exact: true}).focus();
+                await Promise.all([page.waitForURL(url => url.pathname === editor), page.keyboard.press('Enter')]);
+                assert.equal(await page.getByRole('link', {name: 'К странице', exact: true}).getAttribute('href'), settings);
+                if (back === 'К странице') {
+                    if (isItem) await page.locator('[data-tab="description"]').click();
+                    await page.locator('textarea[name=content]').fill(`<p>Page handoff ${width}px</p>`);
+                    await Promise.all([
+                        page.waitForURL(url => url.pathname === editor && (url.searchParams.has('saved') || url.searchParams.has('published'))),
+                        page.getByRole('button', {name: isItem ? 'Сохранить' : 'Сохранить черновик', exact: true}).click(),
+                    ]);
+                }
+                await page.getByRole('link', {name: back, exact: true}).focus();
+                await Promise.all([page.waitForURL(url => url.pathname === settings), page.keyboard.press('Enter')]);
+                assert.equal(await page.getByRole('link', {name: 'Редактировать содержимое', exact: true}).isVisible(), true);
+                assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Page settings overflow at ${width}px`);
+            }
+        }
+    }
     const propertyFixture = JSON.parse(require('node:fs').readFileSync('/tmp/cms-property-browser.json', 'utf8'));
     for (const width of [1440, 1024, 390]) {
         await page.setViewportSize({width, height: 1000});
