@@ -1,6 +1,7 @@
 <?php declare(strict_types=1); ?>
 <section class="admin-panel" style="margin-bottom:18px" aria-label="Папки">
     <div class="admin-actions"><a class="admin-link" href="<?= text($browser['path']) ?>">Корневая папка</a><a class="admin-link" href="<?= text($browser['path']) ?>?folder=all">Все материалы</a>
+        <?php foreach ($browser['ancestors'] as $ancestor): ?><a class="admin-link" href="<?= text($browser['path']) ?>?folder=<?= text($ancestor['id']) ?>"><?= text($ancestor['name']) ?></a><?php endforeach; ?>
         <?php if ($browser['current'] !== null): ?><strong><?= text($browser['current']['name']) ?></strong><a class="admin-link" href="/admin/folders/<?= text($browser['scope']) ?>/<?= text($browser['selected']) ?>/edit">Настройки папки</a><?php endif; ?>
     </div>
     <ul><?php foreach ($browser['children'] as $child): ?><li><a class="admin-link" href="<?= text($browser['path']) ?>?folder=<?= text($child['id']) ?>"><?= text($child['name']) ?></a></li><?php endforeach; ?></ul>

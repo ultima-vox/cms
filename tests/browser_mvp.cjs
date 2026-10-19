@@ -4,8 +4,10 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
 (async () => {
     const browser = await chromium.launch({headless: true, args: ['--no-sandbox']});
     const context = await browser.newContext({storageState: process.env.MVP_BROWSER_STATE});
-    const page = await context.newPage();
     const errors = [];
+    await context.exposeFunction('__recordCspViolation', (directive, blocked) => errors.push(`CSP ${directive}: ${blocked}`));
+    await context.addInitScript(() => window.addEventListener('securitypolicyviolation', event => window.__recordCspViolation(event.violatedDirective, event.blockedURI)));
+    const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
     for (const width of [1440, 1024, 390]) {
         await page.setViewportSize({width, height: 1000});
@@ -37,6 +39,30 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
             assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
         }
     }
+    const fixtures = JSON.parse(require('node:fs').readFileSync('/tmp/cms-folder-browser.json', 'utf8'));
+    await page.goto(base + `/admin/folders/documents/${fixtures.folder}/edit`);
+    let deletes = 0;
+    page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith(`/folders/documents/${fixtures.folder}/delete`)) deletes++; });
+    const dialogEvent = page.waitForEvent('dialog');
+    const deletionClick = page.locator('form[action$="/delete"] button').click();
+    const confirm = await dialogEvent;
+    assert.equal(confirm.type(), 'confirm');
+    await confirm.dismiss();
+    await deletionClick;
+    assert.equal(deletes, 0, 'Cancelling deletion still submitted the form');
+    assert(page.url().endsWith(`/folders/documents/${fixtures.folder}/edit`));
+    await page.goto(base + `/admin/infosystems/${fixtures.infosystem}/edit`);
+    await page.locator('#add-field').click();
+    await page.locator('#add-field').click();
+    assert.equal(await page.locator('[data-field-row]').count(), 2);
+    await page.locator('[data-field-row]').first().locator('[data-remove-field]').click();
+    assert.equal(await page.locator('[data-field-row]').count(), 1);
+    await page.locator('[name="fields[0][name]"]').fill('Поле CSP');
+    await page.locator('[name="fields[0][code]"]').fill('csp_field');
+    await Promise.all([page.waitForURL(`**/infosystems/${fixtures.infosystem}/edit?saved=1`), page.locator('#infosystem-form button[type="submit"]').click()]);
+    assert.equal(await page.locator('[name="fields[0][name]"]').inputValue(), 'Поле CSP');
+    await page.goto(base + '/admin/updates');
+    await page.screenshot({path: '/tmp/cms-layout-updates.png', fullPage: true});
     assert.equal(errors.length, 0, errors.join('\n'));
     await browser.close();
     console.log('Browser layout OK: 1440/1024/390px, bounded upload controls, pilot assets and mobile menu');

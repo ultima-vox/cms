@@ -73,7 +73,7 @@ final class Application
                 \Core\Http\Response::redirect('/admin/login', 303)->send();
                 return;
             }
-            SecurityHeaders::apply(\Core\Http\Response::html('<h1>403</h1><p>Нет доступа к активным сайтам. Обратитесь к суперадминистратору.</p>', 403))->send();
+            SecurityHeaders::apply(\Core\Http\Response::html('<h1>403</h1><p>Нет доступа к активным сайтам. Обратитесь к суперадминистратору.</p><form method="post" action="/admin/logout"><input type="hidden" name="_csrf" value="' . htmlspecialchars(\Core\Security\Csrf::token(), ENT_QUOTES, 'UTF-8') . '"><button type="submit">Выйти</button></form>', 403))->send();
             return;
         }
         $adminSite = $this->isAdminPath($request->path)

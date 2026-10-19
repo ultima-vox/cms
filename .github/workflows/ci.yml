@@ -138,6 +138,9 @@ jobs:
       - name: Sync extension metadata
         run: php bin/console extensions:sync
 
+      - name: Site-scoped content folders
+        run: php tests/content_folders_smoke.php
+
       - name: Admin delivery invalidation integration test
         run: php tests/delivery_invalidation_routes_smoke.php
 

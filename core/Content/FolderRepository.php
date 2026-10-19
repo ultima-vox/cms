@@ -86,7 +86,13 @@ final readonly class FolderRepository
         $this->assertFolder($id);
         $options = $this->all();
         $children = array_values(array_filter($options, static fn ($f) => (int) ($f['parent_id'] ?? 0) === ($id ?? 0)));
-        return ['scope' => $this->scope, 'path' => $path, 'selected' => $id, 'all' => $all, 'current' => $id === null ? null : $this->find($id), 'children' => $children, 'options' => $options];
+        $ancestors = []; $cursor = $id === null ? null : $this->find($id);
+        while ($cursor !== null && $cursor['parent_id'] !== null) {
+            $cursor = $this->find((int) $cursor['parent_id']);
+            if ($cursor !== null) array_unshift($ancestors, $cursor);
+            if (count($ancestors) > 64) throw new RuntimeException('Некорректное дерево папок.');
+        }
+        return ['ancestors' => $ancestors, 'scope' => $this->scope, 'path' => $path, 'selected' => $id, 'all' => $all, 'current' => $id === null ? null : $this->find($id), 'children' => $children, 'options' => $options];
     }
     public function filter(array $rows, array $browser): array
     {

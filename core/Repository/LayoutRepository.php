@@ -84,7 +84,7 @@ final readonly class LayoutRepository
     }
     private function codeFromTemplatePath(string $path): string
     {
-        if (!preg_match('#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.(?:html\.php|php)$#D', trim($path), $match)) throw new RuntimeException('Invalid layout template path.');
+        if (!preg_match('#^layouts/([a-z0-9][a-z0-9_-]{0,79})\.(?:html\.php|php)$#D', trim($path), $match)) throw new RuntimeException('Layout template path cannot be converted to a stable code.');
         return $match[1];
     }
 }

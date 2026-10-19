@@ -22,8 +22,8 @@ BEGIN
     WITH RECURSIVE chain AS (
         SELECT id, parent_id, 1 AS depth FROM content_folders WHERE id = NEW.parent_id
         UNION ALL
-        SELECT p.id, p.parent_id, c.depth + 1 FROM content_folders p JOIN chain c ON p.id = c.parent_id WHERE c.depth <= 64 AND c.id <> NEW.id
-    ) SELECT EXISTS(SELECT 1 FROM chain WHERE id = NEW.id OR depth > 64) INTO invalid;
+        SELECT p.id, p.parent_id, c.depth + 1 FROM content_folders p JOIN chain c ON p.id = c.parent_id WHERE c.depth < 64 AND c.id <> NEW.id
+    ) SELECT EXISTS(SELECT 1 FROM chain WHERE id = NEW.id OR depth >= 64) INTO invalid;
     IF invalid THEN RAISE EXCEPTION 'Folder cycle or maximum depth exceeded.'; END IF;
     RETURN NEW;
 END $$;

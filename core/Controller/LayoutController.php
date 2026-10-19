@@ -54,9 +54,11 @@ final class LayoutController
             return $denied;
         }
 
+        try { $selected = $this->folders->browser($request->query['folder'] ?? null, '/admin/layouts')['selected']; }
+        catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
         return $this->formResponse($this->normalizeFormModel([
             'source' => $this->defaultTemplateSource(),
-            'folder_id' => $request->query['folder'] ?? null,
+            'folder_id' => $selected,
         ]));
     }
 
