@@ -74,3 +74,9 @@ MVP_EDITOR_BASELINE_DISPOSABLE=1 NODE_PATH=/tmp/cms-browser/node_modules node te
 6. Следующие работы Documents/Structure — по #125, #126, #128; визуальный редактор, autosave и конфликты не объединять в один PR.
 
 Пункты 2–6 — G1 после приёмки G0. Отдельный подтверждённый дефект доступности из пункта 1 допускает исправление в стабилизации с собственным review; не выдавать это за старт всего G1.
+
+## G1: возврат в список Documents (#142)
+
+Documents 1.3.1 сохраняет folder/q/status/sort/per_page/page в валидированном контексте каждой ссылки редактора. «К документам» и «Отмена» возвращают в исходный список; create, draft/publish redirects и 422 сохраняют его. Параметры проходят существующий bounded DocumentListQuery, папка проверяется владельцем текущего сайта. Чужой/удалённый folder или другой site marker сбрасывает контекст к списку по умолчанию. Произвольный return URL не используется. Отдельные вкладки не переписывают друг другу session-wide last-list state.
+
+Контракт проверяют общий HTTP journey на PG и четырёх legacy jobs, Documents query smoke и browser round trips с page=2/папкой на 390/1024/1440. Исторические G0 screenshots и измеренные наблюдения выше остаются привязаны к исходной ревизии. Это исправление контекста, не реализация визуального Documents editor, autosave, preview или конфликтов. Миграции и Core/config не меняются.

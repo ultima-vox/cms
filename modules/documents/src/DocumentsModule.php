@@ -114,6 +114,7 @@ final readonly class DocumentsModule implements ModuleInterface
             new AuditLogRepository($db, $core->sites()->adminId()),
             $adminView,
             new \Core\Content\FolderRepository($db, $siteId, 'documents'),
+            $siteId,
         );
         $gate = new PermissionGate($auth);
         $html = new HtmlSanitizingHandler(new HtmlSanitizer());

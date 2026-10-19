@@ -329,3 +329,6 @@ print('Multisite folders HTTP OK: hierarchy, equal codes, independent layouts, d
 
 # Enough isolated documents to exercise real list pagination in the browser.
 query("INSERT INTO documents(site_id,code,name) SELECT 1, 'browser-list-' || n, 'Browser list ' || lpad(n::text,2,'0') FROM generate_series(1,26) AS n")
+
+from document_context_http import verify_document_return_context
+verify_document_return_context(lambda path, data=None, expected=200: request(client, path, data, expected=expected), 1, folder_a, folder_b, site_b)

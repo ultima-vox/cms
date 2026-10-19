@@ -8,7 +8,37 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
     await context.exposeFunction('__recordCspViolation', (directive, blocked) => errors.push(`CSP ${directive}: ${blocked}`));
     await context.addInitScript(() => window.addEventListener('securitypolicyviolation', event => window.__recordCspViolation(event.violatedDirective, event.blockedURI)));
     const page = await context.newPage();
+    const fixtures = JSON.parse(require('node:fs').readFileSync('/tmp/cms-folder-browser.json', 'utf8'));
     page.on('pageerror', error => errors.push(error.message));
+    const listContext = url => Object.fromEntries(['folder', 'q', 'status', 'sort', 'per_page', 'page'].map(key => [
+        key, url.searchParams.get(key) ?? ({page: '1', sort: 'name', per_page: '25'}[key] || ''),
+    ]));
+    const documentRoundTrip = async width => {
+        const expected = listContext(new URL(page.url()));
+        for (const label of ['К документам', 'Отмена']) {
+            await Promise.all([
+                page.waitForURL(url => /^\/admin\/documents\/\d+\/edit$/.test(url.pathname)),
+                page.locator('tbody tr').first().locator('a').first().click(),
+            ]);
+            if (label === 'К документам') {
+                await page.locator('textarea[name=content]').fill(`<p>List context ${width}px</p>`);
+                await Promise.all([
+                    page.waitForURL(url => url.pathname.endsWith('/edit') && url.searchParams.get('saved') === '1'),
+                    page.getByRole('button', {name: 'Сохранить черновик', exact: true}).click(),
+                ]);
+            }
+            await Promise.all([
+                page.waitForURL(url => url.pathname === '/admin/documents'),
+                page.getByRole('link', {name: label, exact: true}).click(),
+            ]);
+            assert.deepEqual(listContext(new URL(page.url())), expected, `Lost list context at ${width}px`);
+            assert.equal(await page.locator('tbody tr').count(), 1);
+            assert.equal(await page.getByLabel('Название или код').inputValue(), expected.q);
+            assert.equal(await page.getByLabel('Публикация', {exact: true}).inputValue(), expected.status);
+            assert.equal(await page.getByLabel('Сортировка', {exact: true}).inputValue(), expected.sort);
+            assert.equal(await page.getByLabel('На странице', {exact: true}).inputValue(), expected.per_page);
+        }
+    };
     for (const width of [1440, 1024, 390]) {
         await page.setViewportSize({width, height: 1000});
         await page.goto(base + '/admin/modules');
@@ -67,6 +97,12 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         assert.equal(await page.getByLabel('Название или код').inputValue(), 'Browser list');
         assert.equal(await page.getByLabel('Публикация', {exact: true}).inputValue(), 'unpublished');
         assert.equal(new URL(page.url()).searchParams.get('folder'), 'all');
+        await documentRoundTrip(width);
+        await page.goto(base + '/admin/documents?' + new URLSearchParams({
+            folder: String(fixtures.folder), q: 'Return context', status: 'unpublished', sort: 'code', per_page: '25', page: '2',
+        }));
+        assert.equal(await page.locator('tbody tr').count(), 1);
+        await documentRoundTrip(width);
         const failed = [];
         page.on('response', response => { if (response.status() >= 400) failed.push(response.url()); });
         await page.goto(base + '/mechaniki');
@@ -85,7 +121,6 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
             assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
         }
     }
-    const fixtures = JSON.parse(require('node:fs').readFileSync('/tmp/cms-folder-browser.json', 'utf8'));
     await page.goto(base + `/admin/folders/documents/${fixtures.folder}/edit`);
     let deletes = 0;
     page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith(`/folders/documents/${fixtures.folder}/delete`)) deletes++; });

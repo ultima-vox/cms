@@ -72,18 +72,21 @@ let browser;
             click(page.getByRole('button', {name: 'Применить', exact: true})),
         ]);
         await navigation();
-        const originalList = new URL(page.url()).search;
+        const listContext = url => Object.fromEntries(['folder', 'q', 'status', 'sort', 'per_page', 'page'].map(key => [
+            key, url.searchParams.get(key) ?? ({page: '1', sort: 'name', per_page: '25'}[key] || ''),
+        ]));
+        const originalList = listContext(new URL(page.url()));
         const documentLink = page.locator('tbody tr').first().locator('a').first();
         const documentUrl = await documentLink.getAttribute('href');
-        assert.match(documentUrl, /^\/admin\/documents\/\d+\/edit$/);
+        assert.match(new URL(documentUrl, base).pathname, /^\/admin\/documents\/\d+\/edit$/);
         await screenshot('documents-filtered');
-        await Promise.all([page.waitForURL('**/documents/*/edit'), click(documentLink)]);
+        await Promise.all([page.waitForURL(url => /^\/admin\/documents\/\d+\/edit$/.test(url.pathname)), click(documentLink)]);
         await navigation();
         await Promise.all([
             page.waitForURL(url => url.pathname === '/admin/documents'),
             click(page.getByRole('link', {name: 'К документам', exact: true})),
         ]);
-        current.returnContextPreserved = new URL(page.url()).search === originalList;
+        current.returnContextPreserved = JSON.stringify(listContext(new URL(page.url()))) === JSON.stringify(originalList);
         await navigation();
         finish();
 
@@ -92,7 +95,7 @@ let browser;
         await fill(page.locator('textarea[name=content]'), `<p>G0 disposable UI observation ${width}</p>`);
         await screenshot('document-editor');
         await Promise.all([
-            page.waitForURL('**/edit?saved=1'),
+            page.waitForURL(url => url.pathname.endsWith('/edit') && url.searchParams.get('saved') === '1'),
             click(page.getByRole('button', {name: 'Сохранить черновик', exact: true})),
         ]);
         assert.equal(await page.locator('textarea[name=content]').inputValue(), `<p>G0 disposable UI observation ${width}</p>`);
