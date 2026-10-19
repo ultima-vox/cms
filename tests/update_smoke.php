@@ -31,7 +31,7 @@ foreach (['public', 'webroot'] as $layout) {
     $hashes = array_map(static fn ($v) => hash('sha256', $v), $old);
     put($root . '/release.json', json_encode(['version' => '0.1.1', 'layout' => $layout, 'files' => $hashes, 'schema' => ['database/migrations/001.sql' => hash('sha256', 'schema')]]));
     $updater = new FileUpdater($root);
-    $new = ['core/state.php' => 'new-code', 'public/assets/site.css' => 'new-css', 'database/migrations/001.sql' => 'schema', 'sites/mechaniki/activate.php' => '<?php echo "site package";'];
+    $new = ['core/state.php' => 'new-code', 'public/assets/site.css' => 'new-css', 'database/migrations/001.sql' => 'schema', 'modules/mechaniki/site/activate.php' => '<?php echo "site package";'];
     [$bytes, $offer] = bundle($new);
     reject(fn () => $updater->apply($bytes, array_replace($offer, ['sha256' => str_repeat('0', 64)])), 'Invalid hash accepted');
     [$bad, $badOffer] = bundle($new, extra: ['../outside' => 'bad']);
@@ -60,7 +60,7 @@ foreach (['public', 'webroot'] as $layout) {
     $backup = $updater->apply($bytes, $offer);
     check(is_file($backup . '/journal.json'), 'Backup absent');
     check(file_get_contents($root . '/core/state.php') === 'new-code', 'Code did not update');
-    check(is_file($root . '/sites/mechaniki/activate.php'), 'Packaged site activation was not installed');
+    check(is_file($root . '/modules/mechaniki/site/activate.php'), 'Packaged site activation was not installed');
     check(!file_exists($root . '/core/obsolete.php'), 'Obsolete file remains');
     check(file_get_contents($root . '/public/assets/site.css') === 'new-css', 'CSS did not update');
     if ($layout === 'webroot') check(file_get_contents($directory . '/assets/site.css') === 'new-css', 'Webroot CSS mirror stale');
