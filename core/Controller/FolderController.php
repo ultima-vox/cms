@@ -35,7 +35,10 @@ final readonly class FolderController
                 else $id = $folders->save($id, is_string($request->post['name'] ?? null) ? $request->post['name'] : '', FolderRepository::id($request->post['parent_id'] ?? null));
                 $this->audit->record((int) $this->auth->user()['id'], $delete ? 'folder.delete' : 'folder.save', 'folder', $id, ['scope' => $definition['scope'], 'site_id' => $this->core->sites()->adminId()], null);
                 return Response::redirect($definition['path'] . ($delete ? '' : '?folder=' . $id));
-            } catch (Throwable $e) { $error = $e->getMessage(); $folder = array_merge($folder ?? [], $request->post); }
+            } catch (Throwable $e) { $error = $e->getMessage();
+                $name = is_string($request->post['name'] ?? null) ? $request->post['name'] : '';
+                try { $parent = FolderRepository::id($request->post['parent_id'] ?? null); } catch (Throwable) { $parent = null; }
+                $folder = array_merge($folder ?? [], ['name' => $name, 'parent_id' => $parent]); }
         }
         return Response::html($this->view->render('admin/folders/form.php', ['definition' => $definition, 'folder' => $folder, 'folder_id' => $id, 'options' => $folders->all(), 'error' => $error]), $error === null ? 200 : 422);
     }
