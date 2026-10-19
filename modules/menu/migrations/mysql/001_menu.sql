@@ -5,8 +5,8 @@ CREATE TABLE menus (
     code VARCHAR(120) NOT NULL,
     name VARCHAR(255) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     CONSTRAINT menus_code_format CHECK (code REGEXP '^[a-z][a-z0-9_-]{0,119}$'),
     CONSTRAINT menus_site_code_unique UNIQUE (site_id, code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
@@ -23,8 +23,8 @@ CREATE TABLE menu_items (
     source_config JSON NOT NULL DEFAULT ('{}'),
     sorting INTEGER NOT NULL DEFAULT 0 CHECK (sorting >= 0),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     CONSTRAINT menu_items_menu_id_id_unique UNIQUE (menu_id, id),
     CONSTRAINT menu_items_parent_same_menu
         FOREIGN KEY (menu_id, parent_id)
