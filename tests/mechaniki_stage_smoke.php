@@ -125,8 +125,12 @@ try {
     }
 } finally {
     if ($siteId !== null) {
-        $delete = $db->prepare('DELETE FROM sites WHERE id = :id');
-        $delete->execute(['id' => $siteId]);
+        foreach (['nodes', 'documents', 'site_domains', 'layouts'] as $table) {
+            $delete = $db->prepare('DELETE FROM ' . $table . ' WHERE site_id = :site_id');
+            $delete->execute(['site_id' => $siteId]);
+        }
+        $deleteSite = $db->prepare('DELETE FROM sites WHERE id = :id');
+        $deleteSite->execute(['id' => $siteId]);
     }
 }
 
