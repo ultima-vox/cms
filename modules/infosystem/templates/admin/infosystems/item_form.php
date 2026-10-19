@@ -42,8 +42,8 @@ echo $view->render('admin/_header.php', [
             <section class="admin-panel"><h2 class="admin-panel__title">Описание и содержание</h2>
                 <p class="admin-field__hint">Визуальный режим редактирует текст и разметку; исходный режим сохраняет существующий HTML без преобразования, пока вы его не изменили.</p>
                 <div class="admin-form__grid">
-            <label class="admin-field admin-field--wide"><span class="admin-field__label">Краткое описание</span><textarea class="admin-textarea admin-textarea--small" name="description" data-rich-editor="description" data-editor-style-list="<?= text(json_encode($editor_styles ?? [], JSON_THROW_ON_ERROR)) ?>"><?= text($item['description'] ?? '') ?></textarea></label>
-            <label class="admin-field admin-field--wide"><span class="admin-field__label">Контент</span><textarea class="admin-textarea admin-textarea--content" name="content" data-rich-editor="content" data-editor-style-list="<?= text(json_encode($editor_styles ?? [], JSON_THROW_ON_ERROR)) ?>"><?= text($item['content'] ?? '') ?></textarea></label>
+            <div class="admin-field admin-field--wide"><label class="admin-field__label" for="is-description">Краткое описание</label><textarea id="is-description" class="admin-textarea admin-textarea--small" name="description" data-rich-editor="description" data-editor-style-list="<?= text(json_encode($editor_styles ?? [], JSON_THROW_ON_ERROR)) ?>"><?= text($item['description'] ?? '') ?></textarea></div>
+            <div class="admin-field admin-field--wide"><label class="admin-field__label" for="is-content">Контент</label><textarea id="is-content" class="admin-textarea admin-textarea--content" name="content" data-rich-editor="content" data-editor-style-list="<?= text(json_encode($editor_styles ?? [], JSON_THROW_ON_ERROR)) ?>"><?= text($item['content'] ?? '') ?></textarea></div>
                 </div>
             </section>
         </div>
