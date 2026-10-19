@@ -1,8 +1,8 @@
 # G0 — карта функций Ultima Vox CMS
 
-Дата: 2026-10-19. **Актуальный main: `0a10ade2182c5ea7c8d246e9dbe81cfa10abae9c`** (PR101). Проверенный runtime baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb` (PR103); между ними добавлен только файл плана, runtime/схема не менялись. Core `0.4.0`, Extension API `1.0.0`.
+Дата: 2026-10-19. **Проверенный main: `68cd931945ecb1afad608f22398cce84fa994063`**. Исходный G0 runtime baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`; план вошёл через PR101. После baseline объединены исправление доступности PR132, детерминированный TTL test PR135 и нативная страница элемента Infosystem PR136. Core `0.4.0`, Extension API `1.0.0`; применённые миграции не менялись.
 
-Основание: [утверждённый пользователем источник ТЗ](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md), [epic102](https://github.com/ultima-vox/cms/issues/102), [G0-01](https://github.com/ultima-vox/cms/issues/104). Во время G0 PR101 вошёл в main; ветка G0 сверена с этим коммитом. Эта карта заменяет предварительный материал PR99 для формальной приёмки G0; ветки не объединяются автоматически.
+Основание: [утверждённый пользователем источник ТЗ](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md), [epic102](https://github.com/ultima-vox/cms/issues/102), [G0-01](https://github.com/ultima-vox/cms/issues/104). Ветка G0 сверена с main68cd931; отдельная работа PR136 сохранена. [Main CI39255125805](https://github.com/ultima-vox/cms/actions/runs/39255125805) и [MVP39255125931](https://github.com/ultima-vox/cms/actions/runs/39255125931) — success. Эта карта заменяет предварительный материал PR99 для формальной приёмки G0; ветки не объединяются автоматически.
 
 ## Как читать статусы и доказательства
 
@@ -26,7 +26,7 @@
 | Browser-install, editor, site isolation, browser widths | [mvp_http_smoke.py](../../tests/mvp_http_smoke.py), [browser_mvp.cjs](../../tests/browser_mvp.cjs); MVP65, public/webroot | 390/1024/1440 px — проверенные размеры, не полная WCAG AA/визуальная приёмка |
 | Реальный upgrade со старой сборки | [prepare_upgrade_runtime.php](../../tests/prepare_upgrade_runtime.php), [update_existing_runtime_smoke.php](../../tests/update_existing_runtime_smoke.php), [HTTP](../../tests/update_existing_runtime_http.py); MVP65 | PG webroot baseline v0.1.20; не все прошлые версии/legacy layouts |
 
-Полный tracked tree получен через git; просмотрены manifests, API/boot/routing, владельцы контента, установка/обновление/миграции, безопасность и связанные тесты. Это направленный аудит возможностей и границ, не независимый pentest и не доказательство всех возможных путей исполнения. В baseline 138 PHP-файлов Core и 43 SQL-файла Core/модулей с учётом отдельных legacy-схем; эти числа — инвентарь, не метрика сложности или покрытия.
+Полный tracked tree получен через git; просмотрены manifests, API/boot/routing, владельцы контента, установка/обновление/миграции, безопасность и связанные тесты. Это направленный аудит возможностей и границ, не независимый pentest и не доказательство всех возможных путей исполнения. В исходном baseline 138 PHP-файлов Core; main68cd931 содержит 139 после generic PageNotFoundException. SQL-файлов по-прежнему 43 в Core/модулях с учётом отдельных legacy-схем; эти числа — инвентарь, не метрика сложности или покрытия.
 
 ## Platform
 
@@ -75,7 +75,8 @@
 | C17 Typed document Actions + notifications | missing | Actions/notifications owner отсутствует; HTML sanitizer не является dispatch API | Нет submission/SMTP/idempotency/retention acceptance; #115; Forms не обязательная зависимость |
 | C18 Localization + regions | missing | `localization`/`regions` отсутствуют; [product variants](../architecture/product-variants.md) — план | Нет 2×2×2 acceptance; #116. Язык UI не равен языку публикации |
 | C19 Mechaniki reference product | partial | [MechanikiModule](../../modules/mechaniki/src/MechanikiModule.php) — opt-in пилот /mechaniki, Documents | [MVP pilot](../../tests/mvp_http_smoke.py); перенос в корень PR96 не merged, формы не разрешены. Live deployment этой ревизии не проверен |
-| C20 Общий admin shell/a11y/UX | partial | [AdminPhpRenderer](../../core/View/AdminPhpRenderer.php), [AdminApi](../../core/Extension/Api/AdminApi.php), [design rules](../admin-design-system.md) | [browser](../../tests/browser_mvp.cjs), [module template scope](../../tests/module_template_scope_smoke.php); click/error baseline, axe/WCAG и три полных walkthrough отсутствуют (#105) |
+| C20 Общий admin shell/a11y/UX | partial | [AdminPhpRenderer](../../core/View/AdminPhpRenderer.php), [AdminApi](../../core/Extension/Api/AdminApi.php), [design rules](../admin-design-system.md) | [browser](../../tests/browser_mvp.cjs), [module template scope](../../tests/module_template_scope_smoke.php); три browser flows на 390/1024/1440 с actions/errors/screenshot измерены в PR130; доступность collapsed/mobile controls исправлена PR132; axe/WCAG и полные пользовательские walkthrough остаются release gate |
+| C21 Published Infosystem item page | implemented | [executor](../../modules/infosystem/src/InfosystemItemPageExecutor.php), [bounded repository](../../modules/infosystem/src/Repository/InfosystemRepository.php), [generic not-found contract](../../core/Page/PageNotFoundException.php) | PR136/main68cd931; [module tests](../../tests/infosystem_module_smoke.php) проверяют site/publication/group visibility, view и cache dependencies. Полный новый сценарий — PG smoke; legacy общий subset не заменяет отдельный item HTTP contract |
 
 ## Commerce и коммерческая упаковка
 
@@ -97,7 +98,7 @@
 | Пакет / manifest | Версия | Default | Runtime requires кроме Core | Page/facade/routes |
 | --- | --- | --- | --- | --- |
 | [documents](../../modules/documents/module.json) | 1.3.0 | on | нет; migration_after infosystem | documents.page (default), documents facade, /admin/documents |
-| [infosystem](../../modules/infosystem/module.json) | 1.2.0 | on | нет | infosystem.list, infosystems facade, /admin/infosystems |
+| [infosystem](../../modules/infosystem/module.json) | 1.2.0 | on | нет | infosystem.list + infosystem.item (PR136), infosystems facade, /admin/infosystems |
 | [menu](../../modules/menu/module.json) | 1.1.0 | on | нет | menus facade, navigation source; admin editor отсутствует |
 | [menu-infosystem](../../modules/menu-infosystem/module.json) | 1.1.0 | off | menu ^1.0, infosystem ^1.0 | bridge navigation source, не отдельное хранилище |
 | [sites](../../modules/sites/module.json) | 1.2.0 | on | нет | /admin/sites; Core владеет site identity/access primitives |
@@ -135,19 +136,19 @@ Core владеет Structure/layouts, users/RBAC, site identity, generic bindin
 | Отсутствие физического пакета не покрывалось full-application fresh-process проверкой | G0 regression gap | Новый [module_removal_smoke](../../tests/module_removal_smoke.php): isolated copies, dependent closure, Core/admin/independent page, two sites, all seven single-package cases + all/baseline. Таблицы не удаляются; это не purge/data-migration acceptance |
 | Исторические Core migrations создают IS domain tables | Документированный migration debt | [001](../../database/migrations/001_initial.sql), [005](../../database/migrations/005_infosystems.sql), [Documents migration ownership](../../modules/documents/migrations/001_documents.sql). Не переписывать применённые файлы; runtime ownership и история различаются |
 | Некорректная календарная дата проходит форматный валидатор ИС | **P1 data validation** | FieldSchema::normalizeProperties, `2026-02-31` проходит regex. [Issue108](https://github.com/ultima-vox/cms/issues/108); требуется отдельный regression/fix PR, не заявлен исправленным здесь |
-| TTL=1 second fresh-read тест зависит от wall-clock | CI reliability debt | [page_static_cache_smoke](../../tests/page_static_cache_smoke.php), промежуточный run39242873559 failure, финальный baseline success. [Issue107](https://github.com/ultima-vox/cms/issues/107); не скрывать retry-until-green |
+| TTL=1 second fresh-read тест зависел от wall-clock; исправлено | Resolved #107 | [page_static_cache_smoke](../../tests/page_static_cache_smoke.php), исторический run39242873559 failure. PR135/mainf1855d1 заменил ожидание на явные fixture states и проверку точного expiry; main CI39254909750/MVP39254909774 success. [Issue107](https://github.com/ultima-vox/cms/issues/107) закрыт |
 | No-SSH crash recovery отсутствует | Production operational gap | [UPDATES](../UPDATES.md), [recover CLI](../../bin/update-recover.php); #121. Unknown commit остаётся maintenance |
 | MySQL snapshot имеет ограничения и implicit DDL | Compatibility/update risk | [MysqlSnapshot](../../core/Database/MysqlSnapshot.php): 256MiB, InnoDB/dedicated DB, без routines/events/views; dirty migration refuses retry. Тесты mysql_update/failure; #106 |
 | Self-HTTP hosting proof может отказать на корректном, но недоступном серверу origin | Hosting support limitation | HostingProbe + [MVP](../MVP.md): outbound/CA/assets/A-record/worker constraints, нет unsafe bypass; #106 |
 | Release integrity не равна подписи publisher | Release gate gap | SHA/TLS есть, CMS release signature/SBOM нет; #120/#122 |
 | Общий static/type/security analysis и полный unused-code audit не выполнены | Evidence gap | Composer/CI не содержит PHPStan/Psalm/SAST/dependency-audit gate; targeted source checks не заменяют их; G10/#122 |
-| UX/performance цифр нет | G0 evidence incomplete | Нет подтверждённых p50/p95/SQL/peak-memory/click counts; [Issue105](https://github.com/ultima-vox/cms/issues/105). Нельзя утверждать «быстрее HostCMS» или pass provisional thresholds |
+| UX/performance baseline измерен, интеграция отдельно | Evidence ready / review #105 | PR130: 9 browser observations, screenshots и actions/errors. PR133: Content 1k/10k, пять DB, cold/warm CLI p50/p95/SQL/allocated memory, raw provenance; head7760377 CI39255626188/MVP39255626206/G039255626397 success. CLI не равен HTTP/FPM/FASTPANEL; provisional thresholds не приняты |
 
 Нового подтверждённого P0 data-loss/RCE/cross-site дефекта в просмотренных сценариях не найдено. Это не security sign-off: P1 #108 открыт, отдельная security review и ещё не реализованные домены остаются gates. Условия перехода — [release-gates.md](release-gates.md).
 
 ## Очередь после G0
 
-- G0 evidence/reliability: #105, #106, #107. Не считать сам факт открытия этих задач прохождением gate.
+- G0: интегрировать evidence PR129/130/133 и зафиксировать review; #107 уже закрыт, #106 сохраняет явные compatibility/release ограничения. Не считать сам факт открытия задач прохождением gate.
 - G1: #109 → маленькие задачи #123 (существующий IS list), #124 (layouts), #125 (document revisions/conflicts), #126 (preview; после #125), #127 (Documents bulk move), #128 (Structure UX); #108 — validation fix.
 - Эпики плана02–15: #109–#122. Зависимости и acceptance находятся в issue bodies и epic102. Никакая из этих функций не помечена реализованной из-за созданного issue.
 - CRM/ERP/WMS, AI editor, frontend SPA-builder, full Forms-конструктор и обязательный external search — вне 1.0 по выбранному ТЗ.

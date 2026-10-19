@@ -1,6 +1,6 @@
 # G0 и production 1.0 — release gates
 
-Main: `0a10ade2182c5ea7c8d246e9dbe81cfa10abae9c`; runtime CI baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`, 2026-10-19. Между ними только документ плана; код и SQL совпадают. [Карта функций и доказательства](feature-matrix.md), [tracking102](https://github.com/ultima-vox/cms/issues/102), [план](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md).
+Main review: `68cd931945ecb1afad608f22398cce84fa994063`; runtime CI baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`, 2026-10-19. После исходного baseline вошли plan PR101, a11y PR132, TTL-test PR135 и infosystem.item PR136; схема не менялась. Исторические CI ниже остаются привязаны к своим SHA. [Карта функций и доказательства](feature-matrix.md), [tracking102](https://github.com/ultima-vox/cms/issues/102), [план](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md).
 
 **Решение сейчас: NO-GO для v1.0.0. G0 inventory candidate — на review, G1 не начат.** Зелёный baseline CI доказывает перечисленные MVP-сценарии, не закрывает отсутствующие функции и неизвестные измерения. GitHub merge/tag не доказывает deployment на ru.rewired.ru или другом production URL.
 
@@ -11,11 +11,11 @@ Main: `0a10ade2182c5ea7c8d246e9dbe81cfa10abae9c`; runtime CI baseline: `f5eecbbc
 | G0-A Source/dependencies/API/PR inventory | Подготовлено в candidate | Review feature-matrix и pinned plan; source/test links, no mixed unfinished branches; #104 |
 | G0-B Reproducible install/upgrade baseline | Есть bounded MVP evidence | CI584 + MVP65 на точном SHA, PG both layouts/real v0.1.20 upgrade, four legacy contracts/webroot. Расширение матрицы #106 не выдавать за уже покрытое |
 | G0-C Module removal / architecture executable checks | Добавлено в candidate, требуется green CI | Physical package removal + fresh application dispatch и two-site isolation на пяти DB jobs; targeted SQL/import guard и failing fixtures. Не считать это удалением domain tables или формальным анализом всех dynamic SQL |
-| G0-D UX и performance baseline | **Не закрыто** | #105: фиксированные fixtures, три editor flows на 390/1024/1440, clicks/errors, cold/warm p50/p95, SQL count и peak memory, описанное окружение/нагрузка. Не выдумывать measurements |
-| G0-E Bug/compatibility registry | Подготовлен, задачи открыты | #108 P1 data validation; #107 flaky expiry check; #106 hosting/legacy limitations. Подтверждённый критический security/data/installation bug запрещает переход; не объявлять неизвестный риск исправленным |
+| G0-D UX и performance baseline | Данные готовы в PR130/133, требуется интеграция/review | #105: фиксированные fixtures, три editor flows на 390/1024/1440, clicks/errors, cold/warm p50/p95, SQL count и peak memory, описанное окружение/нагрузка. Не выдумывать measurements |
+| G0-E Bug/compatibility registry | Подготовлен, задачи открыты | #108 P1 data validation; #107 исправлен PR135 (main CI/MVP green); #106 hosting/legacy limitations. Подтверждённый критический security/data/installation bug запрещает переход; не объявлять неизвестный риск исправленным |
 | G0-F Compatibility/version policy | Кандидат правил ниже, на review | Сохранить Extension API1 current behavior, additive migrations; versioned REST ещё missing; owner review перед breaking changes |
 
-G0 не объявляется целиком принятым этим документом. Следующая исполнимая задача — #105 с измеримыми доказательствами; отдельно #107 устраняет подтверждённую нестабильность проверки. G1 #109/#123–#128 остаётся blocked до приёмки G0 и отсутствия его критических проблем. #108 должен быть исправлен до production; отсутствие запланированного Commerce не является регрессией существующего MVP, но запрещает релиз 1.0.
+G0 не объявляется целиком принятым этим документом. Измеримые доказательства #105 готовы в отдельных PR130 (browser UX) и PR133 (Content 1k/10k CLI profiling); #107 уже закрыт. Следующий шаг — интеграция и явное решение по G0 gates. Пользовательские walkthrough G10/G-REL-07 и утверждение load budgets после G0 не вводятся как новые неоговорённые блокеры G0. G1 #109/#123–#128 остаётся blocked до приёмки G0 и отсутствия его критических проблем. #108 должен быть исправлен до production; отсутствие запланированного Commerce не является регрессией существующего MVP, но запрещает релиз 1.0.
 
 ## Полная матрица совместимости
 

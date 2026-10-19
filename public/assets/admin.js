@@ -50,6 +50,9 @@
     const setCollapsed = (collapsed) => {
         shell.classList.toggle('admin-shell--collapsed', collapsed);
         collapseButton?.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+        const label = collapsed ? 'Развернуть меню' : 'Свернуть меню';
+        collapseButton?.setAttribute('aria-label', label);
+        collapseButton?.setAttribute('title', label);
     };
 
     if (collapseButton) {
