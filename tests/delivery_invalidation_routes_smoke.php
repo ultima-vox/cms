@@ -48,16 +48,6 @@ try {
         $siteIds[] = (int) $insertSite->fetchColumn();
     }
     [$siteId, $otherSiteId] = $siteIds;
-    $site = new SiteContext($siteId, 'delivery-route-one', 'Delivery routes', 'delivery-routes.test');
-    $core = new ExtensionCore(new RuntimeApi(
-        $db,
-        $rootPath,
-        $site,
-        new TaggedCache(new FilesystemCacheStore($cacheRoot . '/data'), new FilesystemTagIndex($cacheRoot . '/index')),
-    ));
-    (new ModuleLoader($rootPath))->load($core);
-    $core->freeze();
-
     $insertUser = $db->prepare(
         "INSERT INTO users (email, password_hash, display_name) VALUES (:email, :hash, 'Delivery fixture') RETURNING id"
     );
@@ -68,8 +58,20 @@ try {
     $userId = (int) $insertUser->fetchColumn();
     $grantRole = $db->prepare("INSERT INTO user_roles (user_id, role_id) SELECT :id, id FROM roles WHERE code = 'editor'");
     $grantRole->execute(['id' => $userId]);
+    $grantSite = $db->prepare('INSERT INTO user_sites(user_id, site_id) VALUES(:user, :site)');
+    $grantSite->execute(['user' => $userId, 'site' => $siteId]);
     $_SESSION['auth_user_id'] = $userId;
     $csrf = Csrf::token();
+    $site = new SiteContext($siteId, 'delivery-route-one', 'Delivery routes', 'delivery-routes.test');
+    $core = new ExtensionCore(new RuntimeApi(
+        $db,
+        $rootPath,
+        $site,
+        new TaggedCache(new FilesystemCacheStore($cacheRoot . '/data'), new FilesystemTagIndex($cacheRoot . '/index')),
+    ));
+    (new ModuleLoader($rootPath))->load($core);
+    $core->freeze();
+
     $post = static fn (string $path, array $data): Request => new Request('POST', $path, $path, [], $data, [], []);
 
     // Real published Documents output supplies the dependencies used by a cached fragment/static page.
@@ -162,6 +164,9 @@ try {
     }
     $grantAdmin = $db->prepare("INSERT INTO user_roles (user_id, role_id) SELECT :id, id FROM roles WHERE code = 'admin'");
     $grantAdmin->execute(['id' => $userId]);
+    $otherPath = '/admin/sites/' . $otherSiteId;
+    $foreign = $updateSite($post($otherPath, $siteData), ['id' => (string) $otherSiteId]);
+    if ($foreign->statusCode() !== 404 || !is_file($otherStatic) || $core->cache()->get('other-site') !== 'Other site') throw new RuntimeException('Site-scoped admin changed another site or its output.');
     $badCsrf = array_replace($siteData, ['_csrf' => 'invalid']);
     $response = $updateSite($post($sitePath, $badCsrf), ['id' => (string) $siteId]);
     if ($response->statusCode() !== 419 || !is_file($policyClean)) {
