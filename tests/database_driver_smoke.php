@@ -71,6 +71,13 @@ try {
         'properties' => ['number' => 12, 'kind' => 'bio', 'enabled' => true], 'publish_at' => null];
     $item = $systems->saveItem(null, $system, $group, $data);
     $systems->saveItem($item, $system, $group, $data);
+    $emptyData = array_replace($data, ['name' => 'Empty properties', 'slug' => 'empty-properties', 'status' => 'draft', 'properties' => []]);
+    $emptyItem = $systems->saveItem(null, $system, null, $emptyData);
+    $systems->saveItem($emptyItem, $system, null, array_replace($emptyData, ['properties' => ['value' => 1]]));
+    $systems->saveItem($emptyItem, $system, null, $emptyData);
+    $typeFunction = SqlDialect::mysql($db) ? 'JSON_TYPE' : 'jsonb_typeof';
+    $type = $db->query("SELECT $typeFunction(properties) FROM infosystem_items WHERE id=" . $emptyItem)->fetchColumn();
+    $assert(strtolower((string) $type) === 'object' && $systems->findItem($system, $emptyItem)['properties'] === [], 'Empty properties did not remain a JSON object on create/update');
     $search = new InfosystemItemSearchRepository($db);
     $assert($search->search($system, 1, 25, '100%_!', null, 'published', ['number' => 12, 'enabled' => true])['total'] === 1, 'Literal search/typed JSON filters failed');
     $assert($search->search($system, 1, 25, null, null, null, ['number' => '12'])['total'] === 0, 'JSON number/string types mixed');
