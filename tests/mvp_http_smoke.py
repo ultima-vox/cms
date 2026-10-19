@@ -154,7 +154,7 @@ request(client, '/admin/mechaniki/import', {'_csrf': csrf}, expected=422)
 assert query("SELECT COUNT(*) FROM nodes WHERE site_id = 1 AND (path = '/mechaniki' OR path LIKE '/mechaniki/%')") == count
 for path in ('/mechaniki', '/mechaniki/services', '/mechaniki/services/engine', '/mechaniki/services/suspension', '/mechaniki/about', '/mechaniki/contacts'):
     body, _ = request(public, path)
-    assert 'noindex, nofollow' in body and '/assets/mechaniki/site.css' in body
+    assert 'noindex,nofollow' in body and '/assets/mechaniki/production.css' in body
     assert '+7 (926) 815-09-24' in body
 for name in ('site.css', 'site.js', 'logo.svg', 'OFL.txt'):
     request(public, '/assets/mechaniki/' + name)
