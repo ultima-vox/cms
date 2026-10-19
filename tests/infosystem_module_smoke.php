@@ -116,6 +116,95 @@ if (!in_array('infosystems.manage', $permissionCodes, true)) {
     throw new RuntimeException('Infosystem permission metadata is missing.');
 }
 
+// A dedicated item page stays within the linked infosystem and site.
+if (!$core->pages()->has('infosystem.item')) {
+    throw new RuntimeException('Infosystem item page type was not registered.');
+}
+
+$itemDefinition = $core->pages()->definition('infosystem.item');
+if ($itemDefinition->validateConfiguration(['item_path' => '/service']) !== ['item_path' => '/service']) {
+    throw new RuntimeException('Infosystem item path configuration was changed.');
+}
+
+foreach (['', 'service', '/service/../x', '/service?token=x'] as $invalidPath) {
+    try {
+        $itemDefinition->validateConfiguration(['item_path' => $invalidPath]);
+        throw new RuntimeException('Invalid item path was accepted.');
+    } catch (RuntimeException $exception) {
+        if ($exception->getMessage() === 'Invalid item path was accepted.') {
+            throw $exception;
+        }
+    }
+}
+
+$itemRepository = new \UltimaVox\Modules\Infosystem\Repository\InfosystemRepository($db);
+$visible = $itemRepository->findPublishedItems(1, $infosystemId, 50);
+$first = $visible[0] ?? null;
+if (!is_array($first) || !is_string($first['path'] ?? null)) {
+    throw new RuntimeException('Expected published catalog fixture item.');
+}
+
+$publishedPath = $first['path'];
+$actual = $itemRepository->findPublishedItemByPath(1, $infosystemId, $publishedPath);
+if (!is_array($actual) || (int) $actual['id'] !== (int) $first['id']) {
+    throw new RuntimeException('Published item lookup did not resolve its item path.');
+}
+if ($itemRepository->findPublishedItemByPath(2, $infosystemId, $publishedPath) !== null
+    || $itemRepository->findPublishedItemByPath(1, $infosystemId, '/missing-item') !== null) {
+    throw new RuntimeException('Published item lookup leaked a site or unknown record.');
+}
+
+$itemPageContext = static fn (int $siteId, string $path): \Core\Page\PageExecutionContext
+    => new \Core\Page\PageExecutionContext(
+        new \Core\Http\Request('GET', '/', '/', [], [], [], []),
+        new SiteContext($siteId, 'item-test', 'Item test', 'localhost'),
+        ['id' => $nodeId, 'site_id' => $siteId, 'path' => '/', 'title' => 'Item test'],
+        ['item_path' => $path],
+        new \Core\View\Render\RenderContext(),
+    );
+
+$itemContext = $itemPageContext(1, $publishedPath);
+$itemHtml = $itemDefinition->executor->execute($itemContext)->value();
+if (!str_contains($itemHtml, (string) $first['name'])) {
+    throw new RuntimeException('Native infosystem.item page did not render the published item.');
+}
+if (!in_array('site:1:infosystem_item:' . (int) $first['id'], $itemContext->renderContext->dependencies(), true)
+    || !in_array('site:1:infosystem:' . $infosystemId, $itemContext->renderContext->dependencies(), true)) {
+    throw new RuntimeException('Infosystem item page cache tags are incomplete.');
+}
+
+try {
+    $itemDefinition->executor->execute($itemPageContext(2, $publishedPath));
+    throw new RuntimeException('Foreign-site infosystem item was exposed.');
+} catch (\Core\Page\PageNotFoundException) {
+    // An item exists in one site only.
+}
+
+$db->beginTransaction();
+try {
+    $hide = $db->prepare("UPDATE infosystem_items SET status = 'draft' WHERE id = :id");
+    $hide->execute(['id' => $first['id']]);
+    if ($itemRepository->findPublishedItemByPath(1, $infosystemId, $publishedPath) !== null) {
+        throw new RuntimeException('Draft item was exposed.');
+    }
+    try {
+        $itemDefinition->executor->execute($itemPageContext(1, $publishedPath));
+        throw new RuntimeException('Draft item page rendered without a 404.');
+    } catch (\Core\Page\PageNotFoundException) {
+        // Valid 404 gate.
+    }
+
+    $future = $db->prepare(
+        "UPDATE infosystem_items SET status = 'published', publish_at = CURRENT_TIMESTAMP + INTERVAL '1 day' WHERE id = :id"
+    );
+    $future->execute(['id' => $first['id']]);
+    if ($itemRepository->findPublishedItemByPath(1, $infosystemId, $publishedPath) !== null) {
+        throw new RuntimeException('Future item was exposed.');
+    }
+} finally {
+    $db->rollBack();
+}
+
 require __DIR__ . '/module_template_scope_smoke.php';
 
 fwrite(STDOUT, "INFOSYSTEM MODULE OK\n");
