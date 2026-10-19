@@ -1,6 +1,6 @@
 # G0 — карта функций Ultima Vox CMS
 
-Дата: 2026-10-19. **Проверенный main: `c4dbd280396477d9e54ff65dc01a69fd11b008e8`**. Исходный G0 runtime baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`; план вошёл через PR101. После baseline объединены исправление доступности PR132, детерминированный TTL test PR135 и нативная страница элемента Infosystem PR136, перенос Mechaniki PR96 и поставка ресурсов PR138. Core `0.4.0`, Extension API `1.0.0`; применённые миграции не менялись.
+Дата: 2026-10-19. **Проверенный main: `c56e50b1fbd4416179c8a9207a3a08e79008cb73`**. Исходный G0 runtime baseline: `f5eecbbc8e6d7257687fb828c57fb268b73427bb`; план вошёл через PR101. После baseline объединены исправление доступности PR132, детерминированный TTL test PR135 и нативная страница элемента Infosystem PR136, перенос Mechaniki PR96 и поставка ресурсов PR138. Core `0.4.0`, Extension API `1.0.0`; применённые миграции не менялись.
 
 Основание: [утверждённый пользователем источник ТЗ](https://github.com/ultima-vox/cms/blob/d0c4f16550a8dee6eb764cef9e22729c9a037171/docs/roadmap/production-1.0-agent-plan.md), [epic102](https://github.com/ultima-vox/cms/issues/102), [G0-01](https://github.com/ultima-vox/cms/issues/104). Ветка G0 сверена с mainc4dbd28; отдельная работа PR136, перенос Mechaniki PR96 и поставочные ресурсы PR138 сохранены, включая новые CI checks. [Main CI39255125805](https://github.com/ultima-vox/cms/actions/runs/39255125805) и [MVP39255125931](https://github.com/ultima-vox/cms/actions/runs/39255125931) — success. Эта карта заменяет предварительный материал PR99 для формальной приёмки G0; ветки не объединяются автоматически.
 
@@ -152,3 +152,7 @@ Core владеет Structure/layouts, users/RBAC, site identity, generic bindin
 - G1: #109 → маленькие задачи #123 (существующий IS list), #124 (layouts), #125 (document revisions/conflicts), #126 (preview; после #125), #127 (Documents bulk move), #128 (Structure UX); #108 — validation fix.
 - Эпики плана02–15: #109–#122. Зависимости и acceptance находятся в issue bodies и epic102. Никакая из этих функций не помечена реализованной из-за созданного issue.
 - CRM/ERP/WMS, AI editor, frontend SPA-builder, full Forms-конструктор и обязательный external search — вне 1.0 по выбранному ТЗ.
+
+### Последующий main: Mechaniki media
+
+PR140 добавляет проверенную локальную синхронизацию 14 ресурсов (`modules/mechaniki/site/sync-media.php`, `SiteMedia.php`) и `tests/mechaniki_media_smoke.php`; соответствующий CI step сохранён. Это доставка ресурсов пилотного сайта, а не самостоятельная медиабиблиотека: C14 остаётся missing. Ни deployment, ни обработка заявок этим не подтверждаются.

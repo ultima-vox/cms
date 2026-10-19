@@ -13,13 +13,15 @@ root = Path(__file__).resolve().parent.parent
 tracked = subprocess.check_output(
     ["git", "ls-files", "--", "modules/mechaniki/site"], cwd=root, text=True
 ).splitlines()
-assert len(tracked) == 65, f"Unexpected site package inventory: {len(tracked)}"
+assert len(tracked) == 67, f"Unexpected site package inventory: {len(tracked)}"
 assert all(Path(name).suffix in {".php", ".html", ".json", ".md"} for name in tracked)
 for file in tracked:
     assert (root / file).is_file(), f"Missing source file: {file}"
 for key in [
     "modules/mechaniki/site/activate.php",
     "modules/mechaniki/site/activate-infosystems.php",
+    "modules/mechaniki/site/sync-media.php",
+    "modules/mechaniki/site/media-manifest.json",
     "modules/mechaniki/site/infosystems/services.json",
     "modules/mechaniki/site/infosystems/prices.json",
 ]:

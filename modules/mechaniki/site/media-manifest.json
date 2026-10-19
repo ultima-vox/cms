@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "source": "ultima-vox/mechaniki.ru/frontend/data/asset-manifest.json",
+  "assets": [
+    {
+      "source_url": "https://mechaniki.ru/assets/images/avtoservis-car-carych.jpg",
+      "target": "/assets/mechaniki/legacy/avtoservis-car-carych.jpg",
+      "bytes": 253445,
+      "sha256": "ed8ac64ea35e47db2e468d7adbde752b109f6365111dbcfe1be13641738cf4f7"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/6/4/9/group_649/group_649.jpg",
+      "target": "/assets/mechaniki/legacy/group_649.jpg",
+      "bytes": 115757,
+      "sha256": "d7ee3e575c3848b5aecdfcfd26c5525e7ab55e66a886f34d4fd9edda24b8656d"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/6/5/0/group_650/group_650.jpeg",
+      "target": "/assets/mechaniki/legacy/group_650.jpeg",
+      "bytes": 67637,
+      "sha256": "67c42fab140f37033a4c5dd8b410fc7f7dba8a88f08f2525f19e6e62c3f5ce2b"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/6/5/1/group_651/group_651.jpeg",
+      "target": "/assets/mechaniki/legacy/group_651.jpeg",
+      "bytes": 60033,
+      "sha256": "17ecf304c0510d2d5ca0600a3ba4cc539c0d1a0ec9e5cca3dada85bb4525b2ce"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/6/5/2/group_652/group_652.jpg",
+      "target": "/assets/mechaniki/legacy/group_652.jpg",
+      "bytes": 41014,
+      "sha256": "07b96a49818bd602a32156ac01cd231a3a0597235817bc65130d5cea10d15449"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/6/5/3/group_653/group_653.jpg",
+      "target": "/assets/mechaniki/legacy/group_653.jpg",
+      "bytes": 94517,
+      "sha256": "4ee11d31476d3d0e3b7b552c2edb55dc8ec7928476913aa125c355de98576b72"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/6/5/4/group_654/group_654.jpeg",
+      "target": "/assets/mechaniki/legacy/group_654.jpeg",
+      "bytes": 97676,
+      "sha256": "c0da8650b1dbddcb85b1e36166a2d5f55463e8e5cea928506c8224e253bb283d"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/6/5/7/group_657/group_657.jpeg",
+      "target": "/assets/mechaniki/legacy/group_657.jpeg",
+      "bytes": 94495,
+      "sha256": "2736ff91531bc5330fb3c459f0b49ec615abe3461b0677d66005c825b83ed775"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/6/5/6/group_656/small_group_656.jpg",
+      "target": "/assets/mechaniki/legacy/small_group_656.jpg",
+      "bytes": 29765,
+      "sha256": "53598ec8ad5dd28c23b7db9b4ea13c2244d7f84474c57d712e8b96598da18698"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/2/2/2/item_222/item_222.jpg",
+      "target": "/assets/mechaniki/legacy/item_222.jpg",
+      "bytes": 56941,
+      "sha256": "e80a8f3189edfa8a26302df480e25427bb7fe0fbad8c64134a03b91339aaa35b"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/6/5/5/group_655/small_group_655.jpeg",
+      "target": "/assets/mechaniki/legacy/small_group_655.jpeg",
+      "bytes": 20105,
+      "sha256": "5bd4a4b03eb34ba053de8cb85cd710f4c715d14c6a7b0a8cc9ec014155684832"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/2/3/2/item_232/item_232.png",
+      "target": "/assets/mechaniki/legacy/item_232.png",
+      "bytes": 2232054,
+      "sha256": "90aa0bc6330ad76327f042d27b9fe9f1a9bd3320161fdea4d806c8a1d7af55d2"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/2/2/6/item_226/item_226.jpg",
+      "target": "/assets/mechaniki/legacy/item_226.jpg",
+      "bytes": 66521,
+      "sha256": "d7508996d16d662d0c3e4e8b43fa5d35528eb5dcd34667bf80d2133704d7cf74"
+    },
+    {
+      "source_url": "https://mechaniki.ru/upload/shop_5/2/2/7/item_227/item_227.jpg",
+      "target": "/assets/mechaniki/legacy/item_227.jpg",
+      "bytes": 92819,
+      "sha256": "780b0fcacd65f2e927bc2be8f4253e5152621ae34777bd50881631f49dc457b4"
+    }
+  ]
+}
