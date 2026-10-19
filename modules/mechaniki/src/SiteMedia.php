@@ -28,9 +28,18 @@ final class SiteMedia
             }
 
             // Never substitute a local URL until its file really exists.
-            if (is_file($rootPath . '/public' . $asset['target'])) {
-                $replace[$asset['source_url']] = $asset['target'];
+            $privateFile = $rootPath . '/public' . $asset['target'];
+            if (!is_file($privateFile)) {
+                continue;
             }
+
+            $release = json_decode((string) @file_get_contents($rootPath . '/release.json'), true);
+            if (($release['layout'] ?? null) === 'webroot'
+                && !is_file(dirname($rootPath) . $asset['target'])) {
+                continue;
+            }
+
+            $replace[$asset['source_url']] = $asset['target'];
         }
 
         return $replace === [] ? $html : strtr($html, $replace);
