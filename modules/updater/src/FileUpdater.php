@@ -249,7 +249,7 @@ final readonly class FileUpdater
     {
         if (!is_string($path) || str_contains($path, '\\') || str_contains($path, '//')
             || preg_match('~(?:^|/)\.{1,2}(?:/|$)|[\x00-\x20]~', $path)
-            || !preg_match('~^(?:(?:core|modules|templates|public|database|installer|deploy|vendor|bin)/[a-zA-Z0-9_./@+-]+|composer\.(?:json|lock))$~D', $path)
+            || !preg_match('~^(?:(?:(?:core|modules|templates|public|database|installer|deploy|vendor|bin)/[a-zA-Z0-9_./@+-]+|sites/mechaniki/[a-zA-Z0-9_./@+-]+\.(?:php|html|json|md))|composer\.(?:json|lock))$~D', $path)
             || preg_match('~(?:^|/)(?:\.env(?:\..*)?|\.git|storage)(?:/|$)~', $path)) {
             throw new RuntimeException('Недопустимый путь файла обновления.');
         }
