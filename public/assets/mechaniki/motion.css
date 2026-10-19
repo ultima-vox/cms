@@ -1,0 +1,92 @@
+/* Calm, progressive motion. Content is always visible without enhancement. */
+:root {
+  --motion-fast:160ms;
+  --motion-base:220ms;
+  --motion-slow:450ms;
+  --ease-standard:cubic-bezier(.2,.8,.2,1);
+  --ease-enter:cubic-bezier(.16,1,.3,1);
+  --ease-exit:cubic-bezier(.4,0,1,1);
+}
+[data-motion-delay="0"] { --motion-stagger:0ms; }
+[data-motion-delay="80"] { --motion-stagger:80ms; }
+[data-motion-delay="160"] { --motion-stagger:160ms; }
+[data-motion-delay="240"] { --motion-stagger:240ms; }
+/* Only attached after intersection: no pre-observation hidden state. */
+[data-motion-active="true"][data-motion="reveal"] {
+  animation:mechaniki-reveal var(--motion-slow) var(--ease-enter) var(--motion-stagger,0ms) both;
+}
+[data-motion-active="true"][data-motion="photo"] {
+  animation:mechaniki-photo var(--motion-slow) var(--ease-enter) both;
+}
+[data-motion-active="true"][data-motion="menu"] {
+  animation:mechaniki-menu var(--motion-fast) var(--ease-enter) both;
+}
+@keyframes mechaniki-reveal {
+  from { opacity:0; transform:translateY(14px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@keyframes mechaniki-photo {
+  from { opacity:.85; transform:scale(1.02); }
+  to { opacity:1; transform:scale(1); }
+}
+@keyframes mechaniki-menu {
+  from { opacity:0; transform:translateY(-6px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.service-card,.ip-service-card {
+  transition:transform var(--motion-base) var(--ease-standard),border-color var(--motion-base) var(--ease-standard);
+}
+.service-card img,.ip-service-card .ip-photo img {
+  transition:transform var(--motion-base) var(--ease-standard);
+}
+.service-card__body>.ui-icon:last-child,.ip-service-body>.ui-icon,.ip-card-arrow {
+  transition:transform var(--motion-base) var(--ease-standard),color var(--motion-fast) var(--ease-standard);
+}
+.symptom,.ip-symptom {
+  transition:transform var(--motion-base) var(--ease-standard),background-color var(--motion-base) var(--ease-standard),border-color var(--motion-base) var(--ease-standard);
+}
+.symptom>.ui-icon,.ip-symptom>.ui-icon {
+  transition:color var(--motion-fast) var(--ease-standard),transform var(--motion-base) var(--ease-standard);
+}
+.process-list .step-number,.ip-step-number {
+  transition:color var(--motion-base) var(--ease-standard),transform var(--motion-base) var(--ease-standard);
+}
+.faq-item summary .ui-icon,.faq .faq-item summary::after,.menu-chevron {
+  transition:transform var(--motion-base) var(--ease-standard),color var(--motion-fast) var(--ease-standard);
+}
+/* Keep native details/summary, keyboard behaviour and the existing single chevron.
+   Unsupported browsers retain instant native opening, with no JS dependency. */
+@supports (interpolate-size:allow-keywords) and selector(details::details-content) {
+  .faq-item { interpolate-size:allow-keywords; }
+  .faq-item::details-content {
+    block-size:0;
+    overflow:clip;
+    opacity:0;
+    transition:block-size var(--motion-base) var(--ease-standard),opacity var(--motion-base) var(--ease-standard),content-visibility var(--motion-base) allow-discrete;
+  }
+  .faq-item[open]::details-content { block-size:auto; opacity:1; }
+}
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .service-card:hover,.ip-service-card:hover { transform:translateY(-2px); border-color:var(--red); }
+  .service-card:hover img,.ip-service-card:hover .ip-photo img { transform:scale(1.03); }
+  .service-card:hover .service-card__body>.ui-icon:last-child,.ip-service-card:hover .ip-service-body>.ui-icon,.ip-service-card:hover .ip-card-arrow { transform:translateX(4px); color:var(--red); }
+  .symptom:hover,.ip-symptom:hover { transform:translateY(-2px); background:#fdf6f2; }
+  .symptom:hover>.ui-icon,.ip-symptom:hover>.ui-icon { color:var(--red); }
+  .symptom:hover>.ui-icon:last-child,.ip-symptom:hover>.ui-icon:last-child { transform:translateX(4px); }
+}
+@media (prefers-reduced-motion:reduce) {
+  [data-motion-active="true"] { animation:none!important; }
+  .service-card,.ip-service-card,.symptom,.ip-symptom,
+  .service-card img,.ip-service-card .ip-photo img,
+  .service-card__body>.ui-icon:last-child,.ip-service-body>.ui-icon,.ip-card-arrow,
+  .symptom>.ui-icon,.ip-symptom>.ui-icon,.process-list .step-number,.ip-step-number,
+  .faq-item summary .ui-icon,.faq .faq-item summary::after,.menu-chevron {
+    transition:none!important;
+  }
+  .service-card:hover,.ip-service-card:hover,.symptom:hover,.ip-symptom:hover,
+  .service-card:hover img,.ip-service-card:hover .ip-photo img,
+  .service-card:hover .service-card__body>.ui-icon:last-child,.ip-service-card:hover .ip-service-body>.ui-icon,.ip-service-card:hover .ip-card-arrow,
+  .symptom:hover>.ui-icon:last-child,.ip-symptom:hover>.ui-icon:last-child,
+  .process-list>li:hover .step-number,.ip-process li:hover .ip-step-number { transform:none!important; }
+  .faq-item::details-content { transition:none!important; }
+}
