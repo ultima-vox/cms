@@ -195,7 +195,7 @@ try {
     }
 
     $future = $db->prepare(
-        "UPDATE infosystem_items SET status = 'published', publish_at = CURRENT_TIMESTAMP + INTERVAL '1 day' WHERE id = :id"
+        "UPDATE infosystem_items SET status = 'published', publish_at = '2099-12-31 00:00:00' WHERE id = :id"
     );
     $future->execute(['id' => $first['id']]);
     if ($itemRepository->findPublishedItemByPath(1, $infosystemId, $publishedPath) !== null) {
