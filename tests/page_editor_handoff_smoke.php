@@ -98,8 +98,8 @@ try {
         $assert($core->pages()->editorUrl($bad, $auth) === null, 'Unsafe destination accepted');
     }
     $assert(VersionConstraint::matches('1.1.0', '^1.0') && !VersionConstraint::matches('1.0.0', '^1.1'), 'Additive API constraints broken');
-    echo "PAGE EDITOR HANDOFF OK: owner paths, same-code site isolation, real IS list/item targets, permissions, missing owners/content, bounded returns and safe destinations\n";
 } finally {
     ($auth ?? null)?->logout();
     if ($db->inTransaction()) $db->rollBack();
 }
+echo "PAGE EDITOR HANDOFF OK: owner paths, same-code site isolation, real IS list/item targets, permissions, missing owners/content, bounded returns and safe destinations\n";
