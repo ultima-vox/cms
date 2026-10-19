@@ -31,7 +31,6 @@ final readonly class MechanikiModule implements ModuleInterface
         $auth = new AuthService(new UserRepository($db), new LoginAttemptRepository($db));
         $view = (new AdminPhpRendererFactory($core->runtime()->rootPath(), $auth, $core->admin(), $core->sites()))
             ->create([dirname(__DIR__) . '/templates']);
-        $core->admin()->navigation('mechaniki', 'Механики · MVP', '/admin/mechaniki', 'modules.manage', 95, 'layout');
         $handler = function (Request $request, array $variables = []) use ($core, $db, $auth, $view): Response {
             unset($variables);
             if ($auth->user() === null) {
