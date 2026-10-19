@@ -3,17 +3,17 @@
 Целевой адрес: **https://ru.rewired.ru/** (не `/mechaniki`).
 
 Источник контента и визуала: `ultima-vox/mechaniki.ru`.
-Основной CSS и JS взяты из актуальных `site/templates/template1001/style.css` и `script.js`. Статические фрагменты страниц получены из `frontend/*/index.html` и сохранены в `sites/mechaniki/pages/**/*.html`. Они являются **исходниками для наполнения Documents**, а не файлами, которые веб-сервер должен обслуживать напрямую.
+Основной CSS и JS взяты из актуальных `site/templates/template1001/style.css` и `script.js`. Статические фрагменты страниц получены из `frontend/*/index.html` и сохранены в `modules/mechaniki/site/pages/**/*.html`. Они являются **исходниками для наполнения Documents**, а не файлами, которые веб-сервер должен обслуживать напрямую.
 
 ## Архитектура
 
 - `templates/layouts/mechaniki-live.php` — общая оболочка без HostCMS API, получает `$page` и вызывает `$page->execute()`.
 - `public/assets/mechaniki/production.css`, `production.js`, `site-config.js` — текущий визуальный слой и браузерное поведение; настройка отправки намеренно выключена.
-- `sites/mechaniki/pages/*.html` — 56 исходных фрагментов; до активации ИС используются как безопасный промежуточный снимок Documents.
-- `sites/mechaniki/infosystems/*.json` — структурированный импорт: 33 услуги, 11 симптомов, 48 цен, 3 демонстрационных кейса, 5 FAQ и 3 отзыва.
-- `sites/mechaniki/activate-infosystems.php` — отдельная атомарная миграция в 6 ИС, 49 привязок Structure к `infosystem.item/list`; поддерживает dry-run и явный refresh.
+- `modules/mechaniki/site/pages/*.html` — 56 исходных фрагментов; до активации ИС используются как безопасный промежуточный снимок Documents.
+- `modules/mechaniki/site/infosystems/*.json` — структурированный импорт: 33 услуги, 11 симптомов, 48 цен, 3 демонстрационных кейса, 5 FAQ и 3 отзыва.
+- `modules/mechaniki/site/activate-infosystems.php` — отдельная атомарная миграция в 6 ИС, 49 привязок Structure к `infosystem.item/list`; поддерживает dry-run и явный refresh.
 - `modules/mechaniki/templates/public/*.php` — зарегистрированные PHP-представления ИС, без XML/XSLT.
-- `sites/mechaniki/activate.php` — одноразовый CLI import/activation с проверкой конкретного host; регистрирует layout, Documents и Structure для целевого сайта. Скрипт не является Core migration.
+- `modules/mechaniki/site/activate.php` — одноразовый CLI import/activation с проверкой конкретного host; регистрирует layout, Documents и Structure для целевого сайта. Скрипт не является Core migration.
 
 На стенде нет PHP endpoint записи. Все `bookingEndpoint` / `bookingTokenEndpoint` равны `null`, а `data-environment="staging"` не даёт JS включить submit. Отправка заявки, уведомлений и писем **отключена**. Телефон и ссылки мессенджеров остаются доступными.
 
@@ -28,11 +28,11 @@ composer install --no-dev --classmap-authoritative
 php bin/console migrate
 php bin/console modules:migrate --all
 php bin/console extensions:sync
-php sites/mechaniki/activate.php
-php sites/mechaniki/activate.php --apply
+php modules/mechaniki/site/activate.php
+php modules/mechaniki/site/activate.php --apply
 php bin/console extensions:enable mechaniki
-php sites/mechaniki/activate-infosystems.php
-php sites/mechaniki/activate-infosystems.php --apply
+php modules/mechaniki/site/activate-infosystems.php
+php modules/mechaniki/site/activate-infosystems.php --apply
 ```
 
 Без флага `--apply` обе команды импорта ничего не меняют. Первая команда создаёт недостающие документы/узлы и назначает `mechaniki-live` на корень сайта. Вторая создаёт ИС и в одной транзакции переключает 49 узлов на `infosystem.item/list` с конкретным `item_path` и шаблоном. При повторном запуске уже опубликованные документы не перезаписываются; `--apply --refresh` обновляет содержимое материалами из Git. Выполнять только на тестовом сайте и только после резервной копии базы. Другие домены, даже если используют эту же CMS, не должны изменяться.

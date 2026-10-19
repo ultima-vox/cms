@@ -11,7 +11,7 @@ use Core\Repository\StructureRepository;
 use Dotenv\Dotenv;
 use UltimaVox\Modules\Documents\Repository\DocumentRepository;
 
-$root = dirname(__DIR__, 2);
+$root = dirname(__DIR__, 3);
 require_once $root . '/vendor/autoload.php';
 require_once $root . '/modules/documents/autoload.php';
 Dotenv::createImmutable($root)->safeLoad();

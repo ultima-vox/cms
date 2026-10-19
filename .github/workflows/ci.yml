@@ -55,6 +55,15 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Package private Mechaniki site resources in all distributions
+        env:
+          CMS_VERSION: 0.1.999
+        run: |
+          python3 tools/package_mvp.py /tmp/mechaniki-public.zip
+          python3 tools/package_mvp.py /tmp/mechaniki-webroot.zip --webroot
+          python3 tools/package_update.py /tmp/mechaniki-update.zip
+          python3 tests/mechaniki_distribution_smoke.py /tmp/mechaniki-public.zip /tmp/mechaniki-webroot.zip /tmp/mechaniki-update.zip
+
       - name: PHP syntax check
         run: |
           find core public templates tests modules -type f -name '*.php' -print0 | xargs -0 -n1 php -l
@@ -348,8 +357,8 @@ jobs:
 
       - name: Mechaniki root-site integration smoke
         run: |
-          php -l sites/mechaniki/activate.php
-          php -l sites/mechaniki/activate-infosystems.php
+          php -l modules/mechaniki/site/activate.php
+          php -l modules/mechaniki/site/activate-infosystems.php
           find modules/mechaniki/templates/public -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php tests/mechaniki_stage_smoke.php
 
