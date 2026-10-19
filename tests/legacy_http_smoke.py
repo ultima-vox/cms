@@ -60,3 +60,9 @@ for path in ['/app', '/app/.env', '/app/composer.json', '/app/vendor/autoload.ph
 body, _ = request('/')
 assert 'Legacy HTTP site' in body
 print('LEGACY HTTP OK: PostgreSQL default, explicit MySQL install, login, all admin sections, document, folder, private files')
+
+from document_context_http import DocumentPage, verify_document_return_context
+body, _ = request("/admin/documents")
+folder_link = DocumentPage(body).link("Legacy folder")
+folder_id = int(urllib.parse.parse_qs(urllib.parse.urlsplit(folder_link).query)["folder"][0])
+verify_document_return_context(request, 1, folder_id)

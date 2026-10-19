@@ -97,7 +97,7 @@
 
 | Пакет / manifest | Версия | Default | Runtime requires кроме Core | Page/facade/routes |
 | --- | --- | --- | --- | --- |
-| [documents](../../modules/documents/module.json) | 1.3.0 | on | нет; migration_after infosystem | documents.page (default), documents facade, /admin/documents |
+| [documents](../../modules/documents/module.json) | 1.3.1 (G1 #142; baseline 1.3.0) | on | нет; migration_after infosystem | documents.page (default), documents facade, /admin/documents |
 | [infosystem](../../modules/infosystem/module.json) | 1.2.0 | on | нет | infosystem.list + infosystem.item (PR136), infosystems facade, /admin/infosystems |
 | [menu](../../modules/menu/module.json) | 1.1.0 | on | нет | menus facade, navigation source; admin editor отсутствует |
 | [menu-infosystem](../../modules/menu-infosystem/module.json) | 1.1.0 | off | menu ^1.0, infosystem ^1.0 | bridge navigation source, не отдельное хранилище |

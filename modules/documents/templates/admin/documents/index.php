@@ -15,7 +15,7 @@ echo $view->render('admin/_header.php', [
             <h1 class="admin-header__title">Документы</h1>
             <p class="admin-page-header__description">Тексты страниц и повторно используемые материалы.</p>
         </div>
-        <a class="admin-button admin-button--primary" href="/admin/documents/create?folder=<?= text($folder_browser['selected'] ?? '') ?>">Новый документ</a>
+        <a class="admin-button admin-button--primary" href="<?= text($list_query->createUrl($admin_shell->site()->id, $listing['page'])) ?>">Новый документ</a>
     </header>
 
     <?php if (!empty($created)): ?>
@@ -52,7 +52,7 @@ echo $view->render('admin/_header.php', [
                 <?php else: ?>
                     <h2><?= $list_query->allFolders ? 'Документов пока нет' : 'В этой папке пока нет документов' ?></h2><p>Создайте документ или откройте «Все материалы».</p>
                 <?php endif; ?>
-                <a class="admin-button admin-button--primary" href="/admin/documents/create?folder=<?= text($folder_browser['selected'] ?? '') ?>">Создать документ</a>
+                <a class="admin-button admin-button--primary" href="<?= text($list_query->createUrl($admin_shell->site()->id, $listing['page'])) ?>">Создать документ</a>
             </div>
         <?php else: ?>
             <div class="admin-table-wrap">
@@ -69,11 +69,11 @@ echo $view->render('admin/_header.php', [
                     <tbody>
                     <?php foreach ($documents as $document): ?>
                         <tr>
-                            <td><a class="admin-link" href="/admin/documents/<?= text($document['id']) ?>/edit"><strong><?= text($document['name'] ?? '') ?></strong></a></td>
+                            <td><a class="admin-link" href="<?= text($list_query->editUrl((int) $document['id'], $admin_shell->site()->id, $listing['page'])) ?>"><strong><?= text($document['name'] ?? '') ?></strong></a></td>
                             <td><code><?= text($document['code'] ?? '') ?></code></td>
                             <td><?= !empty($document['published_version']) ? 'v' . text($document['published_version']) : '—' ?></td>
                             <td><?= !empty($document['draft_version']) ? 'v' . text($document['draft_version']) : '—' ?></td>
-                            <td class="admin-table__actions"><a class="admin-button admin-button--secondary" href="/admin/documents/<?= text($document['id'] ?? '') ?>/edit">Редактировать</a></td>
+                            <td class="admin-table__actions"><a class="admin-button admin-button--secondary" href="<?= text($list_query->editUrl((int) $document['id'], $admin_shell->site()->id, $listing['page'])) ?>">Редактировать</a></td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
