@@ -1,0 +1,22 @@
+{
+  "name": "ultima-vox-cms-admin-editors",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:editors": "node scripts/build-editors.mjs",
+    "check:editors": "node --check frontend/editors/index.js && node --check scripts/build-editors.mjs"
+  },
+  "dependencies": {
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.9",
+    "@codemirror/lang-javascript": "^6.2.4",
+    "@codemirror/lang-php": "^6.0.2",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.0",
+    "@tiptap/core": "^2.26.1",
+    "@tiptap/starter-kit": "^2.26.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.9"
+  }
+}
