@@ -10,7 +10,7 @@ use Throwable;
 
 final class InfosystemManagementRepository
 {
-    private const LIST_SELECT = <<'SQL'
+    private const LIST_SELECT = <<<'SQL'
 SELECT i.*,
                 (SELECT COUNT(*) FROM infosystem_groups g WHERE g.infosystem_id=i.id) AS group_count,
                 (SELECT COUNT(*) FROM infosystem_items item WHERE item.infosystem_id=i.id) AS item_count,
