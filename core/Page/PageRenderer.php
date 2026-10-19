@@ -75,6 +75,10 @@ final readonly class PageRenderer
             $context,
             new PageExecutionChain($stages),
         );
-        return new RenderResult($page->start()->value(), $renderContext);
+        try {
+            return new RenderResult($page->start()->value(), $renderContext);
+        } catch (PageNotFoundException) {
+            return null;
+        }
     }
 }
