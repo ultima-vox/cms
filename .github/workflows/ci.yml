@@ -484,3 +484,83 @@ jobs:
           name: legacy-diagnostics-${{ strategy.job-index }}
           path: /tmp/legacy-http.log
           if-no-files-found: ignore
+
+  apache-hosting:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        layout: [public, webroot]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cms_apache
+          POSTGRES_USER: cms
+          POSTGRES_PASSWORD: cms
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U cms -d cms_apache"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      MVP_URL: http://127.0.0.1:8086
+      MVP_LAYOUT: ${{ matrix.layout }}
+      MVP_DB_NAME: cms_apache
+      MVP_DB_USER: cms
+      MVP_DB_PASS: cms
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, dom, mbstring, zip
+          coverage: none
+      - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
+      - name: Build real Apache PHP 8.4 fixture
+        run: docker build -t cms-apache tests/fixtures/apache
+      - name: Package a clean hosting installation
+        run: |
+          if [ "$MVP_LAYOUT" = webroot ]; then
+            python3 tools/package_mvp.py /tmp/apache-hosting.zip --webroot
+          else
+            python3 tools/package_mvp.py /tmp/apache-hosting.zip
+          fi
+          mkdir /tmp/cms-apache
+          unzip -q /tmp/apache-hosting.zip -d /tmp/cms-apache
+          if [ "$MVP_LAYOUT" = webroot ]; then APP_PATH=/tmp/cms-apache/app; else APP_PATH=/tmp/cms-apache; fi
+          printf 'CMS_PRIVATE_PROOF' > "$APP_PATH/storage/logs/private-proof.txt"
+      - name: Install and edit through Apache with actual htaccess rules
+        run: |
+          if [ "$MVP_LAYOUT" = webroot ]; then DOCUMENT_ROOT=/var/www/cms; else DOCUMENT_ROOT=/var/www/cms/public; fi
+          docker run --detach --name cms-apache --network host -e CMS_DOCUMENT_ROOT="$DOCUMENT_ROOT" -v /tmp/cms-apache:/var/www/cms cms-apache
+          trap 'docker logs cms-apache > /tmp/cms-apache.log 2>&1; docker rm -f cms-apache' EXIT
+          docker exec cms-apache chown -R www-data:www-data /var/www/cms
+          for n in $(seq 1 30); do
+            if curl --fail --silent --output /dev/null "$MVP_URL/install"; then break; fi
+            sleep 1
+          done
+          python3 tests/apache_private_files_smoke.py --before-install
+          python3 tests/mvp_http_smoke.py
+          python3 tests/apache_private_files_smoke.py
+          docker exec cms-apache php -r 'if (PHP_VERSION_ID < 80400 || PHP_SAPI !== "cli") exit(1);'
+      - name: Prove negative Apache fixture detects private file exposure
+        if: matrix.layout == 'webroot'
+        run: |
+          sed 's/AllowOverride All/AllowOverride None/' tests/fixtures/apache/site.conf > /tmp/apache-unsafe.conf
+          docker run --detach --name cms-apache-unsafe --network host -e CMS_DOCUMENT_ROOT=/var/www/cms -v /tmp/cms-apache:/var/www/cms:ro -v /tmp/apache-unsafe.conf:/etc/apache2/sites-available/000-default.conf:ro cms-apache
+          trap 'docker logs cms-apache-unsafe > /tmp/cms-apache-unsafe.log 2>&1; docker rm -f cms-apache-unsafe' EXIT
+          for n in $(seq 1 30); do
+            if curl --silent --output /dev/null "$MVP_URL/app/composer.json"; then break; fi
+            sleep 1
+          done
+          python3 tests/apache_private_files_smoke.py --expect-unsafe
+          if python3 tests/apache_private_files_smoke.py; then
+            echo 'Protection test incorrectly accepted unsafe hosting'
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: apache-diagnostics-${{ matrix.layout }}
+          path: /tmp/cms-apache*.log
+          if-no-files-found: ignore
