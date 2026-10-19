@@ -12,6 +12,35 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
     for (const width of [1440, 1024, 390]) {
         await page.setViewportSize({width, height: 1000});
         await page.goto(base + '/admin/modules');
+        const navigation = page.getByRole('navigation', {name: 'Основная навигация'});
+        const labels = await navigation.locator('.admin-nav__label').allTextContents();
+        const assertNamedNavigation = async () => {
+            for (const label of labels) {
+                assert.equal(await navigation.getByRole('link', {name: label.trim(), exact: true}).count(), 1, `Unnamed navigation at ${width}px: ${label}`);
+            }
+            assert.equal(await page.getByRole('button', {name: 'Поиск и команды', exact: true}).isVisible(), true);
+        };
+        await assertNamedNavigation();
+        if (width > 800) {
+            // Keyboard activation must preserve role/name and state after reload.
+            await page.getByRole('button', {name: 'Свернуть меню', exact: true}).focus();
+            await page.keyboard.press('Space');
+            assert.equal(await page.getByRole('button', {name: 'Развернуть меню', exact: true}).getAttribute('aria-pressed'), 'true');
+        } else {
+            // A desktop collapsed preference may carry into the mobile viewport.
+            await page.evaluate(() => localStorage.setItem('uv-admin-sidebar-collapsed', '1'));
+        }
+        await page.reload();
+        await assertNamedNavigation();
+        assert.equal(await page.locator('[data-admin-collapse]').getAttribute('aria-label'), 'Развернуть меню');
+        if (width > 800) {
+            await page.getByRole('button', {name: 'Развернуть меню', exact: true}).focus();
+            await page.keyboard.press('Space');
+            assert.equal(await page.getByRole('button', {name: 'Свернуть меню', exact: true}).getAttribute('aria-pressed'), 'false');
+        } else {
+            await page.evaluate(() => localStorage.removeItem('uv-admin-sidebar-collapsed'));
+            await page.reload();
+        }
         await page.screenshot({path: `/tmp/cms-layout-admin-${width}.png`, fullPage: true});
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Admin overflow at ${width}px`);
         for (const panel of await page.locator('.module-upload-panel').all()) {
