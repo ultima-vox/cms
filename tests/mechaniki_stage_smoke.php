@@ -212,6 +212,41 @@ try {
     $core = new \Core\Extension\Core(new \Core\Extension\Api\RuntimeApi($db, $root));
     (new \Core\Extension\ModuleLoader($root))->load($core);
     $core->freeze();
+
+    $layoutRenderer = new \Core\View\PhpRenderer($root, $core);
+    $publicRenderer = new \Core\Page\PageRenderer(
+        new \Core\Repository\NodeRepository($db),
+        $layoutRenderer,
+        $core->pages(),
+        new \Core\Layout\LayoutHierarchyResolver(
+            new \Core\Repository\LayoutRepository($db, $siteId),
+        ),
+    );
+    $stagingSite = new \Core\Site\SiteContext(
+        $siteId, 'mechaniki-stage-smoke', 'Mechaniki', 'ru.rewired.ru',
+    );
+    $homePage = $publicRenderer->render(
+        new \Core\Http\Request('GET', '/', '/', [], [], ['HTTP_HOST' => 'ru.rewired.ru'], []),
+        $stagingSite,
+    );
+    if ($homePage === null || str_contains($homePage->html, 'uv-slot-')) {
+        throw new RuntimeException('Homepage Infosystem slots were not fully composed.');
+    }
+    if (!str_contains($homePage->html, 'Диагностика АКПП')
+        || !str_contains($homePage->html, 'Как узнать точную стоимость?')) {
+        throw new RuntimeException('Homepage did not use dynamic price and FAQ Infosystems.');
+    }
+    $systemIds = $db->prepare(
+        "SELECT id FROM infosystems WHERE site_id = :site_id AND code LIKE 'mechaniki_%'"
+    );
+    $systemIds->execute(['site_id' => $siteId]);
+    $dependencies = $homePage->context->dependencies();
+    foreach ($systemIds->fetchAll(PDO::FETCH_COLUMN) as $infosystemId) {
+        if (!in_array('site:' . $siteId . ':infosystem:' . (int) $infosystemId, $dependencies, true)) {
+            throw new RuntimeException('Missing homepage Infosystem cache dependency.');
+        }
+    }
+
     foreach ([
         '/services/podveska' => ['infosystem.item', 'Ремонт подвески'],
         '/problems/stuk' => ['infosystem.item', 'Стук на неровностях'],
