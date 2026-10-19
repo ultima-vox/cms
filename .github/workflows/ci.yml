@@ -566,14 +566,17 @@ jobs:
       - name: Reject redirects without following the supplied destination
         if: matrix.layout == 'webroot'
         run: |
-          sed '/Options FollowSymLinks/a\        RedirectMatch 302 ^/assets/cms-install-probe- http://169.254.169.254/' tests/fixtures/apache/site.conf > /tmp/apache-redirect.conf
+          python3 -m http.server 8091 --bind 127.0.0.1 > /tmp/cms-probe-redirect-target.log 2>&1 &
+          CANARY_PID=$!
+          sed '/Options FollowSymLinks/a\        RedirectMatch 302 ^/assets/cms-install-probe- http://127.0.0.1:8091/' tests/fixtures/apache/site.conf > /tmp/apache-redirect.conf
           docker run --detach --name cms-apache-redirect --network host -e INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8086 -e CMS_DOCUMENT_ROOT=/var/www/cms -v /tmp/cms-apache-unsafe:/var/www/cms -v /tmp/apache-redirect.conf:/etc/apache2/sites-available/000-default.conf:ro cms-apache
-          trap 'docker logs cms-apache-redirect > /tmp/cms-apache-redirect.log 2>&1; docker rm -f cms-apache-redirect' EXIT
+          trap 'docker logs cms-apache-redirect > /tmp/cms-apache-redirect.log 2>&1; docker rm -f cms-apache-redirect; kill "$CANARY_PID"' EXIT
           for n in $(seq 1 30); do
             if curl --silent --output /dev/null "$MVP_URL/install"; then break; fi
             sleep 1
           done
           EXPECTED_PROBE_ERROR='URL не возвращает контрольный файл' python3 tests/installer_hosting_http_smoke.py
+          if grep -q 'GET /' /tmp/cms-probe-redirect-target.log; then echo 'Probe followed a redirect to the canary'; exit 1; fi
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
