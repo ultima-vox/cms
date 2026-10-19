@@ -12,7 +12,7 @@ use Dotenv\Dotenv;
 use UltimaVox\Modules\Infosystem\FieldSchema;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
 
-$root = dirname(__DIR__, 2);
+$root = dirname(__DIR__, 3);
 require_once $root . '/vendor/autoload.php';
 require_once $root . '/modules/infosystem/autoload.php';
 require_once $root . '/modules/documents/autoload.php';
