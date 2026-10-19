@@ -93,7 +93,8 @@ foreach ($definitions as $code => $schema) {
     foreach ($manifest['records'] as $record) {
         if (!is_array($record) || !is_string($record['slug'] ?? null)
             || preg_match('/^[a-z][a-z0-9-]{0,119}$/D', $record['slug']) !== 1
-            || !is_string($record['name'] ?? null) || trim($record['name']) === '') {
+            || !is_string($record['name'] ?? $record['question'] ?? null)
+            || trim((string) ($record['name'] ?? $record['question'])) === '') {
             throw new RuntimeException('Invalid record in manifest: ' . $code);
         }
 
