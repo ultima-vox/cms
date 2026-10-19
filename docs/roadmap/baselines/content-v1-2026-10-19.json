@@ -7,6 +7,7 @@
   "workflow_run": 39253441363,
   "workflow_url": "https://github.com/ultima-vox/cms/actions/runs/39253441363",
   "protocol": {
+    "measured_connection_isolation": "READ COMMITTED, explicitly set by the original probe self-check; subsequent probe uses no-op DO and preserves DB default",
     "dataset": "Content-v1: primary 1000 nodes / 999 published documents / 10000 IS items; secondary 2 nodes / 1 document / 20 IS items",
     "concurrency": 1,
     "samples_per_state": 40,

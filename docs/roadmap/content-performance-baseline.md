@@ -53,7 +53,7 @@ Secondary site: 2 узла, 1 документ, 20 элементов ИС и 20
 | body_bytes/body_sha256 | Размер и хеш фактического ответа; response body не сохраняется |
 | page_hits/page_misses/status | Контроль cache state и ожидаемого HTTP status, выставленного Response в CLI dispatch |
 
-PDO-счётчик находится только в test probe; reflection задаёт существующий private Database connection в одноразовом процессе. Core, конфиг и production API не меняются. Перед **каждым** образцом проверяются query, exec и два execute одного statement — ожидаются четыре исполнения; затем счётчик обнуляется. Накладные расходы instrumentation входят в время dispatch.
+PDO-счётчик находится только в test probe; reflection задаёт существующий private Database connection в одноразовом процессе. Core, конфиг и production API не меняются. Перед **каждым** образцом проверяются query, exec и два execute одного statement — ожидаются четыре исполнения; затем счётчик обнуляется. Накладные расходы instrumentation входят в время dispatch. Exec self-check использует безвредный DO без смены connection settings. Уровень transaction isolation записывается в php_environment; новые прогоны сохраняют default СУБД.
 
 Лимит памяти — 128M. OPcache CLI выключен. Точные PHP/DB версии, JIT setting, SAPI, SHA проверенного checkout и head PR пишутся в JSON. CPU, память и filesystem runner сохраняются отдельными файлами. Подробные raw samples позволяют проверить percentiles, ошибки и разброс; не выводить числа без ссылки на соответствующий run и SHA.
 
@@ -74,6 +74,8 @@ PDO-счётчик находится только в test probe; reflection з�
 ## Измеренный прогон 19 октября 2026
 
 [G0 workflow39253441363](https://github.com/ultima-vox/cms/actions/runs/39253441363), все пять jobs — success. Source head `a65fd6294dec03faf0cc604e07286f8420a69f3f`, фактически проверенный PR merge checkout `e0e47b35cefca934f80ed7c2b18d33d29f0fd484`. [Постоянный JSON snapshot](baselines/content-v1-2026-10-19.json) содержит summary, SHA, artifact digest и metadata; исходные 2000 raw samples доступны в workflow artifacts с retention90 дней. Самостоятельно пересчитаны nearest-rank summaries всех raw samples, проверены cache states/status и одинаковый fixture descriptor на пяти СУБД. Обычные [CI39253441325](https://github.com/ultima-vox/cms/actions/runs/39253441325) и [MVP39253441259](https://github.com/ultima-vox/cms/actions/runs/39253441259) также success.
+
+В исходном зафиксированном прогоне exec self-check задавал READ COMMITTED всем соединениям. Это не штатный default legacy СУБД. В последующем probe self-check заменён на DO, а фактический уровень isolation добавлен в environment; старый snapshot сохраняет точный provenance и не выдаётся за прогон изменённого probe.
 
 PostgreSQL16.15 / PHP8.4.26 / CLI, 128M, OPcache CLI off. В этой таблице только primary PG job; другие СУБД — в JSON. Это application dispatch, не HTTP latency.
 

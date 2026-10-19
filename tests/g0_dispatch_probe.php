@@ -70,12 +70,14 @@ if ($driver === 'mysql') $db->exec("SET time_zone = '+00:00'");
 // Verify direct, exec, prepared repeated and parameterized paths before each sample.
 G0SqlCounter::$executions = 0;
 $db->query('SELECT 1')->fetchColumn();
-$db->exec($driver === 'pgsql' ? 'SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL READ COMMITTED' : 'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED');
+$db->exec($driver === 'pgsql' ? 'DO $$BEGIN NULL; END$$;' : 'DO 0');
 $statement = $db->prepare('SELECT :value');
 $statement->execute(['value' => 2]); $statement->fetchColumn();
 $statement->execute(['value' => 3]); $statement->fetchColumn();
 if (G0SqlCounter::$executions !== 4) throw new RuntimeException('SQL instrumentation count failed.');
 unset($statement);
+$serverVersion = (string) $db->getAttribute(PDO::ATTR_SERVER_VERSION);
+$isolation = (string) $db->query($driver === 'pgsql' ? 'SHOW transaction_isolation' : (str_contains($serverVersion, 'MariaDB') ? 'SELECT @@tx_isolation' : 'SELECT @@transaction_isolation'))->fetchColumn();
 // Set the existing private connection only in this disposable worker; no production hook added.
 (new ReflectionProperty(Core\Database::class, 'instance'))->setValue(null, $db);
 $site = $fixture['sites'][$scenario['site'] ?? 'primary'];
@@ -120,5 +122,5 @@ echo json_encode([
     'peak_allocated_bytes' => $peak, 'peak_delta_bytes' => max(0, $peak - $before),
     'body_bytes' => strlen($body), 'body_sha256' => hash('sha256', $body),
     'page_hits' => $cache->pageHits, 'page_misses' => $cache->pageMisses, 'status' => $status,
-    'environment' => ['php' => PHP_VERSION, 'sapi' => PHP_SAPI, 'db_server' => $db->getAttribute(PDO::ATTR_SERVER_VERSION), 'pdo_driver' => $driver, 'memory_limit' => ini_get('memory_limit'), 'opcache_cli' => ini_get('opcache.enable_cli'), 'jit' => ini_get('opcache.jit')],
+    'environment' => ['php' => PHP_VERSION, 'sapi' => PHP_SAPI, 'db_server' => $serverVersion, 'transaction_isolation' => $isolation, 'pdo_driver' => $driver, 'memory_limit' => ini_get('memory_limit'), 'opcache_cli' => ini_get('opcache.enable_cli'), 'jit' => ini_get('opcache.jit')],
 ], JSON_THROW_ON_ERROR) . "\n";
