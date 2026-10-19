@@ -107,6 +107,9 @@
         const notes = make('p', 'admin-field__hint', 'Стили текущего макета применяются в изолированном предпросмотре. PHP и JavaScript только подсвечиваются и не исполняются.');
         const sourceArea = make('div', 'uv-rich__source-area');
         const initial = textarea.value;
+        if (/<(?:svg|form|script|button|iframe)\b|\sdata-[a-z0-9-]+\s*=/i.test(initial)) {
+            notes.textContent = 'Сложная разметка сайта: просмотр и редактирование обычных полей доступны, но преобразование содержимого в визуальном режиме может удалить компоненты. Сервер отклонит изменение этого HTML до подключения расширенного редактора.';
+        }
         let mode = 'source';
         let dirtyVisual = false;
         let loaded = false;

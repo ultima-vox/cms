@@ -399,6 +399,11 @@ jobs:
           php tests/infosystem_editor_browser_smoke.php
           node --check public/assets/infosystem-editor.js
 
+      - name: Imported HTML preservation guard
+        run: |
+          php -l modules/infosystem/src/Admin/LegacyRichContentGuard.php
+          php tests/infosystem_legacy_html_guard_smoke.php
+
 
 
       - name: Admin item search smoke test
