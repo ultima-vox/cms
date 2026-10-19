@@ -29,7 +29,7 @@ foreach (['home.css', 'commercial.css', 'internal.css', 'motion.css', 'release.c
     }
 }
 
-$dir = $root . '/sites/mechaniki/pages';
+$dir = $root . '/modules/mechaniki/site/pages';
 $pages = [];
 foreach (new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
@@ -73,7 +73,7 @@ try {
     $domain->execute(['site_id' => $siteId, 'host' => 'ru.rewired.ru']);
 
     $command = escapeshellarg(PHP_BINARY)
-        . ' ' . escapeshellarg($root . '/sites/mechaniki/activate.php') . ' --apply';
+        . ' ' . escapeshellarg($root . '/modules/mechaniki/site/activate.php') . ' --apply';
     exec($command . ' 2>&1', $output, $code);
     if ($code !== 0) {
         throw new RuntimeException('Mechaniki activation failed: ' . implode("\n", $output));
@@ -144,7 +144,7 @@ try {
     // activating Infosystem-backed routes; other sites remain isolated.
     $db->exec("UPDATE installed_modules SET is_enabled = TRUE WHERE code = 'mechaniki'");
     $infosystemsCommand = escapeshellarg(PHP_BINARY)
-        . ' ' . escapeshellarg($root . '/sites/mechaniki/activate-infosystems.php') . ' --apply';
+        . ' ' . escapeshellarg($root . '/modules/mechaniki/site/activate-infosystems.php') . ' --apply';
     $output = [];
     exec($infosystemsCommand . ' 2>&1', $output, $code);
     if ($code !== 0) {
