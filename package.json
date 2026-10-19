@@ -14,7 +14,8 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.38.0",
     "@tiptap/core": "^2.26.1",
-    "@tiptap/starter-kit": "^2.26.1"
+    "@tiptap/starter-kit": "^2.26.1",
+    "codemirror": "^6.0.2"
   },
   "devDependencies": {
     "esbuild": "^0.25.9"
