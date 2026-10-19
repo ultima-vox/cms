@@ -27,17 +27,17 @@ echo $view->render('admin/_header.php', [
     <form class="admin-list-filters" method="get" action="/admin/documents" aria-label="Поиск и фильтры документов">
         <input type="hidden" name="folder" value="<?= text($list_query->allFolders ? 'all' : ($list_query->folderId ?? '')) ?>">
         <label class="admin-field"><span>Название или код</span><input class="admin-input" type="search" name="q" maxlength="160" value="<?= text($list_query->search) ?>" placeholder="Поиск в выбранной папке"></label>
-        <label class="admin-field"><span>Публикация</span><select class="admin-select" name="status">
+        <label class="admin-field"><span id="documents-status-label">Публикация</span><select class="admin-select" name="status" aria-labelledby="documents-status-label">
             <?php foreach (['' => 'Все статусы', 'published' => 'Есть публикация', 'draft' => 'Есть черновик', 'unpublished' => 'Без публикации'] as $value => $label): ?>
                 <option value="<?= text($value) ?>" <?= $list_query->status === $value ? 'selected' : '' ?>><?= text($label) ?></option>
             <?php endforeach; ?>
         </select></label>
-        <label class="admin-field"><span>Сортировка</span><select class="admin-select" name="sort">
+        <label class="admin-field"><span id="documents-sort-label">Сортировка</span><select class="admin-select" name="sort" aria-labelledby="documents-sort-label">
             <?php foreach (['name' => 'Название: А–Я', 'name_desc' => 'Название: Я–А', 'code' => 'По коду', 'updated' => 'Сначала изменённые'] as $value => $label): ?>
                 <option value="<?= text($value) ?>" <?= $list_query->sort === $value ? 'selected' : '' ?>><?= text($label) ?></option>
             <?php endforeach; ?>
         </select></label>
-        <label class="admin-field"><span>На странице</span><select class="admin-select" name="per_page">
+        <label class="admin-field"><span id="documents-size-label">На странице</span><select class="admin-select" name="per_page" aria-labelledby="documents-size-label">
             <?php foreach ([25, 50, 100] as $size): ?><option value="<?= $size ?>" <?= $list_query->perPage === $size ? 'selected' : '' ?>><?= $size ?></option><?php endforeach; ?>
         </select></label>
         <div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Применить</button><a class="admin-link" href="/admin/documents?folder=<?= text($list_query->allFolders ? 'all' : ($list_query->folderId ?? '')) ?>">Сбросить</a></div>
