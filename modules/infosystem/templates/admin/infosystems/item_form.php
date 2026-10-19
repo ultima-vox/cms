@@ -13,7 +13,7 @@ if (!empty($item['publish_at'])) {
 echo $view->render('admin/_header.php', [
     'admin_active' => $adminActive,
     'admin_title' => $itemId ? 'Редактирование элемента' : 'Новый элемент',
-    'admin_styles' => ['/assets/infosystems.css', '/assets/infosystem-editor.css'],
+    'admin_styles' => ['/assets/infosystems.css', '/assets/infosystem-editor.css', '/assets/code-formatter.css'],
 ]);
 ?>
 <div class="admin-dashboard">
@@ -98,5 +98,5 @@ echo $view->render('admin/_header.php', [
 </div>
 <?= $view->render('admin/_footer.php', [
     'admin_active' => $adminActive,
-    'admin_scripts' => ['/assets/infosystem-editor.js'],
+    'admin_scripts' => ['/assets/code-formatter.js', '/assets/infosystem-editor.js'],
 ]) ?>

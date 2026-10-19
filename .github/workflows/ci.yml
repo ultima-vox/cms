@@ -401,6 +401,11 @@ jobs:
           php tests/infosystem_editor_browser_smoke.php
           node --check public/assets/infosystem-editor.js
 
+      - name: Source formatting safety tests
+        run: |
+          node --check public/assets/code-formatter.js
+          node tests/code_formatter_smoke.cjs
+
 
 
       - name: Admin item search smoke test

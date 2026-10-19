@@ -281,6 +281,17 @@
             else doc.body.append(table);
             dirtyVisual = true;
         });
+        const codeStatus = make('span', 'uv-rich__format-status');
+        codeStatus.setAttribute('role', 'status');
+        extra('Форматировать код', 'Форматировать исходный код без сохранения', () => {
+            showMode('source'); // Writes dirty visual content before formatting.
+            if (!window.UVCodeFormatter) {
+                codeStatus.textContent = 'Форматтер не загружен.';
+                return;
+            }
+            window.UVCodeFormatter.apply(textarea, language.value, codeStatus);
+        });
+        formatting.append(codeStatus);
         formatting.setAttribute('aria-label', 'Форматирование');
         toolbar.append(formatting);
 
