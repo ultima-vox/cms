@@ -1,0 +1,117 @@
+{
+  "code": "mechaniki_services",
+  "name": "Услуги автосервиса",
+  "schema_version": 1,
+  "records": [
+    {
+      "path": "/services/diagnostika-avtomobilya",
+      "item_path": "/diagnostika-avtomobilya",
+      "group": null,
+      "slug": "diagnostika-avtomobilya",
+      "name": "Диагностика автомобиля в Зеленограде",
+      "lead": "Индикатор, шум или изменение поведения автомобиля — отправная точка для проверки. Выберем нужную систему и объясним, что удалось установить.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/3/group_653/group_653.jpg",
+      "price_hint": null,
+      "source_file": "pages/services/diagnostika-avtomobilya.html"
+    },
+    {
+      "path": "/services/diagnostika-avtomobilya/diagnostika-dvigatelya",
+      "item_path": "/diagnostika-avtomobilya/diagnostika-dvigatelya",
+      "group": "diagnostika-avtomobilya",
+      "slug": "diagnostika-dvigatelya",
+      "name": "Диагностика двигателя в Зеленограде",
+      "lead": "Неровная работа, трудный запуск или посторонний звук требуют поиска причины. Проверку двигателя строим вокруг конкретных симптомов.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/3/group_653/group_653.jpg",
+      "price_hint": null,
+      "source_file": "pages/services/diagnostika-avtomobilya/diagnostika-dvigatelya.html"
+    },
+    {
+      "path": "/services/diagnostika-avtomobilya/diagnostika-elektrooborudovaniya",
+      "item_path": "/diagnostika-avtomobilya/diagnostika-elektrooborudovaniya",
+      "group": "diagnostika-avtomobilya",
+      "slug": "diagnostika-elektrooborudovaniya",
+      "name": "Диагностика электрооборудования в Зеленограде",
+      "lead": "Начнём с оборудования, которое работает неправильно. Проверим питание и соединения, затем определим, какие проверки нужны для поиска причины.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/4/group_654/group_654.jpeg",
+      "price_hint": null,
+      "source_file": "pages/services/diagnostika-avtomobilya/diagnostika-elektrooborudovaniya.html"
+    },
+    {
+      "path": "/services/diagnostika-avtomobilya/diagnostika-pered-pokupkoj",
+      "item_path": "/diagnostika-avtomobilya/diagnostika-pered-pokupkoj",
+      "group": "diagnostika-avtomobilya",
+      "slug": "diagnostika-pered-pokupkoj",
+      "name": "Диагностика перед покупкой в Зеленограде",
+      "lead": "Перед покупкой полезно понять техническое состояние автомобиля и вопросы к его обслуживанию. Заранее обсудим доступный объём осмотра.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/3/group_653/group_653.jpg",
+      "price_hint": null,
+      "source_file": "pages/services/diagnostika-avtomobilya/diagnostika-pered-pokupkoj.html"
+    },
+    {
+      "path": "/services/diagnostika-avtomobilya/diagnostika-podveski",
+      "item_path": "/diagnostika-avtomobilya/diagnostika-podveski",
+      "group": "diagnostika-avtomobilya",
+      "slug": "diagnostika-podveski",
+      "name": "Диагностика подвески в Зеленограде",
+      "lead": "При стуке или скрипе проверим подвеску, люфты и крепления. По результатам осмотра определим, какие элементы требуют внимания.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/0/group_650/group_650.jpeg",
+      "price_hint": null,
+      "source_file": "pages/services/diagnostika-avtomobilya/diagnostika-podveski.html"
+    },
+    {
+      "path": "/services/diagnostika-avtomobilya/kompyuternaya-diagnostika",
+      "item_path": "/diagnostika-avtomobilya/kompyuternaya-diagnostika",
+      "group": "diagnostika-avtomobilya",
+      "slug": "kompyuternaya-diagnostika",
+      "name": "Компьютерная диагностика в Зеленограде",
+      "lead": "Проверим ошибки и параметры нужной системы. Разберёмся, что стоит за показаниями, прежде чем предлагать замену деталей.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/3/group_653/group_653.jpg",
+      "price_hint": null,
+      "source_file": "pages/services/diagnostika-avtomobilya/kompyuternaya-diagnostika.html"
+    },
+    {
+      "path": "/services/kuzovnoj-remont",
+      "item_path": "/kuzovnoj-remont",
+      "group": null,
+      "slug": "kuzovnoj-remont",
+      "name": "Кузовной ремонт в Зеленограде",
+      "lead": "Осмотрим повреждённую зону и соседние элементы. После этого обсудим возможный способ восстановления, перечень работ и расчёт.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/1/group_651/group_651.jpeg",
+      "price_hint": "от 1 500 ₽",
+      "source_file": "pages/services/kuzovnoj-remont.html"
+    },
+    {
+      "path": "/services/kuzovnoj-remont/remont-vmyatin-bez-pokraski",
+      "item_path": "/kuzovnoj-remont/remont-vmyatin-bez-pokraski",
+      "group": "kuzovnoj-remont",
+      "slug": "remont-vmyatin-bez-pokraski",
+      "name": "Ремонт вмятин без покраски в Зеленограде",
+      "lead": "Оценим вмятину и возможность восстановления без покраски. Метод ремонта выбирают по состоянию повреждённого элемента, а не только по размеру вмятины.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/1/group_651/group_651.jpeg",
+      "price_hint": null,
+      "source_file": "pages/services/kuzovnoj-remont/remont-vmyatin-bez-pokraski.html"
+    },
+    {
+      "path": "/services/kuzovnoj-remont/zamena-stekol",
+      "item_path": "/kuzovnoj-remont/zamena-stekol",
+      "group": "kuzovnoj-remont",
+      "slug": "zamena-stekol",
+      "name": "Замена стёкол в Зеленограде",
+      "lead": "Уточним, какое стекло требуется заменить, и данные автомобиля. Осмотрим повреждение и обсудим подходящую деталь, материалы и состав установки.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/1/group_651/group_651.jpeg",
+      "price_hint": "от 2 000 ₽",
+      "source_file": "pages/services/kuzovnoj-remont/zamena-stekol.html"
+    },
+    {
+      "path": "/services/podveska",
+      "item_path": "/podveska",
+      "group": null,
+      "slug": "podveska",
+      "name": "Ремонт подвески в Зеленограде",
+      "lead": "Стук на неровностях и изменение управляемости могут иметь разные причины. Осмотрим подвеску и объясним, какие работы нужны по результатам проверки.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/0/group_650/group_650.jpeg",
+      "price_hint": "от 1 800 ₽",
+      "source_file": "pages/services/podveska.html"
+    }
+  ]
+}
