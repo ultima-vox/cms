@@ -355,6 +355,12 @@ jobs:
       - name: Site resolution and isolation smoke test
         run: php tests/site_resolution_smoke.php
 
+      - name: Mechaniki local media safety smoke
+        run: |
+          php -l modules/mechaniki/site/sync-media.php
+          php tests/mechaniki_media_smoke.php
+          php -r '$m = json_decode(file_get_contents("modules/mechaniki/site/media-manifest.json"), true, flags: JSON_THROW_ON_ERROR); if (count($m["assets"]) !== 14) exit(1);'
+
       - name: Mechaniki root-site integration smoke
         run: |
           php -l modules/mechaniki/site/activate.php
