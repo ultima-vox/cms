@@ -35,7 +35,7 @@ final readonly class SiteAccessRepository
         $q = $this->db->prepare("SELECT u.id, u.email, u.display_name, us.user_id IS NOT NULL AS granted, EXISTS(SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = u.id AND r.code = 'superadmin') AS global_access FROM users u LEFT JOIN user_sites us ON us.user_id = u.id AND us.site_id = :site WHERE u.is_active = TRUE ORDER BY u.display_name, u.id");
         $q->execute(['site' => $siteId]); return $q->fetchAll(PDO::FETCH_ASSOC);
     }
-    public function assign(int $siteId, array $userIds): void
+    public function assign(int $siteId, array $userIds, ?int $actorId = null): void
     {
         $ids = [];
         foreach ($userIds as $id) {
@@ -52,6 +52,7 @@ final readonly class SiteAccessRepository
                 $q->execute(['site' => $siteId, 'user' => $id]);
                 if ($q->rowCount() !== 1) throw new RuntimeException('Пользователь не найден или отключён.');
             }
+            if ($actorId !== null) (new \Core\Repository\AuditLogRepository($this->db, $siteId))->record($actorId, 'site.access.update', 'site', $siteId, ['users' => array_keys($ids)], null);
             if ($owned) $this->db->commit();
         } catch (Throwable $e) { if ($owned && $this->db->inTransaction()) $this->db->rollBack(); throw $e; }
     }

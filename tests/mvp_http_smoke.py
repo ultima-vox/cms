@@ -236,6 +236,19 @@ body, _ = request(client, '/admin/documents')
 assert 'Секрет сайта А' not in body
 body, _ = request(client, f'/admin/documents?folder={child_a}')
 assert 'Секрет сайта А' in body
+# Move a document and a containing folder without changing the document's code.
+request(client, f'/admin/documents/{doc_a}', {'_csrf': token(body), 'name': 'Секрет сайта А', 'content': '<p>Секрет сайта А</p>', 'folder_id': folder_a, 'save_mode': 'publish'}, expected=302)
+body, _ = request(client, f'/admin/documents?folder={child_a}')
+assert 'Секрет сайта А' not in body
+body, _ = request(client, f'/admin/documents?folder={folder_a}')
+assert 'Секрет сайта А' in body
+request(client, f'/admin/documents/{doc_a}', {'_csrf': token(body), 'name': 'Секрет сайта А', 'content': '<p>Секрет сайта А</p>', 'folder_id': child_a, 'save_mode': 'publish'}, expected=302)
+new_parent = folder('documents', 'Другой раздел')
+body, _ = request(client, f'/admin/folders/documents/{child_a}/edit')
+request(client, f'/admin/folders/documents/{child_a}', {'_csrf': token(body), 'name': 'Переименованная папка', 'parent_id': new_parent}, expected=302)
+body, _ = request(client, f'/admin/documents?folder={child_a}')
+assert 'Секрет сайта А' in body and 'Другой раздел' in body
+assert query(f'SELECT code FROM documents WHERE id = {doc_a}') == 'same-folder-code'
 is_folder_a = folder('infosystems', 'Каталоги сайта')
 body, _ = request(client, '/admin/infosystems/create')
 request(client, '/admin/infosystems', {'_csrf': token(body), 'name': 'Каталог А', 'code': 'same-site-is', 'folder_id': is_folder_a, 'is_active': '1'}, expected=302)
@@ -269,6 +282,8 @@ assert doc_b != doc_a
 layout_folder_b = folder('layouts', 'Макеты сайта')
 layout_b = create_layout('SITE-B-LAYOUT', layout_folder_b)
 create_proof(layout_b, '')
+body, _ = request(client, f'/admin/layouts/{layout_b}/edit')
+request(client, f'/admin/layouts/{layout_b}', {'_csrf': token(body), 'name': 'Changed incorrectly', 'folder_id': layout_folder_a, 'source': '<?php echo "BAD-FOREIGN-FOLDER"; ?>'}, expected=422)
 body, _ = request(public, '/', headers={'Host': 'isolation-b.test'})
 assert 'SITE-B-LAYOUT' in body and 'SITE-A-LAYOUT' not in body
 body, _ = request(public, '/isolation-proof')

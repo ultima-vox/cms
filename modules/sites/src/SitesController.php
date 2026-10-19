@@ -264,7 +264,7 @@ final class SitesController
         try {
             $ids = $request->post['users'] ?? [];
             if (!is_array($ids)) throw new RuntimeException('Некорректный список пользователей.');
-            $this->access->assign($id, $ids);
+            $this->access->assign($id, $ids, (int) $this->auth->user()['id']);
             return Response::redirect('/admin/sites/' . $id . '/edit?saved=1');
         } catch (Throwable $e) { return $this->formResponse($site, $e->getMessage(), 422); }
     }
