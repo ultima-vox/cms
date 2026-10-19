@@ -27,6 +27,47 @@ final readonly class MechanikiModule implements ModuleInterface
 {
     public function register(Core $core): void
     {
+        $core->templates()->view(
+            'mechaniki.services',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/services-list.php',
+        );
+        $core->templates()->view(
+            'mechaniki.problems',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/problems-list.php',
+        );
+        $core->templates()->view(
+            'mechaniki.prices',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/prices-list.php',
+        );
+        $core->templates()->view(
+            'mechaniki.cases',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/cases-list.php',
+        );
+        $core->templates()->view(
+            'mechaniki.reviews',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/reviews-list.php',
+        );
+        $core->templates()->view(
+            'mechaniki.faq',
+            'infosystem.items',
+            'modules/mechaniki/templates/public/faq-list.php',
+        );
+        $core->templates()->view(
+            'mechaniki.service.item',
+            'infosystem.item',
+            'modules/mechaniki/templates/public/service-item.php',
+        );
+        $core->templates()->view(
+            'mechaniki.problem.item',
+            'infosystem.item',
+            'modules/mechaniki/templates/public/problem-item.php',
+        );
+
         $db = $core->runtime()->database();
         $auth = new AuthService(new UserRepository($db), new LoginAttemptRepository($db));
         $view = (new AdminPhpRendererFactory($core->runtime()->rootPath(), $auth, $core->admin(), $core->sites()))
