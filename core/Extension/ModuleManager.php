@@ -30,7 +30,7 @@ final class ModuleManager
         // The updating request still holds the previous PHP classes and Composer class map.
         // Reconcile providers and permissions only in a fresh worker after code replacement.
         if (is_file($this->rootPath . '/storage/updates/maintenance.json')) {
-            $this->db->exec('INSERT INTO extension_sync_jobs(singleton) VALUES(TRUE) ON CONFLICT(singleton) DO UPDATE SET requested_at = CURRENT_TIMESTAMP');
+            $this->db->exec('INSERT INTO extension_sync_jobs(singleton) VALUES(TRUE)' . \Core\Database\SqlDialect::upsert($this->db, ['singleton'], ['requested_at']));
             return ['modules' => $modules, 'loaded' => 0, 'permissions' => 0];
         }
 
@@ -39,7 +39,8 @@ final class ModuleManager
         $loaded = $this->loader->load($core);
         $core->freeze();
         $permissions = (new PermissionSynchronizer($this->db))->sync($core->permissions());
-        $this->db->exec("DELETE FROM role_permissions rp USING roles r, permissions p WHERE rp.role_id = r.id AND rp.permission_id = p.id AND p.global_only = TRUE AND r.code <> 'superadmin'");
+        $this->db->exec("UPDATE permissions SET global_only=TRUE WHERE code IN ('templates.code.edit','modules.manage')");
+        $this->db->exec("DELETE FROM role_permissions WHERE permission_id IN (SELECT id FROM permissions WHERE global_only = TRUE) AND role_id IN (SELECT id FROM roles WHERE code <> 'superadmin')");
 
         return [
             'modules' => $modules,
@@ -75,6 +76,7 @@ final class ModuleManager
         $manifests = $this->loader->discover();
         $this->state->sync($manifests);
         $this->loader->assertCanEnable($code, $manifests, $this->state);
+        \Core\Database\SqlDialect::migrationPath($this->db, $this->rootPath . '/modules/' . $code . '/migrations');
         $this->state->setEnabled($code, true);
     }
 

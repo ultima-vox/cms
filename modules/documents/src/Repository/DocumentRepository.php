@@ -27,16 +27,15 @@ final class DocumentRepository
             <<<'SQL'
             INSERT INTO documents (site_id, code, name)
             VALUES (:site_id, :code, :name)
-            RETURNING id
-            SQL
-        );
+
+            SQL . \Core\Database\SqlDialect::returningId($this->db));
         $statement->execute([
             'site_id' => $siteId,
             'code' => $code,
             'name' => $name,
         ]);
 
-        return (int) $statement->fetchColumn();
+        return \Core\Database\SqlDialect::insertedId($this->db, $statement);
     }
 
     /** @return array<string, mixed>|null */
@@ -101,15 +100,14 @@ final class DocumentRepository
                     'draft'
                 FROM document_versions
                 WHERE document_id = :document_id
-                RETURNING id
-                SQL
-            );
+
+                SQL . \Core\Database\SqlDialect::returningId($this->db));
             $statement->execute([
                 'document_id' => $documentId,
                 'content' => $content,
             ]);
 
-            return (int) $statement->fetchColumn();
+            return \Core\Database\SqlDialect::insertedId($this->db, $statement);
         });
     }
 

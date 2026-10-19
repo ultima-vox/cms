@@ -17,7 +17,7 @@ prefix = 'app/' if args.webroot else ''
 if not (root / 'vendor/autoload.php').is_file():
     raise SystemExit('Run composer install --no-dev --classmap-authoritative first.')
 folders = ('core', 'modules', 'templates', 'public', 'database', 'installer', 'deploy', 'vendor', 'bin')
-files = ('composer.json', 'composer.lock', '.env.example', 'README.md', 'docs/MVP.md', 'docs/UPDATES.md', 'docs/architecture/infrastructure-scaling.md')
+files = ('composer.json', 'composer.lock', '.env.example', 'README.md', 'docs/MVP.md', 'docs/UPDATES.md', 'docs/database-drivers.md', 'docs/architecture/hostcms-roadmap.md', 'docs/architecture/infrastructure-scaling.md')
 with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
     for folder in folders:
         for path in sorted((root / folder).rglob('*')):

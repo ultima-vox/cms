@@ -25,20 +25,11 @@ final class InfosystemManagementRepository
         $statement = $this->db->prepare(
             <<<'SQL'
             SELECT i.*,
-                   COUNT(DISTINCT g.id) AS group_count,
-                   COUNT(DISTINCT item.id) AS item_count,
-                   COUNT(DISTINCT n.id) AS node_count
-            FROM infosystems i
-            LEFT JOIN infosystem_groups g ON g.infosystem_id = i.id
-            LEFT JOIN infosystem_items item ON item.infosystem_id = i.id
-            LEFT JOIN node_module_bindings b
-                ON b.module_code = 'infosystem'
-               AND b.binding_code = 'primary'
-               AND b.target_key = i.code
-            LEFT JOIN nodes n ON n.id = b.node_id AND n.site_id = i.site_id
-            WHERE i.site_id = :site_id
-            GROUP BY i.id
-            ORDER BY i.name, i.id
+                (SELECT COUNT(*) FROM infosystem_groups g WHERE g.infosystem_id=i.id) AS group_count,
+                (SELECT COUNT(*) FROM infosystem_items item WHERE item.infosystem_id=i.id) AS item_count,
+                (SELECT COUNT(*) FROM node_module_bindings b JOIN nodes n ON n.id=b.node_id
+                 WHERE b.module_code='infosystem' AND b.binding_code='primary' AND b.target_key=i.code AND n.site_id=i.site_id) AS node_count
+            FROM infosystems i WHERE i.site_id=:site_id ORDER BY i.name,i.id
             SQL
         );
         $statement->execute(['site_id' => $this->siteId]);
@@ -92,21 +83,20 @@ final class InfosystemManagementRepository
         $statement = $this->db->prepare(
             <<<'SQL'
             INSERT INTO infosystems (site_id, name, code, description, field_schema, is_active, folder_id)
-            VALUES (:site_id, :name, :code, :description, CAST(:field_schema AS jsonb), :is_active, :folder_id)
-            RETURNING id
-            SQL
-        );
+            VALUES (:site_id, :name, :code, :description, :field_schema, :is_active, :folder_id)
+
+            SQL . \Core\Database\SqlDialect::returningId($this->db));
         $statement->execute([
             'site_id' => $this->siteId,
             'name' => $name,
             'code' => $code,
             'description' => $description,
             'field_schema' => json_encode($fieldSchema, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'is_active' => $isActive,
+            'is_active' => (int) $isActive,
             'folder_id' => $folderId,
         ]);
 
-        return (int) $statement->fetchColumn();
+        return \Core\Database\SqlDialect::insertedId($this->db, $statement);
     }
 
     public function update(int $id, string $name, ?string $description, array $fieldSchema, bool $isActive, ?int $folderId = null): void
@@ -117,7 +107,7 @@ final class InfosystemManagementRepository
             UPDATE infosystems
             SET name = :name,
                 description = :description,
-                field_schema = CAST(:field_schema AS jsonb),
+                field_schema = :field_schema,
                 is_active = :is_active,
                 folder_id = :folder_id,
                 updated_at = CURRENT_TIMESTAMP
@@ -131,7 +121,7 @@ final class InfosystemManagementRepository
             'name' => $name,
             'description' => $description,
             'field_schema' => json_encode($fieldSchema, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'is_active' => $isActive,
+            'is_active' => (int) $isActive,
             'folder_id' => $folderId,
         ]);
     }
@@ -213,9 +203,8 @@ final class InfosystemManagementRepository
                 (infosystem_id, parent_id, name, slug, path, description, sorting, is_active)
             VALUES
                 (:infosystem_id, :parent_id, :name, :slug, :path, :description, :sorting, :is_active)
-            RETURNING id
-            SQL
-        );
+
+            SQL . \Core\Database\SqlDialect::returningId($this->db));
         $statement->execute([
             'infosystem_id' => $infosystemId,
             'parent_id' => $parentId,
@@ -224,10 +213,9 @@ final class InfosystemManagementRepository
             'path' => $path,
             'description' => $description,
             'sorting' => $sorting,
-            'is_active' => $isActive,
-            'folder_id' => $folderId,
+            'is_active' => (int) $isActive,
         ]);
-        return (int) $statement->fetchColumn();
+        return \Core\Database\SqlDialect::insertedId($this->db, $statement);
     }
 
     public function updateGroup(
@@ -252,7 +240,8 @@ final class InfosystemManagementRepository
         $oldPath = (string) $group['path'];
         $newPath = $this->groupPath($infosystemId, $parentId, $slug);
 
-        $this->db->beginTransaction();
+        $owned = !$this->db->inTransaction();
+        if ($owned) $this->db->beginTransaction();
         try {
             $statement = $this->db->prepare(
                 <<<'SQL'
@@ -264,7 +253,6 @@ final class InfosystemManagementRepository
                     description = :description,
                     sorting = :sorting,
                     is_active = :is_active,
-                folder_id = :folder_id,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE infosystem_id = :infosystem_id AND id = :id
                 SQL
@@ -276,8 +264,7 @@ final class InfosystemManagementRepository
                 'path' => $newPath,
                 'description' => $description,
                 'sorting' => $sorting,
-                'is_active' => $isActive,
-            'folder_id' => $folderId,
+                'is_active' => (int) $isActive,
                 'infosystem_id' => $infosystemId,
                 'id' => $id,
             ]);
@@ -286,7 +273,7 @@ final class InfosystemManagementRepository
                 $groupUpdate = $this->db->prepare(
                     <<<'SQL'
                     UPDATE infosystem_groups
-                    SET path = :new_path || substring(path from :start_position),
+                    SET path = CONCAT(COALESCE(:new_path, ''), substring(path from :start_position)),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE infosystem_id = :infosystem_id
                       AND path LIKE :prefix
@@ -302,7 +289,7 @@ final class InfosystemManagementRepository
                 $itemUpdate = $this->db->prepare(
                     <<<'SQL'
                     UPDATE infosystem_items
-                    SET path = :new_path || substring(path from :start_position),
+                    SET path = CONCAT(COALESCE(:new_path, ''), substring(path from :start_position)),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE infosystem_id = :infosystem_id
                       AND path LIKE :prefix
@@ -316,9 +303,9 @@ final class InfosystemManagementRepository
                 ]);
             }
 
-            $this->db->commit();
+            if ($owned) $this->db->commit();
         } catch (Throwable $exception) {
-            if ($this->db->inTransaction()) {
+            if ($owned && $this->db->inTransaction()) {
                 $this->db->rollBack();
             }
             throw $exception;
@@ -421,10 +408,9 @@ final class InfosystemManagementRepository
                      status, is_active, sorting, properties, publish_at)
                 VALUES
                     (:infosystem_id, :group_id, :name, :slug, :path, :description, :content, :meta_description,
-                     :status, :is_active, :sorting, CAST(:properties AS jsonb), :publish_at)
-                RETURNING id
-                SQL
-            );
+                     :status, :is_active, :sorting, :properties, :publish_at)
+
+                SQL . \Core\Database\SqlDialect::returningId($this->db));
         } else {
             $statement = $this->db->prepare(
                 <<<'SQL'
@@ -438,15 +424,13 @@ final class InfosystemManagementRepository
                     meta_description = :meta_description,
                     status = :status,
                     is_active = :is_active,
-                folder_id = :folder_id,
                     sorting = :sorting,
-                    properties = CAST(:properties AS jsonb),
+                    properties = :properties,
                     publish_at = :publish_at,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE infosystem_id = :infosystem_id AND id = :id
-                RETURNING id
-                SQL
-            );
+
+                SQL . \Core\Database\SqlDialect::returningId($this->db));
         }
 
         $params = [
@@ -459,7 +443,7 @@ final class InfosystemManagementRepository
             'content' => $data['content'],
             'meta_description' => $data['meta_description'],
             'status' => $data['status'],
-            'is_active' => $data['is_active'],
+            'is_active' => (int) $data['is_active'],
             'sorting' => $data['sorting'],
             'properties' => $properties,
             'publish_at' => $data['publish_at'],
@@ -470,7 +454,7 @@ final class InfosystemManagementRepository
 
         $statement->execute($params);
 
-        return (int) $statement->fetchColumn();
+        return $id ?? \Core\Database\SqlDialect::insertedId($this->db, $statement);
     }
 
     public function deleteItem(int $infosystemId, int $id): void

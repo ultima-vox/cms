@@ -40,7 +40,7 @@ final class InfosystemItemSearchRepository
         $params = ['infosystem_id' => $infosystemId];
 
         if ($query !== null && $query !== '') {
-            $where[] = "(i.name ILIKE :query ESCAPE E'\\\\' OR i.slug ILIKE :query ESCAPE E'\\\\' OR i.path ILIKE :query ESCAPE E'\\\\')";
+            $where[] = "(LOWER(i.name) LIKE LOWER(:query) ESCAPE '!' OR LOWER(i.slug) LIKE LOWER(:query) ESCAPE '!' OR LOWER(i.path) LIKE LOWER(:query) ESCAPE '!')";
             $params['query'] = '%' . $this->escapeLike($query) . '%';
         }
         if ($groupId !== null) {
@@ -52,7 +52,7 @@ final class InfosystemItemSearchRepository
             $params['status'] = $status;
         }
         if ($propertyFilters !== []) {
-            $where[] = 'i.properties @> CAST(:property_filters AS jsonb)';
+            $where[] = \Core\Database\SqlDialect::mysql($this->db) ? 'JSON_CONTAINS(i.properties, :property_filters)' : 'i.properties @> CAST(:property_filters AS jsonb)';
             $params['property_filters'] = json_encode(
                 $propertyFilters,
                 JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
@@ -115,10 +115,6 @@ final class InfosystemItemSearchRepository
 
     private function escapeLike(string $value): string
     {
-        return strtr($value, [
-            '\\' => '\\\\',
-            '%' => '\\%',
-            '_' => '\\_',
-        ]);
+        return strtr($value, ['!' => '!!', '%' => '!%', '_' => '!_']);
     }
 }

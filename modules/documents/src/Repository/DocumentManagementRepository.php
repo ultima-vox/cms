@@ -36,22 +36,16 @@ final readonly class DocumentManagementRepository
                 draft.id AS draft_version_id,
                 draft.version AS draft_version
             FROM documents d
-            LEFT JOIN LATERAL (
-                SELECT id, version
-                FROM document_versions
-                WHERE document_id = d.id
-                  AND status = 'published'
-                ORDER BY version DESC, id DESC
-                LIMIT 1
-            ) published ON TRUE
-            LEFT JOIN LATERAL (
-                SELECT id, version
-                FROM document_versions
-                WHERE document_id = d.id
-                  AND status = 'draft'
-                ORDER BY version DESC, id DESC
-                LIMIT 1
-            ) draft ON TRUE
+            LEFT JOIN document_versions published ON published.id = (
+                SELECT id FROM document_versions
+                WHERE document_id = d.id AND status = 'published'
+                ORDER BY version DESC, id DESC LIMIT 1
+            )
+            LEFT JOIN document_versions draft ON draft.id = (
+                SELECT id FROM document_versions
+                WHERE document_id = d.id AND status = 'draft'
+                ORDER BY version DESC, id DESC LIMIT 1
+            )
             WHERE d.site_id = :site_id
             ORDER BY d.name, d.id
             SQL

@@ -24,6 +24,9 @@ final class ModuleMigrationRunner
         $this->assertModuleExists($moduleCode);
 
         $path = $this->rootPath . '/modules/' . $moduleCode . '/migrations';
+        if (\Core\Database\SqlDialect::mysql($this->db)) {
+            return (new \Core\Database\MysqlMigrationRunner($this->db))->migrate($path, $moduleCode);
+        }
         if (!is_dir($path)) {
             return [];
         }
@@ -128,11 +131,7 @@ final class ModuleMigrationRunner
 
     private function assertMigrationRegistryExists(): void
     {
-        $statement = $this->db->query(
-            "SELECT to_regclass('public.module_schema_migrations')"
-        );
-        $table = $statement->fetchColumn();
-        if ($table !== 'module_schema_migrations') {
+        if (!\Core\Database\SqlDialect::tableExists($this->db, 'module_schema_migrations')) {
             throw new RuntimeException('Сначала примените миграции Core: php bin/console migrate');
         }
     }

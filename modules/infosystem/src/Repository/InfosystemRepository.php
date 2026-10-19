@@ -106,7 +106,7 @@ final class InfosystemRepository
         ];
 
         if ($filters !== []) {
-            $where[] = 'i.properties @> CAST(:filters AS jsonb)';
+            $where[] = \Core\Database\SqlDialect::mysql($this->db) ? 'JSON_CONTAINS(i.properties, :filters)' : 'i.properties @> CAST(:filters AS jsonb)';
             $params['filters'] = json_encode(
                 $filters,
                 JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,

@@ -32,14 +32,11 @@ final readonly class PermissionSynchronizer
                 <<<'SQL'
                 INSERT INTO permissions (code, name)
                 VALUES (:code, :name)
-                ON CONFLICT (code) DO UPDATE
-                SET name = EXCLUDED.name
-                RETURNING id
-                SQL
-            );
+
+                SQL . \Core\Database\SqlDialect::upsert($this->db, ['code'], ['name']) . \Core\Database\SqlDialect::returningId($this->db));
             $roleStatement = $this->db->prepare('SELECT id FROM roles WHERE code = :code LIMIT 1');
             $assignmentStatement = $this->db->prepare(
-                'INSERT INTO role_permissions (role_id, permission_id) VALUES (:role_id, :permission_id) ON CONFLICT DO NOTHING'
+                'INSERT INTO role_permissions (role_id, permission_id) VALUES (:role_id, :permission_id)' . \Core\Database\SqlDialect::upsert($this->db, ['role_id', 'permission_id'])
             );
 
             foreach ($definitions as $definition) {
@@ -47,7 +44,13 @@ final readonly class PermissionSynchronizer
                     'code' => $definition->code,
                     'name' => $definition->name,
                 ]);
-                $permissionId = (int) $permissionStatement->fetchColumn();
+                if (\Core\Database\SqlDialect::mysql($this->db)) {
+                    $lookup = $this->db->prepare('SELECT id FROM permissions WHERE code = :code');
+                    $lookup->execute(['code' => $definition->code]);
+                    $permissionId = (int) $lookup->fetchColumn();
+                } else {
+                    $permissionId = (int) $permissionStatement->fetchColumn();
+                }
 
                 foreach ($definition->defaultRoles as $roleCode) {
                     $roleStatement->execute(['code' => $roleCode]);

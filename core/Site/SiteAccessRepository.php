@@ -45,7 +45,7 @@ final readonly class SiteAccessRepository
         $owned = !$this->db->inTransaction();
         if ($owned) $this->db->beginTransaction();
         try {
-            $lock = $this->db->prepare("SELECT pg_advisory_xact_lock(hashtext('site-access:' || CAST(:site AS text)))"); $lock->execute(['site' => $siteId]);
+            \Core\Database\SqlDialect::lock($this->db, 'site-access:' . $siteId, true);
             $q = $this->db->prepare('DELETE FROM user_sites WHERE site_id = :site'); $q->execute(['site' => $siteId]);
             $q = $this->db->prepare('INSERT INTO user_sites(site_id, user_id) SELECT :site, id FROM users WHERE id = :user AND is_active = TRUE');
             foreach (array_keys($ids) as $id) {

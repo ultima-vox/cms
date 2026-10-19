@@ -18,7 +18,7 @@ declare(strict_types=1);
     <main class="installer-card">
         <header class="installer-header">
             <span class="installer-brand">ULTIMA VOX CMS</span>
-            <p class="installer-step">Шаг 2 · PostgreSQL</p>
+            <p class="installer-step">Шаг 2 · База данных</p>
             <h1>Подключение к базе данных</h1>
             <p>Параметры проверяются напрямую. Пароль не выводится обратно в HTML и пока не записывается в <code>.env</code>.</p>
         </header>
@@ -30,6 +30,13 @@ declare(strict_types=1);
                 <div class="installer-result is-error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
             <?php endif; ?>
 
+            <label><span>СУБД</span>
+                <select name="driver" id="database-driver">
+                    <option value="pgsql" <?= $values['driver'] === 'pgsql' ? 'selected' : '' ?>>PostgreSQL — основной, рекомендуется</option>
+                    <option value="mysql" <?= $values['driver'] === 'mysql' ? 'selected' : '' ?>>MySQL / MariaDB — legacy, совместимость с хостингом</option>
+                </select>
+            </label>
+            <p>PostgreSQL 16+ · MySQL 8.0.21+ / MariaDB 10.11+. Для выбранной СУБД нужен соответствующий PDO-драйвер.</p>
             <div class="installer-form__grid">
                 <label>
                     <span>Сервер</span>
@@ -59,5 +66,6 @@ declare(strict_types=1);
             </footer>
         </form>
     </main>
+    <script src="/assets/installer-database.js" defer></script>
 </body>
 </html>

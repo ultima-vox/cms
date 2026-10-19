@@ -24,7 +24,7 @@ final class AuditLogRepository
         $statement = $this->db->prepare(
             <<<'SQL'
             INSERT INTO audit_log (site_id, user_id, action, entity_type, entity_id, context, ip_address)
-            VALUES (:site_id, :user_id, :action, :entity_type, :entity_id, CAST(:context AS jsonb), CAST(:ip_address AS inet))
+            VALUES (:site_id, :user_id, :action, :entity_type, :entity_id, :context, :ip_address)
             SQL
         );
         $statement->execute([

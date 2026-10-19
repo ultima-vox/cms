@@ -71,15 +71,14 @@ final class SitesManagementRepository
         if ($this->userId !== null && !(new \Core\Site\SiteAccessRepository($this->db))->isGlobal($this->userId)) throw new RuntimeException('Создавать сайты может только суперадминистратор.');
         new Permalink('/', $permalinkStyle);
         $statement = $this->db->prepare(
-            'INSERT INTO sites (name, code, settings) VALUES (:name, :code, CAST(:settings AS jsonb)) RETURNING id'
-        );
+            'INSERT INTO sites (name, code, settings) VALUES (:name, :code, :settings) ' . \Core\Database\SqlDialect::returningId($this->db));
         $statement->execute([
             'name' => $name,
             'code' => $code,
             'settings' => json_encode(['permalink_style' => $permalinkStyle], JSON_THROW_ON_ERROR),
         ]);
 
-        return (int) $statement->fetchColumn();
+        return \Core\Database\SqlDialect::insertedId($this->db, $statement);
     }
 
     public function update(int $id, string $name, bool $isActive, ?string $permalinkStyle = null): void
@@ -96,12 +95,12 @@ final class SitesManagementRepository
         }
 
         $statement = $this->db->prepare(
-            'UPDATE sites SET name = :name, is_active = :is_active, settings = settings || CAST(:settings_delta AS jsonb), updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+            'UPDATE sites SET name = :name, is_active = :is_active, settings = ' . (\Core\Database\SqlDialect::mysql($this->db) ? 'JSON_MERGE_PATCH(settings, :settings_delta)' : 'settings || CAST(:settings_delta AS jsonb)') . ', updated_at = CURRENT_TIMESTAMP WHERE id = :id'
         );
         $statement->execute([
             'id' => $id,
             'name' => $name,
-            'is_active' => $isActive,
+            'is_active' => (int) $isActive,
             'settings_delta' => $permalinkStyle === null
                 ? '{}'
                 : json_encode(['permalink_style' => $permalinkStyle], JSON_THROW_ON_ERROR),
@@ -114,7 +113,8 @@ final class SitesManagementRepository
             throw new RuntimeException('Сайт не найден.');
         }
 
-        $this->db->beginTransaction();
+        $owned = !$this->db->inTransaction();
+        if ($owned) $this->db->beginTransaction();
         try {
             if ($primary) {
                 $clear = $this->db->prepare('UPDATE site_domains SET is_primary = FALSE WHERE site_id = :site_id');
@@ -122,19 +122,18 @@ final class SitesManagementRepository
             }
 
             $statement = $this->db->prepare(
-                'INSERT INTO site_domains (site_id, host, is_primary) VALUES (:site_id, :host, :is_primary) RETURNING id'
-            );
+                'INSERT INTO site_domains (site_id, host, is_primary) VALUES (:site_id, :host, :is_primary) ' . \Core\Database\SqlDialect::returningId($this->db));
             $statement->execute([
                 'site_id' => $siteId,
                 'host' => $host,
-                'is_primary' => $primary,
+                'is_primary' => (int) $primary,
             ]);
-            $id = (int) $statement->fetchColumn();
-            $this->db->commit();
+            $id = \Core\Database\SqlDialect::insertedId($this->db, $statement);
+            if ($owned) $this->db->commit();
 
             return $id;
         } catch (Throwable $exception) {
-            if ($this->db->inTransaction()) {
+            if ($owned && $this->db->inTransaction()) {
                 $this->db->rollBack();
             }
             throw $exception;
@@ -143,7 +142,8 @@ final class SitesManagementRepository
 
     public function makePrimary(int $siteId, int $domainId): void
     {
-        $this->db->beginTransaction();
+        $owned = !$this->db->inTransaction();
+        if ($owned) $this->db->beginTransaction();
         try {
             $belongs = $this->db->prepare(
                 'SELECT 1 FROM site_domains WHERE id = :id AND site_id = :site_id LIMIT 1'
@@ -157,9 +157,9 @@ final class SitesManagementRepository
             $clear->execute(['site_id' => $siteId]);
             $set = $this->db->prepare('UPDATE site_domains SET is_primary = TRUE WHERE id = :id AND site_id = :site_id');
             $set->execute(['id' => $domainId, 'site_id' => $siteId]);
-            $this->db->commit();
+            if ($owned) $this->db->commit();
         } catch (Throwable $exception) {
-            if ($this->db->inTransaction()) {
+            if ($owned && $this->db->inTransaction()) {
                 $this->db->rollBack();
             }
             throw $exception;

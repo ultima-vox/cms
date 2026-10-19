@@ -58,7 +58,7 @@ final readonly class InstallationService
         }
         $environment = [
             'APP_ENV' => 'production', 'APP_DEBUG' => 'false', 'APP_URL' => $url,
-            'DB_HOST' => $config->host, 'DB_PORT' => (string) $config->port,
+            'DB_DRIVER' => $config->driver, 'DB_HOST' => $config->host, 'DB_PORT' => (string) $config->port,
             'DB_NAME' => $config->database, 'DB_USER' => $config->user, 'DB_PASS' => $config->password,
         ];
         $env = '';
@@ -91,15 +91,25 @@ final readonly class InstallationService
                 fclose($file);
             }
             $db = (new DatabaseConnector())->connect($config);
-            if ((int) $db->query('SHOW server_version_num')->fetchColumn() < 160000) {
+            if ($config->driver === 'pgsql' && (int) $db->query('SHOW server_version_num')->fetchColumn() < 160000) {
                 throw new RuntimeException('Требуется PostgreSQL 16 или новее.');
+            }
+            if ($config->driver === 'mysql') {
+                $version = (string) $db->query('SELECT VERSION()')->fetchColumn();
+                $maria = stripos($version, 'MariaDB') !== false;
+                if (!preg_match('/([0-9]+\.[0-9]+\.[0-9]+)/', $version, $match)
+                    || version_compare($match[1], $maria ? '10.11.0' : '8.0.21', '<')) {
+                    throw new RuntimeException('Legacy: требуется MySQL 8.0.21+ или MariaDB 10.11+.');
+                }
             }
             $host = (new SiteResolver(new SiteRepository($db), $url))->normalizeHost((string) ($parts['host'] ?? ''));
             if ($host === null) {
                 throw new RuntimeException('Некорректный домен сайта.');
             }
-            $db->query("SELECT pg_advisory_lock(hashtext('ultima_vox_cms_install'))");
-            $objects = (int) $db->query("SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = current_schema() AND c.relkind IN ('r','p','v','m','S')")->fetchColumn();
+            \Core\Database\SqlDialect::lock($db, 'ultima_vox_cms_install');
+            $objects = (int) $db->query(\Core\Database\SqlDialect::mysql($db)
+                ? 'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()'
+                : "SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = current_schema() AND c.relkind IN ('r','p','v','m','S')")->fetchColumn();
             if ($objects !== 0) {
                 throw new RuntimeException('Нужна отдельная пустая база данных. Существующие данные не изменены.');
             }
@@ -111,9 +121,9 @@ final readonly class InstallationService
             $statement->execute(['name' => $name, 'code' => 'default']);
             $statement = $db->prepare('INSERT INTO site_domains (site_id, host, is_primary) VALUES (1, :host, TRUE)');
             $statement->execute(['host' => $host]);
-            $statement = $db->prepare('INSERT INTO users (email, password_hash, display_name) VALUES (:email, :hash, :name) RETURNING id');
+            $statement = $db->prepare('INSERT INTO users (email, password_hash, display_name) VALUES (:email, :hash, :name) ' . \Core\Database\SqlDialect::returningId($db));
             $statement->execute(['email' => $email, 'hash' => password_hash($password, PASSWORD_DEFAULT), 'name' => $name]);
-            $userId = (int) $statement->fetchColumn();
+            $userId = \Core\Database\SqlDialect::insertedId($db, $statement);
             $statement = $db->prepare("INSERT INTO user_roles (user_id, role_id) SELECT :id, id FROM roles WHERE code = 'superadmin'");
             $statement->execute(['id' => $userId]);
             if ($statement->rowCount() !== 1) {
@@ -147,7 +157,7 @@ final readonly class InstallationService
                 unlink($temporary);
             }
             if ($db !== null) {
-                $db->query("SELECT pg_advisory_unlock(hashtext('ultima_vox_cms_install'))");
+                \Core\Database\SqlDialect::unlock($db, 'ultima_vox_cms_install');
             }
             flock($handle, LOCK_UN);
             fclose($handle);

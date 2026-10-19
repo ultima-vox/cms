@@ -180,3 +180,7 @@ The core enables CSRF tokens for state-changing admin requests, strict cookie se
 `modules:migrate --all` validates enabled runtime dependencies before applying SQL. A module may also declare `"migration_after": ["other-module"]` in its manifest to order data migrations after another enabled module without introducing a runtime dependency. Absent or disabled optional predecessors are skipped; they are never automatically enabled. Cycles involving runtime and migration ordering edges are rejected before any module SQL is applied.
 
 Documents declares `migration_after: ["infosystem"]` so legacy Infosystem page types are assigned before Documents migrates remaining Core pages and removes the legacy content column. Use the aggregate command for upgrades involving multiple modules. The explicit `modules:migrate <code>` command remains a low-level single-module operation and does not resolve cross-module ordering.
+
+## Database backends and product roadmap
+
+PostgreSQL is the primary backend and the default. MySQL/MariaDB is an explicitly selected legacy hosting option. See [database drivers](docs/database-drivers.md) for requirements, migration/update recovery and limitations; changing DB_DRIVER does not convert data. The [HostCMS-inspired roadmap](docs/architecture/hostcms-roadmap.md) tracks UX, modules and shared-hosting requirements without an XML/XSLT rendering pipeline.

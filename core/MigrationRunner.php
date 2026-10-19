@@ -8,6 +8,8 @@ use PDO;
 use RuntimeException;
 use Throwable;
 
+require_once __DIR__ . '/Database/SqlDialect.php';
+
 final class MigrationRunner
 {
     public function __construct(
@@ -19,6 +21,9 @@ final class MigrationRunner
     /** @return list<string> */
     public function migrate(): array
     {
+        if (\Core\Database\SqlDialect::mysql($this->db)) {
+            return (new \Core\Database\MysqlMigrationRunner($this->db))->migrate($this->migrationsPath);
+        }
         $this->ensureTrackingSchema();
         $outer = $this->db->inTransaction();
         $this->db->query("SELECT " . ($outer ? 'pg_advisory_xact_lock' : 'pg_advisory_lock') . "(hashtext('ultima_vox_cms_migrations'))");

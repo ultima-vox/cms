@@ -71,8 +71,7 @@ final readonly class MechanikiModule implements ModuleInterface
         $structure = new StructureRepository($db, $siteId);
         $db->beginTransaction();
         try {
-            $lock = $db->prepare('SELECT pg_advisory_xact_lock(hashtext(:key))');
-            $lock->execute(['key' => 'mechaniki_import_' . $siteId]);
+            \Core\Database\SqlDialect::lock($db, 'mechaniki_import_' . $siteId, true);
             $rootId = null;
             foreach ($structure->all() as $node) {
                 if ($node['path'] === '/mechaniki' || str_starts_with($node['path'], '/mechaniki/')) {
