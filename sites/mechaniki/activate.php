@@ -113,10 +113,10 @@ $updated = 0;
 
 $db->beginTransaction();
 try {
-    $layout = $layouts->findByCode('mechaniki');
+    $layout = $layouts->findByCode('mechaniki-live');
     $layoutId = $layout !== null
         ? (int) $layout['id']
-        : $layouts->create('Механики — тестовый дизайн', 'layouts/mechaniki.php', 'Стенд ru.rewired.ru');
+        : $layouts->create('Механики — тестовый дизайн', 'layouts/mechaniki-live.php', 'Стенд ru.rewired.ru');
     $nodeIds = [];
     foreach ($pages as $path => $page) {
         $document = $documents->findActiveByCode($siteId, $page['code']);
