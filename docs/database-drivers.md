@@ -65,3 +65,9 @@ CI: PostgreSQL 16 (существующий полный набор), MySQL 8.0 
 - MySQL implicit commit: https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html
 - MySQL atomic DDL не означает transactional DDL: https://dev.mysql.com/doc/refman/8.0/en/atomic-ddl.html
 - MariaDB JSON: https://mariadb.com/docs/server/reference/data-types/string-data-types/json
+
+## Infosystem property validation (1.2.1, #108)
+
+`date` принимает реальные календарные даты `YYYY-MM-DD`, годы 0001–9999, с проверкой високосных лет. `number` сохраняет прежний приблизительный PHP float/JSON contract: принимаются конечные значения binary64, включая scientific notation; overflow/INF/NAN и ненулевой ввод, округляющийся в ноль из-за underflow, отклоняются до записи. Отдельные поля min/max, exact decimal и денежные значения этим не вводятся. Проверки границ и JSON round trip выполняются на PostgreSQL и поддерживаемых legacy-СУБД.
+
+HTTP create/update возвращает 422 с ошибкой у свойства; другая часть записи не сохраняется. Ошибочный scalar input показывается как текст, чтобы browser date/number input не очистил его до исправления; после успешного сохранения возвращается штатный тип input. Вкладка с ошибкой открывается автоматически. Старые некорректные значения не переписываются миграцией и должны быть исправлены при повторном сохранении. Даты публикации `publish_at` — отдельный контракт, это изменение его не расширяет.

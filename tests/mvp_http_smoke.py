@@ -332,3 +332,8 @@ query("INSERT INTO documents(site_id,code,name) SELECT 1, 'browser-list-' || n, 
 
 from document_context_http import verify_document_return_context
 verify_document_return_context(lambda path, data=None, expected=200: request(client, path, data, expected=expected), 1, folder_a, folder_b, site_b)
+
+from infosystem_property_http import verify_infosystem_properties
+property_edit = verify_infosystem_properties(lambda path, data=None, expected=200: request(client, path, data, expected=expected))
+with open("/tmp/cms-property-browser.json", "w") as handle:
+    json.dump({"edit": property_edit}, handle)

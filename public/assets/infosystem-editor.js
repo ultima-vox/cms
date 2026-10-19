@@ -20,8 +20,10 @@
             }
         };
         nav.setAttribute('role', 'tablist');
-        const requested = location.hash.replace(/^#/, '');
+        const invalidField = document.querySelector('[aria-invalid="true"]');
+        const requested = invalidField?.closest('[data-tab-panel]')?.dataset.tabPanel || location.hash.replace(/^#/, '');
         activate(tabs.some(tab => tab.dataset.tab === requested) ? requested : 'main');
+        if (invalidField) invalidField.focus();
         nav.addEventListener('click', event => {
             const tab = event.target.closest('[data-tab]');
             if (tab && nav.contains(tab)) activate(tab.dataset.tab);
