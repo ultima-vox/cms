@@ -48,11 +48,12 @@ try {
     $repo = new InfosystemManagementRepository($db, $site);
     $foreign = new InfosystemManagementRepository($db, $otherSite);
     $legacy = [['code' => 'category', 'name' => 'Категория', 'type' => 'text'],
+        ['code' => 'amountxminor', 'name' => 'Стоимость в копейках', 'type' => 'number'],
         ['code' => 'amount_minor', 'name' => 'Стоимость в копейках', 'type' => 'number'],
         ['code' => 'custom', 'name' => 'Custom', 'type' => 'number']];
     $id = $repo->create('Prices', 'mechaniki_prices', null, $legacy, true);
     $foreignSchema = $legacy;
-    $foreignSchema[1]['name'] = 'My custom numeric field';
+    $foreignSchema[2]['name'] = 'My custom numeric field';
     $foreignId = $foreign->create('Custom', 'mechaniki_prices', null, $foreignSchema, true);
     $data = ['name' => 'Money fixture', 'slug' => 'money', 'description' => null, 'content' => '',
         'meta_description' => null, 'status' => 'draft', 'is_active' => true, 'sorting' => 0, 'publish_at' => null];
@@ -63,8 +64,8 @@ try {
     $sql = file_get_contents($migration);
     $db->exec($sql);
     $migrated = $repo->find($id)['field_schema'];
-    $assert($migrated[1]['type'] === 'money' && $migrated[1]['name'] === 'Стоимость, ₽', 'Existing price schema not upgraded');
-    $assert($migrated[0] == $legacy[0] && $migrated[2] == $legacy[2], 'Migration touched unrelated fields/order');
+    $assert($migrated[2]['type'] === 'money' && $migrated[2]['name'] === 'Стоимость, ₽', 'Existing price schema not upgraded');
+    $assert($migrated[0] == $legacy[0] && $migrated[1] == $legacy[1] && $migrated[3] == $legacy[3], 'Migration touched unrelated fields/order');
     $assert($foreign->find($foreignId)['field_schema'] == $foreignSchema, 'Migration changed custom schema in another site');
     $assert($repo->findItem($id, $item)['properties']['amount_minor'] === 80000, 'Upgrade changed stored cents');
     $db->exec($sql);
