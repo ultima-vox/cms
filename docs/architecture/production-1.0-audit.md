@@ -30,7 +30,7 @@
 | --- | --- | --- |
 | A1. ZIP, браузерный мастер, public/webroot | implemented | `tools/package_mvp.py`, `core/Installer/`, `tests/mvp_http_smoke.py`; обе раскладки в `.github/workflows/mvp.yml` |
 | A1. PHP, расширения, запись, соединение с БД | implemented | `EnvironmentChecker`, `DatabaseConnector`, тесты installer; это не проверка всей конфигурации хостинга |
-| A1. Безопасность реального Apache/nginx, автоматическое отклонение утечки private, routing/HTTPS preflight | partial | `.htaccess` и примеры nginx есть; в `EnvironmentChecker` нет проверки доступности private по HTTP и маршрутизации. MVP запускается на PHP built-in server, это не доказательство обработки `.htaccess` Apache |
+| A1. Безопасность реального Apache/nginx, автоматическое отклонение утечки private, routing/HTTPS preflight | partial | `.htaccess` и примеры nginx есть; в `EnvironmentChecker` нет проверки доступности private по HTTP и маршрутизации. Исходный MVP проверялся на PHP built-in server; PR100 добавил реальную Apache-проверку обеих раскладок. Автоматический отказ установщика и nginx ещё не проверены |
 | A2. Dependency order и checksums | implemented | `ModuleMigrationCoordinator`, `MigrationRunner`, `MysqlMigrationRunner`; тесты coordinator/checksum/upgrade |
 | A2. Онлайн-обновление, изменения до установки, файловый rollback, crash recovery | implemented | Модуль `updater`, `DeploymentGuard`, `tests/update_*`, `tests/mysql_update_smoke.php`; ограничения ниже |
 | A3. PG default, MySQL/MariaDB legacy, переносимые операции | implemented | `DatabaseConfig`, `SqlDialect`, раздельные SQL; CI PostgreSQL 16, MySQL 8.0/8.4, MariaDB 10.11/11.4 |
@@ -96,6 +96,21 @@
 
 Следующие серии PR: G1 — схема/defaults/сортировка/связи ИС и тесты миграций; G2 — media-интеграция и пресеты; G3 — search с провайдерами и DB backend; H1 — модель переводов и API владельцев; H2 — UI/URL/версии/fallback; H3 — интеграция SEO/search и тесты site/language/region/permissions. Каждый пункт разбивается на отдельные проверяемые срезы после завершения аудита. H обязателен до тега 1.0.0.
 
+## Выполненные срезы P0
+
+### A1: настоящий Apache и исправление ответа CSRF
+
+[PR100](https://github.com/ultima-vox/cms/pull/100) включён в main коммитом `8f658e698a64b163f487a7d49b8949c0827504e8`. Исходная карта выше остаётся привязана к baseline `9cb4893`; этот раздел отражает последующие изменения.
+
+- `apache-hosting` в CI собирает настоящий Apache/PHP 8.4 с memory_limit=128M, mod_rewrite и AllowOverride All. Оба ZIP (public/webroot) проходят полный HTTP-сценарий установки/редактора.
+- Проверяются приватные файлы до/после установки, закодированные пути и публичные assets. Для отказа допустимы 403 или 404.
+- Отрицательная конфигурация AllowOverride None действительно отдаёт приватный composer.json и обязана проваливать тест защиты. Это проверка обнаружения утечки в CI, **не автоматический отказ установщика**.
+- Найден и исправлен runtime-дефект: Apache преобразовывал числовой CSRF-статус 419 в 500; `Response::send()` теперь отправляет для 419 явную строку статуса, сохраняя существующий контракт.
+- Head PR `168f5dc88853c8fdb9939887c9b88f6d59461f33`: CI `39239503788` и MVP acceptance `39239503825` успешны. Включены PostgreSQL 16, MySQL 8.0/8.4, MariaDB 10.11/11.4 и обновление существующей установки. Post-merge проверки выполняются отдельно.
+- Новых файлов Core/config и миграций нет; изменён существующий `core/Http/Response.php`. Docker используется только CI.
+
+Следующий срез A1: безопасная проверка размещения и отказ установщика при утечке private, затем nginx/reverse-proxy/HTTPS. Самопроверка не должна принимать произвольный URL, создавать SSRF или зависеть от возможности PHP-процесса обслужить вложенный HTTP-запрос к самому себе. Полный этап A1 пока `partial`.
+
 ## Что ещё не проверено
 
-Полный read-through всех файлов main, все применённые SQL по отдельности, threat model и внешний security-аудит, реальные Apache/FASTPANEL/VPS fixtures, benchmark p50/p95/памяти/SQL, контентная миграция пилота и окончательный состав production 1.0. Коммерческий магазин не считается готовым из наличия его в цели; оставшиеся требования пользователя ещё ожидаются.
+Полный read-through всех файлов main, все применённые SQL по отдельности, threat model и внешний security-аудит, FASTPANEL/nginx/VPS fixtures (Apache public/webroot уже проверены PR100), benchmark p50/p95/памяти/SQL, контентная миграция пилота и окончательный состав production 1.0. Коммерческий магазин не считается готовым из наличия его в цели; оставшиеся требования пользователя ещё ожидаются.
