@@ -42,6 +42,17 @@ final class SiteMedia
             $replace[$asset['source_url']] = $asset['target'];
         }
 
+        // The old static export references diagnostic.jpeg on many pages,
+        // but that binary was not included in the signed release.
+        // Use an explicit local fallback until the original can be imported.
+        $diagnostic = '/assets/mechaniki/diagnostic.jpeg';
+        $fallback = '/assets/mechaniki/workshop.webp';
+        if (!is_file($rootPath . '/public' . $diagnostic)
+            && is_file($rootPath . '/public' . $fallback)
+            && (($release['layout'] ?? null) !== 'webroot' || is_file(dirname($rootPath) . $fallback))) {
+            $replace[$diagnostic] = $fallback;
+        }
+
         return $replace === [] ? $html : strtr($html, $replace);
     }
 }
