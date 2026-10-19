@@ -357,8 +357,8 @@ jobs:
 
       - name: Mechaniki root-site integration smoke
         run: |
-          php -l sites/mechaniki/activate.php
-          php -l sites/mechaniki/activate-infosystems.php
+          php -l modules/mechaniki/site/activate.php
+          php -l modules/mechaniki/site/activate-infosystems.php
           find modules/mechaniki/templates/public -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php tests/mechaniki_stage_smoke.php
 
