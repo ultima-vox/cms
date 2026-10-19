@@ -297,21 +297,47 @@ if ($delivery->readStatic(77, '/blocked-removal') !== null || is_file($blockedRe
     throw new RuntimeException('Failed physical deletion left invalid managed output readable.');
 }
 // The same site invalidation removed the earlier winner; republish it for expiry isolation checks.
+$freshContext = new RenderContext();
+$freshContext->cacheFor(3600);
 $winner = $delivery->publishRenderedStatic(
-    77, '/race', new RenderResult('winner', $raceContext), $delivery->beginStaticGeneration(),
+    77, '/race', new RenderResult('winner', $freshContext), $delivery->beginStaticGeneration(),
 );
 
-// TTL starts before rendering; checked reads and pruning must remove expired managed output.
+// Model elapsed time in disposable fixture metadata; never race a one-second TTL.
 $shortContext = new RenderContext();
-$shortContext->cacheFor(1);
+$shortContext->cacheFor(3600);
 $short = new RenderResult('short lived', $shortContext);
 $readExpiry = $delivery->publishRenderedStatic(78, '/read-expiry', $short, $delivery->beginStaticGeneration());
 $pruneExpiry = $delivery->publishRenderedStatic(78, '/prune-expiry', $short, $delivery->beginStaticGeneration(), 'html');
 if ($delivery->readStatic(78, '/read-expiry') !== 'short lived') {
     throw new RuntimeException('Fresh managed static output was not readable.');
 }
+// Expiry does not change tags or the generation fence. Locate the two managed
+// records by their actual output keys, preserving the rest of the fixture.
+$expiryKeys = array_map(
+    static fn (string $file): string => 'static:' . substr($file, strlen($root . '/static/')),
+    [$readExpiry, $pruneExpiry],
+);
+$expired = 0;
+foreach (glob($root . '/cache/static-index/keys/*/*.json') ?: [] as $metadataFile) {
+    $metadata = json_decode((string) file_get_contents($metadataFile), true, flags: JSON_THROW_ON_ERROR);
+    if (!in_array($metadata['key'] ?? null, $expiryKeys, true)) {
+        continue;
+    }
+    if (!is_int($metadata['expires_at'] ?? null) || $metadata['expires_at'] <= time()) {
+        throw new RuntimeException('Expiry fixture was not initially fresh.');
+    }
+    $metadata['expires_at'] = 0;
+    if (file_put_contents($metadataFile, json_encode($metadata, JSON_THROW_ON_ERROR)) === false) {
+        throw new RuntimeException('Unable to expire disposable fixture metadata.');
+    }
+    $expired++;
+}
+if ($expired !== 2) {
+    throw new RuntimeException('Expiry fixture did not find both managed outputs.');
+}
 $slowGeneration = $delivery->beginStaticGeneration();
-sleep(2);
+$slowGeneration['started_at'] -= 3601;
 try {
     $delivery->publishRenderedStatic(78, '/slow', $short, $slowGeneration);
     throw new RuntimeException('Expired render was published.');
