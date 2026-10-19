@@ -6,7 +6,8 @@ require_once dirname(__DIR__) . '/modules/mechaniki/src/SiteMedia.php';
 
 use UltimaVox\Modules\Mechaniki\SiteMedia;
 
-$root = sys_get_temp_dir() . '/mechaniki-media-' . bin2hex(random_bytes(6));
+$sandbox = sys_get_temp_dir() . '/mechaniki-media-' . bin2hex(random_bytes(6));
+$root = $sandbox . '/app';
 $target = '/assets/mechaniki/legacy/group_650.jpeg';
 $origin = 'https://mechaniki.ru/upload/shop_5/6/5/0/group_650/group_650.jpeg';
 $document = '<img src="' . $origin . '"><a href="https://elsewhere.example/photo.jpg">Reference</a>';
@@ -54,5 +55,9 @@ try {
     @rmdir($root . '/public/assets');
     @rmdir($root . '/public');
     @rmdir($root);
+    @rmdir($sandbox . '/assets/mechaniki/legacy');
+    @rmdir($sandbox . '/assets/mechaniki');
+    @rmdir($sandbox . '/assets');
+    @rmdir($sandbox);
 }
 echo "MECHANIKI MEDIA URL REWRITE OK\n";
