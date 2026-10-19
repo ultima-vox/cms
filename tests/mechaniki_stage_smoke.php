@@ -23,7 +23,7 @@ if (!is_string($layout) || !is_string($config)
 foreach (['home.css', 'commercial.css', 'internal.css', 'motion.css', 'release.css',
           'site-config.js', 'commercial.js', 'internal.js', 'motion.js',
           'mobile-drawer.js', 'services-experiment.js', 'icons.svg',
-          'manrope.woff2', 'workshop.webp'] as $asset) {
+          'manrope.woff2', 'workshop.webp', 'production.css', 'production.js'] as $asset) {
     if (!is_file($root . '/public/assets/mechaniki/' . $asset)) {
         throw new RuntimeException('Missing Mechaniki asset: ' . $asset);
     }
