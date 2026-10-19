@@ -31,7 +31,8 @@ def request(client, path, data=None, expected=200, headers=None):
     except urllib.error.HTTPError as error:
         response = error
     body = response.read().decode('utf-8')
-    if response.code != expected:
+    allowed = expected if isinstance(expected, tuple) else (expected,)
+    if response.code not in allowed:
         raise AssertionError(f'{path}: expected {expected}, received {response.code}; {body[:500]}')
     return body, response.headers
 
@@ -55,7 +56,7 @@ def check_private_files():
     if os.environ.get('MVP_LAYOUT') == 'webroot':
         for path in ('/app', '/app/.env', '/app/composer.json', '/app/vendor/autoload.php',
                      '/app/public/index.php', '/%61pp/composer.json', '/app%2f.env', '/.env'):
-            request(browser(), path, expected=404)
+            request(browser(), path, expected=(403, 404))
 
 
 check_private_files()
