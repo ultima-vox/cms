@@ -30,6 +30,21 @@ try {
         throw new RuntimeException('Verified local image URL was not applied.');
     }
 
+    $missingDiagnostic = '<img src="/assets/mechaniki/diagnostic.jpeg">';
+    if (SiteMedia::localizeHtml($missingDiagnostic, $root) !== $missingDiagnostic) {
+        throw new RuntimeException('Fallback was applied without a bundled image.');
+    }
+    file_put_contents($root . '/public/assets/mechaniki/workshop.webp', 'fixture');
+    if (SiteMedia::localizeHtml($missingDiagnostic, $root)
+        !== '<img src="/assets/mechaniki/workshop.webp">') {
+        throw new RuntimeException('Missing diagnostic photo was not replaced with local fallback.');
+    }
+    file_put_contents($root . '/public/assets/mechaniki/diagnostic.jpeg', 'original');
+    if (SiteMedia::localizeHtml($missingDiagnostic, $root) !== $missingDiagnostic) {
+        throw new RuntimeException('Fallback incorrectly replaced a restored original photo.');
+    }
+    unlink($root . '/public/assets/mechaniki/diagnostic.jpeg');
+
     file_put_contents($root . '/release.json', '{"layout":"webroot"}');
     if (SiteMedia::localizeHtml($document, $root) !== $document) {
         throw new RuntimeException('Webroot URL was exposed without public mirror.');
@@ -46,6 +61,7 @@ try {
     @unlink($root . '/release.json');
     @unlink($root . '/modules/mechaniki/site/media-manifest.json');
     @unlink($root . '/public' . $target);
+    @unlink($root . '/public/assets/mechaniki/workshop.webp');
     @unlink(dirname($root) . $target);
     @rmdir($root . '/modules/mechaniki/site');
     @rmdir($root . '/modules/mechaniki');
