@@ -287,7 +287,7 @@ final class StructureRepository
         $statement = $this->db->prepare(
             <<<'SQL'
             UPDATE nodes
-            SET path = CONCAT(:new_prefix, substring(path FROM :offset)),
+            SET path = CONCAT(COALESCE(:new_prefix, ''), substring(path FROM :offset)),
                 updated_at = CURRENT_TIMESTAMP
             WHERE site_id = :site_id
               AND id <> :id

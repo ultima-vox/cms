@@ -273,7 +273,7 @@ final class InfosystemManagementRepository
                 $groupUpdate = $this->db->prepare(
                     <<<'SQL'
                     UPDATE infosystem_groups
-                    SET path = CONCAT(:new_path, substring(path from :start_position)),
+                    SET path = CONCAT(COALESCE(:new_path, ''), substring(path from :start_position)),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE infosystem_id = :infosystem_id
                       AND path LIKE :prefix
@@ -289,7 +289,7 @@ final class InfosystemManagementRepository
                 $itemUpdate = $this->db->prepare(
                     <<<'SQL'
                     UPDATE infosystem_items
-                    SET path = CONCAT(:new_path, substring(path from :start_position)),
+                    SET path = CONCAT(COALESCE(:new_path, ''), substring(path from :start_position)),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE infosystem_id = :infosystem_id
                       AND path LIKE :prefix
