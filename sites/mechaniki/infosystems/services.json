@@ -112,6 +112,116 @@
       "image": "https://mechaniki.ru/upload/shop_5/6/5/0/group_650/group_650.jpeg",
       "price_hint": "от 1 800 ₽",
       "source_file": "pages/services/podveska.html"
+    },
+    {
+      "path": "/services/podveska/zamena-amortizatorov",
+      "item_path": "/podveska/zamena-amortizatorov",
+      "group": "podveska",
+      "slug": "zamena-amortizatorov",
+      "name": "Замена амортизаторов в Зеленограде",
+      "lead": "Проверим состояние амортизаторов, опор и связанных элементов подвески. Если замена нужна, уточним подходящие детали и состав работ.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/0/group_650/group_650.jpeg",
+      "price_hint": "от 1 800 ₽",
+      "source_file": "pages/services/podveska/zamena-amortizatorov.html"
+    },
+    {
+      "path": "/services/podveska/zamena-sajlentblokov",
+      "item_path": "/podveska/zamena-sajlentblokov",
+      "group": "podveska",
+      "slug": "zamena-sajlentblokov",
+      "name": "Замена сайлентблоков в Зеленограде",
+      "lead": "Осмотрим сайлентблоки и рычаги, проверим люфты и крепления. Объём замены определим по состоянию узла и конструкции автомобиля.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/0/group_650/group_650.jpeg",
+      "price_hint": "от 1 200 ₽",
+      "source_file": "pages/services/podveska/zamena-sajlentblokov.html"
+    },
+    {
+      "path": "/services/podveska/zamena-stoek-stabilizatora",
+      "item_path": "/podveska/zamena-stoek-stabilizatora",
+      "group": "podveska",
+      "slug": "zamena-stoek-stabilizatora",
+      "name": "Замена стоек стабилизатора в Зеленограде",
+      "lead": "При подозрении на стойки стабилизатора сначала проверим люфты, крепления и соседние элементы. Замену предложим после подтверждения причины.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/0/group_650/group_650.jpeg",
+      "price_hint": "от 360 ₽",
+      "source_file": "pages/services/podveska/zamena-stoek-stabilizatora.html"
+    },
+    {
+      "path": "/services/remont-dvigatelya",
+      "item_path": "/remont-dvigatelya",
+      "group": null,
+      "slug": "remont-dvigatelya",
+      "name": "Ремонт двигателя в Зеленограде",
+      "lead": "Неровная работа, трудный запуск или шум ещё не определяют объём ремонта. Сначала проверим двигатель и разберём найденную причину.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/7/group_657/group_657.jpeg",
+      "price_hint": "от 2 500 ₽",
+      "source_file": "pages/services/remont-dvigatelya.html"
+    },
+    {
+      "path": "/services/remont-dvigatelya/zamena-czepi-grm",
+      "item_path": "/remont-dvigatelya/zamena-czepi-grm",
+      "group": "remont-dvigatelya",
+      "slug": "zamena-czepi-grm",
+      "name": "Замена цепи ГРМ в Зеленограде",
+      "lead": "Разберём симптомы и историю обслуживания двигателя. Необходимость замены цепи ГРМ и перечень деталей определим для конкретного автомобиля.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/7/group_657/group_657.jpeg",
+      "price_hint": "от 7 000 ₽",
+      "source_file": "pages/services/remont-dvigatelya/zamena-czepi-grm.html"
+    },
+    {
+      "path": "/services/remont-dvigatelya/zamena-pompy-i-vodyanogo-nasosa",
+      "item_path": "/remont-dvigatelya/zamena-pompy-i-vodyanogo-nasosa",
+      "group": "remont-dvigatelya",
+      "slug": "zamena-pompy-i-vodyanogo-nasosa",
+      "name": "Замена помпы в Зеленограде",
+      "lead": "Проверим причину неисправности системы охлаждения. Если требуется замена помпы, обсудим доступ к узлу, детали и расходные материалы.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/7/group_657/group_657.jpeg",
+      "price_hint": "от 1 800 ₽",
+      "source_file": "pages/services/remont-dvigatelya/zamena-pompy-i-vodyanogo-nasosa.html"
+    },
+    {
+      "path": "/services/remont-dvigatelya/zamena-remnya-grm",
+      "item_path": "/remont-dvigatelya/zamena-remnya-grm",
+      "group": "remont-dvigatelya",
+      "slug": "zamena-remnya-grm",
+      "name": "Замена ремня ГРМ в Зеленограде",
+      "lead": "Уточним двигатель, регламент и историю замены ремня ГРМ. До начала работ обсудим необходимые детали и состав операции для вашей модели.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/7/group_657/group_657.jpeg",
+      "price_hint": "от 3 000 ₽",
+      "source_file": "pages/services/remont-dvigatelya/zamena-remnya-grm.html"
+    },
+    {
+      "path": "/services/remont-elektrooborudovaniya",
+      "item_path": "/remont-elektrooborudovaniya",
+      "group": null,
+      "slug": "remont-elektrooborudovaniya",
+      "name": "Ремонт автоэлектрики в Зеленограде",
+      "lead": "Не работает свет, оборудование или запуск — важно выяснить, где нарушена работа системы. Проверим питание, соединения и нужные электрические цепи.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/4/group_654/group_654.jpeg",
+      "price_hint": null,
+      "source_file": "pages/services/remont-elektrooborudovaniya.html"
+    },
+    {
+      "path": "/services/remont-transmissii",
+      "item_path": "/remont-transmissii",
+      "group": null,
+      "slug": "remont-transmissii",
+      "name": "Ремонт трансмиссии в Зеленограде",
+      "lead": "Шум, толчки или затруднённое переключение требуют проверки конкретного агрегата. Обсудим симптомы, тип коробки и историю обслуживания.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/6/group_656/small_group_656.jpg",
+      "price_hint": "По выбранной работе",
+      "source_file": "pages/services/remont-transmissii.html"
+    },
+    {
+      "path": "/services/remont-vyxlopnoj-sistemy",
+      "item_path": "/remont-vyxlopnoj-sistemy",
+      "group": null,
+      "slug": "remont-vyxlopnoj-sistemy",
+      "name": "Ремонт выхлопной системы в Зеленограде",
+      "lead": "Громкий звук, дребезг или повреждение соединения — повод проверить выпуск. Объём восстановления определяем по состоянию повреждённого участка.",
+      "image": "https://mechaniki.ru/upload/shop_5/2/2/2/item_222/item_222.jpg",
+      "price_hint": "от 500 ₽",
+      "source_file": "pages/services/remont-vyxlopnoj-sistemy.html"
     }
   ]
 }
