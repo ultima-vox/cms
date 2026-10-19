@@ -78,6 +78,12 @@ final class InfosystemModule implements ModuleInterface
             'modules/infosystem/templates/list.php',
         );
 
+        $core->templates()->view(
+            'infosystem.item',
+            'infosystem.item',
+            'modules/infosystem/templates/item.php',
+        );
+
         $core->templates()->facade(
             'infosystems',
             static fn (TemplateFacadeContext $context): InfosystemsFacade => new InfosystemsFacade(
