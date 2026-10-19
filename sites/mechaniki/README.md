@@ -7,7 +7,7 @@
 
 ## Архитектура
 
-- `templates/layouts/mechaniki.php` — общая оболочка без HostCMS API, получает `$page` и вызывает `$page->execute()`.
+- `templates/layouts/mechaniki-live.php` — общая оболочка без HostCMS API, получает `$page` и вызывает `$page->execute()`.
 - `public/assets/mechaniki/production.css`, `production.js`, `site-config.js` — текущий визуальный слой и браузерное поведение; настройка отправки намеренно выключена.
 - `sites/mechaniki/pages/*.html` — 56 материалов для `Documents`, включая услуги и симптомы.
 - `sites/mechaniki/activate.php` — одноразовый CLI import/activation с проверкой конкретного host; регистрирует layout, Documents и Structure для целевого сайта. Скрипт не является Core migration.
