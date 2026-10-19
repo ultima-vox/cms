@@ -16,7 +16,11 @@ output = args.output.resolve()
 prefix = 'app/' if args.webroot else ''
 if not (root / 'vendor/autoload.php').is_file():
     raise SystemExit('Run composer install --no-dev --classmap-authoritative first.')
-folders = ('core', 'modules', 'templates', 'public', 'database', 'installer', 'deploy', 'vendor', 'bin')
+folders = ('core', 'modules', 'templates', 'public', 'database', 'installer', 'deploy', 'vendor', 'bin', 'sites/mechaniki')
+# Source-only staging package: do not include credentials, archives or runtime data.
+site_root = root / 'sites/mechaniki'
+if any(p.suffix not in ('.php', '.html', '.json', '.md') for p in site_root.rglob('*') if p.is_file()):
+    raise SystemExit('Unexpected file type in sites/mechaniki packaging.')
 files = ('composer.json', 'composer.lock', '.env.example', 'README.md', 'docs/MVP.md', 'docs/UPDATES.md', 'docs/database-drivers.md', 'docs/architecture/hostcms-roadmap.md', 'docs/architecture/infrastructure-scaling.md')
 with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
     for folder in folders:
