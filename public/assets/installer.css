@@ -244,3 +244,5 @@ body {
     opacity: .5;
     cursor: not-allowed;
 }
+
+.installer-form select { width:100%; min-height:44px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:inherit; font:inherit; }

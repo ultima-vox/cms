@@ -65,8 +65,8 @@ final class NodeModuleBindingRepository
             JOIN nodes n ON n.id = b.node_id
             WHERE n.site_id = :site_id
               AND b.module_code = :module_code
-              AND b.binding_code = :binding_code
-              AND b.target_key = :target_key
+              AND binding_code = :binding_code
+              AND target_key = :target_key
             ORDER BY b.node_id
             SQL
         );
@@ -102,13 +102,11 @@ final class NodeModuleBindingRepository
         try {
             $delete = $this->db->prepare(
                 <<<'SQL'
-                DELETE FROM node_module_bindings b
-                USING nodes n
-                WHERE b.node_id = n.id
-                  AND n.site_id = :site_id
-                  AND b.module_code = :module_code
-                  AND b.binding_code = :binding_code
-                  AND b.target_key = :target_key
+                DELETE FROM node_module_bindings
+                WHERE node_id IN (SELECT id FROM nodes WHERE site_id = :site_id)
+                  AND module_code = :module_code
+                  AND binding_code = :binding_code
+                  AND target_key = :target_key
                 SQL
             );
             $delete->execute([
@@ -126,11 +124,8 @@ final class NodeModuleBindingRepository
                     ) VALUES (
                         :node_id, :module_code, :binding_code, :target_key, CURRENT_TIMESTAMP
                     )
-                    ON CONFLICT (node_id, module_code, binding_code)
-                    DO UPDATE SET
-                        target_key = EXCLUDED.target_key,
-                        updated_at = CURRENT_TIMESTAMP
-                    SQL
+
+                    SQL . \Core\Database\SqlDialect::upsert($this->db, ['node_id', 'module_code', 'binding_code'], ['target_key', 'updated_at'])
                 );
 
                 foreach ($nodeIds as $nodeId) {

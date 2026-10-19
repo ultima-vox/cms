@@ -23,13 +23,15 @@ final class Database
         }
 
         $host = self::env('DB_HOST');
-        $port = self::env('DB_PORT', '5432');
+        $driver = self::env('DB_DRIVER', 'pgsql');
+        if (!in_array($driver, ['pgsql', 'mysql'], true)) throw new RuntimeException('DB_DRIVER: pgsql или mysql (legacy).');
+        $port = self::env('DB_PORT', $driver === 'mysql' ? '3306' : '5432');
         $database = self::env('DB_NAME');
         $user = self::env('DB_USER');
         $password = self::env('DB_PASS', '');
 
         $dsn = sprintf(
-            'pgsql:host=%s;port=%s;dbname=%s',
+            $driver . ':host=%s;port=%s;dbname=%s' . ($driver === 'mysql' ? ';charset=utf8mb4' : ''),
             $host,
             $port,
             $database,
@@ -38,11 +40,13 @@ final class Database
         $options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_EMULATE_PREPARES => $driver === 'mysql',
         ];
 
         try {
+            if ($driver === 'mysql') $options[PDO::MYSQL_ATTR_FOUND_ROWS] = true;
             self::$instance = new PDO($dsn, $user, $password, $options);
+            if ($driver === 'mysql') self::$instance->exec("SET time_zone = '+00:00'");
         } catch (PDOException $exception) {
             error_log($exception->getMessage());
 

@@ -22,8 +22,26 @@ final readonly class ModulePackageLifecycle
         $this->manifestReader = new ModuleManifestReader();
     }
 
+    private function assertDatabaseCompatibility(string $archivePath): void
+    {
+        if (!\Core\Database\SqlDialect::mysql($this->db)) return;
+        $zip = new ZipArchive();
+        if ($zip->open($archivePath, ZipArchive::RDONLY) !== true) throw new RuntimeException('Invalid module ZIP.');
+        $hasSql = false; $hasLegacy = false;
+        try {
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $name = $zip->getNameIndex($i);
+                if (!is_string($name) || !str_starts_with($name, 'migrations/') || !str_ends_with($name, '.sql')) continue;
+                $hasSql = true;
+                if (str_starts_with($name, 'migrations/mysql/')) $hasLegacy = true;
+            }
+        } finally { $zip->close(); }
+        if ($hasSql && !$hasLegacy) throw new RuntimeException('Module package does not provide MySQL/MariaDB migrations. No files installed.');
+    }
+
     public function install(string $archivePath): ModuleManifest
     {
+        $this->assertDatabaseCompatibility($archivePath);
         $checksum = $this->packageChecksum($archivePath);
 
         // Fail before touching the filesystem if Core migrations are incomplete.
@@ -43,6 +61,7 @@ final readonly class ModulePackageLifecycle
 
     public function update(string $archivePath): ModuleManifest
     {
+        $this->assertDatabaseCompatibility($archivePath);
         $incoming = $this->inspectPackageManifest($archivePath);
         $current = $this->inventory->find($incoming->code);
         if ($current === null || $current['source'] !== 'package') {

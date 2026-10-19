@@ -16,13 +16,13 @@ final readonly class LayoutRepository
     public function forSite(int $siteId): self { return new self($this->db, $siteId); }
     public function all(): array
     {
-        $q = $this->db->prepare('SELECT l.*, COUNT(n.id)::int AS node_count FROM layouts l LEFT JOIN nodes n ON n.layout_id = l.id AND n.site_id = l.site_id WHERE l.site_id = :site GROUP BY l.id ORDER BY l.name, l.id');
+        $q = $this->db->prepare('SELECT l.*, (SELECT COUNT(*) FROM nodes n WHERE n.layout_id=l.id AND n.site_id=l.site_id) AS node_count FROM layouts l WHERE l.site_id = :site ORDER BY l.name, l.id');
         $q->execute(['site' => $this->siteId]);
         return $q->fetchAll(PDO::FETCH_ASSOC);
     }
     public function find(int $id): ?array
     {
-        $q = $this->db->prepare('SELECT l.*, COUNT(n.id)::int AS node_count FROM layouts l LEFT JOIN nodes n ON n.layout_id = l.id AND n.site_id = l.site_id WHERE l.site_id = :site AND l.id = :id GROUP BY l.id');
+        $q = $this->db->prepare('SELECT l.*, (SELECT COUNT(*) FROM nodes n WHERE n.layout_id=l.id AND n.site_id=l.site_id) AS node_count FROM layouts l WHERE l.site_id = :site AND l.id = :id');
         $q->execute(['site' => $this->siteId, 'id' => $id]);
         return ($row = $q->fetch(PDO::FETCH_ASSOC)) !== false ? $row : null;
     }
@@ -43,6 +43,22 @@ final readonly class LayoutRepository
     public function ancestry(int $id, int $maximumDepth): array
     {
         if ($id < 1 || $maximumDepth < 1) throw new RuntimeException('Invalid layout hierarchy request.');
+        if (\Core\Database\SqlDialect::mysql($this->db)) {
+            $q = $this->db->prepare(<<<'SQL'
+                WITH RECURSIVE layout_chain AS (
+                    SELECT l.id,l.parent_id,l.name,l.template_path,l.site_id,
+                           CAST(CONCAT(',',l.id,',') AS CHAR(4096)) AS visited,FALSE AS cycle,1 AS depth
+                    FROM layouts l WHERE l.id=:id AND l.site_id=:site
+                    UNION ALL
+                    SELECT p.id,p.parent_id,p.name,p.template_path,p.site_id,
+                           CONCAT(c.visited,p.id,','),LOCATE(CONCAT(',',p.id,','),c.visited)>0,c.depth+1
+                    FROM layouts p JOIN layout_chain c ON p.id=c.parent_id AND p.site_id=c.site_id
+                    WHERE c.cycle=FALSE AND c.depth<=:depth
+                ) SELECT id,parent_id,name,template_path,cycle,depth FROM layout_chain ORDER BY depth DESC
+                SQL);
+            $q->execute(['id' => $id, 'site' => $this->siteId, 'depth' => min(128, $maximumDepth)]);
+            return $q->fetchAll(PDO::FETCH_ASSOC);
+        }
         $q = $this->db->prepare(<<<'SQL'
             WITH RECURSIVE layout_chain AS (
                 SELECT l.id, l.parent_id, l.name, l.template_path, l.site_id, ARRAY[l.id]::bigint[] AS visited, FALSE AS cycle, 1 AS depth
@@ -59,9 +75,9 @@ final readonly class LayoutRepository
     public function create(string $name, string $templatePath, ?string $description, ?int $folderId = null): int
     {
         (new FolderRepository($this->db, $this->siteId, 'layouts'))->assertFolder($folderId);
-        $q = $this->db->prepare('INSERT INTO layouts(site_id, code, name, template_path, description, folder_id) VALUES (:site, :code, :name, :path, :description, :folder) RETURNING id');
+        $q = $this->db->prepare('INSERT INTO layouts(site_id, code, name, template_path, description, folder_id) VALUES (:site, :code, :name, :path, :description, :folder) ' . \Core\Database\SqlDialect::returningId($this->db));
         $q->execute(['site' => $this->siteId, 'code' => $this->codeFromTemplatePath($templatePath), 'name' => $name, 'path' => $templatePath, 'description' => $description, 'folder' => $folderId]);
-        return (int) $q->fetchColumn();
+        return \Core\Database\SqlDialect::insertedId($this->db, $q);
     }
     public function update(int $id, string $name, ?string $description, ?int $folderId = null): void
     {

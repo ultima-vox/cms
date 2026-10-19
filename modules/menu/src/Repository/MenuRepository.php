@@ -66,7 +66,7 @@ final readonly class MenuRepository
                 is_active
             FROM menu_items
             WHERE menu_id = :menu_id
-            ORDER BY parent_id NULLS FIRST, sorting, id
+            ORDER BY (parent_id IS NOT NULL), parent_id, sorting, id
             SQL
         );
         $statement->execute(['menu_id' => $menuId]);

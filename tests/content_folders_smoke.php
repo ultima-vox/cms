@@ -24,7 +24,8 @@ $reject = static function (callable $action) use ($db): void {
 };
 $db->beginTransaction();
 try {
-    $siteB = (int) $db->query("INSERT INTO sites(code, name) VALUES('folders-unit-b', 'Folders B') RETURNING id")->fetchColumn();
+    $insert = $db->query("INSERT INTO sites(code, name) VALUES('folders-unit-b', 'Folders B')" . \Core\Database\SqlDialect::returningId($db));
+    $siteB = \Core\Database\SqlDialect::insertedId($db, $insert);
     $a = new FolderRepository($db, 1, 'documents'); $b = new FolderRepository($db, $siteB, 'documents');
     $root = $a->save(null, 'Папка', null); $child = $a->save(null, 'Вложенная', $root);
     $other = $b->save(null, 'Папка', null);

@@ -27,6 +27,9 @@ final readonly class ModulePackagePurger
             ));
         }
 
+        if (\Core\Database\SqlDialect::mysql($this->db)) {
+            throw new RuntimeException('Destructive module purge is unavailable in legacy mode. Disable/remove preserves data; export a database backup before manual deletion.');
+        }
         $inventory = new ModulePackageInventoryRepository($this->db);
         $record = $inventory->find($moduleCode);
         if ($record === null || $record['source'] !== 'package') {

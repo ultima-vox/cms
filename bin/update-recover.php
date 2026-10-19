@@ -20,6 +20,27 @@ $journal = json_decode((string) file_get_contents($backup . '/journal.json'), tr
 $maintenance = $directory . '/maintenance.json';
 $active = json_decode((string) @file_get_contents($maintenance), true);
 if (($active['backup'] ?? null) !== $name) throw new RuntimeException('Recovery is only allowed for the interrupted active update.');
+if (isset($journal['mysql_snapshot_sha256'], $journal['db_commit_token'])) {
+    require $root . '/vendor/autoload.php';
+    Dotenv\Dotenv::createImmutable($root)->safeLoad();
+    $db = Core\Database::connection();
+    if (!Core\Database\SqlDialect::mysql($db)) throw new RuntimeException('Recovery database driver mismatch.');
+    Core\Database\SqlDialect::lock($db, 'ultima_vox_cms_update');
+    $committed = false;
+    if (Core\Database\SqlDialect::tableExists($db, 'update_commits')) {
+        $q = $db->prepare('SELECT 1 FROM update_commits WHERE token=:token');
+        $q->execute(['token' => $journal['db_commit_token']]);
+        $committed = $q->fetchColumn() !== false;
+    }
+    if ($committed) {
+        $journal['status'] = 'complete';
+        file_put_contents($backup . '/journal.json', json_encode($journal, JSON_THROW_ON_ERROR));
+        if (!unlink($maintenance)) throw new RuntimeException('Cannot exit maintenance.');
+        echo "MySQL update committed: new files retained. Restart PHP to clear opcode cache.\n";
+        exit;
+    }
+    Core\Database\MysqlSnapshot::restore($db, $backup . '/database.jsonl', $journal['mysql_snapshot_sha256']);
+}
 if (($journal['db_transaction'] ?? null) !== null) {
     // PostgreSQL 16+ retains the authoritative COMMIT outcome. Never guess it from files.
     $transaction = $journal['db_transaction'];

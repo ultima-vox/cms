@@ -89,7 +89,7 @@ jobs:
       - name: Module manifest smoke test
         run: |
           php tests/module_manifest_smoke.php
-          php bin/console modules:list | grep $'^infosystem\t1.1.0\tInfosystems$'
+          php bin/console modules:list | grep $'^infosystem\t1.2.0\tInfosystems$'
 
       - name: Apply migrations
         run: php bin/console migrate
@@ -140,6 +140,9 @@ jobs:
       - name: Sync extension metadata
         run: php bin/console extensions:sync
 
+      - name: Portable database repository contract
+        run: php tests/database_driver_smoke.php
+
       - name: Site-scoped content folders
         run: php tests/content_folders_smoke.php
 
@@ -148,9 +151,9 @@ jobs:
 
       - name: Module lifecycle smoke test
         run: |
-          php bin/console extensions:list | grep $'^infosystem\t1.1.0\tenabled\t\^1.0\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.2.0\tenabled\t\^1.0\tInfosystems$'
           php tests/module_lifecycle_smoke.php
-          php bin/console extensions:list | grep $'^infosystem\t1.1.0\tenabled\t\^1.0\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.2.0\tenabled\t\^1.0\tInfosystems$'
 
       - name: Extension permission sync smoke test
         run: |
@@ -391,3 +394,87 @@ jobs:
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/layouts)" = "302"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/infosystems)" = "302"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' 'http://127.0.0.1:8080/admin/infosystems/1/items?q=Tank')" = "302"
+
+  legacy-database:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: mysql:8.0
+            client: mysql
+            health: mysqladmin ping -h127.0.0.1 -pcms
+          - image: mysql:8.4
+            client: mysql
+            health: mysqladmin ping -h127.0.0.1 -pcms
+          - image: mariadb:10.11
+            client: mariadb
+            health: mariadb-admin ping -h127.0.0.1 -pcms
+          - image: mariadb:11.4
+            client: mariadb
+            health: mariadb-admin ping -h127.0.0.1 -pcms
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          MYSQL_ROOT_PASSWORD: cms
+          MYSQL_DATABASE: cms_legacy
+          MYSQL_USER: cms
+          MYSQL_PASSWORD: cms
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="${{ matrix.health }}"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      APP_ENV: testing
+      APP_URL: http://127.0.0.1:8089
+      DB_DRIVER: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: cms_legacy
+      DB_USER: cms
+      DB_PASS: cms
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, dom, mbstring, zip
+          coverage: none
+      - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
+      - name: Legacy schema, metadata and repository contracts
+        run: |
+          php bin/console migrate
+          php bin/console migrate | grep 'No pending migrations.'
+          php bin/console modules:migrate --all
+          php bin/console modules:migrate --all | grep 'No pending migrations for enabled modules.'
+          php bin/console extensions:sync
+          php bin/console health
+          php tests/database_driver_smoke.php
+          php tests/content_folders_smoke.php
+          php tests/mysql_update_smoke.php
+          php tests/mysql_migration_failure_smoke.php
+      - name: Prepare dedicated HTTP database
+        env:
+          MYSQL_PWD: cms
+        run: |
+          docker exec -e MYSQL_PWD=cms "${{ job.services.database.id }}" ${{ matrix.client }} -uroot -e "CREATE DATABASE cms_legacy_http CHARACTER SET utf8mb4 COLLATE utf8mb4_bin; GRANT ALL ON cms_legacy_http.* TO 'cms'@'%';"
+          python3 tools/package_mvp.py /tmp/legacy-webroot.zip --webroot
+          mkdir /tmp/legacy-webroot
+          unzip -q /tmp/legacy-webroot.zip -d /tmp/legacy-webroot
+      - name: Fresh shared-hosting installation and editor journey
+        run: |
+          env -u APP_ENV -u APP_URL -u DB_DRIVER -u DB_HOST -u DB_PORT -u DB_NAME -u DB_USER -u DB_PASS php -S 127.0.0.1:8089 -t /tmp/legacy-webroot /tmp/legacy-webroot/index.php > /tmp/legacy-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          for n in $(seq 1 30); do
+            if curl --silent --output /dev/null http://127.0.0.1:8089/install; then break; fi
+            sleep 1
+          done
+          python3 tests/legacy_http_smoke.py
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: legacy-diagnostics-${{ strategy.job-index }}
+          path: /tmp/legacy-http.log
+          if-no-files-found: ignore

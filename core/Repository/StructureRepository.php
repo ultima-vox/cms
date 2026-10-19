@@ -41,7 +41,7 @@ final class StructureRepository
             FROM nodes n
             LEFT JOIN layouts l ON l.id = n.layout_id
             WHERE n.site_id = :site_id
-            ORDER BY n.parent_id NULLS FIRST, n.sorting, n.name, n.id
+            ORDER BY (n.parent_id IS NOT NULL), n.parent_id, n.sorting, n.name, n.id
             SQL
         );
         $statement->execute(['site_id' => $this->siteId]);
@@ -106,12 +106,11 @@ final class StructureRepository
                 page_type, page_config
             ) VALUES (
                 :site_id, :parent_id, :layout_id, :name, :slug, :path, :title,
-                :meta_description, :status, CAST(:is_active AS BOOLEAN), :sorting, :publish_at,
-                :page_type, CAST(:page_config AS jsonb)
+                :meta_description, :status, :is_active, :sorting, :publish_at,
+                :page_type, :page_config
             )
-            RETURNING id
-            SQL
-        );
+
+            SQL . \Core\Database\SqlDialect::returningId($this->db));
 
         $parameters = [
             'site_id' => $this->siteId,
@@ -123,7 +122,7 @@ final class StructureRepository
             'title' => $data['title'],
             'meta_description' => $data['meta_description'],
             'status' => $data['status'],
-            'is_active' => (bool) $data['is_active'] ? 'true' : 'false',
+            'is_active' => (int) (bool) $data['is_active'],
             'sorting' => $data['sorting'],
             'publish_at' => $data['publish_at'],
         ];
@@ -133,7 +132,7 @@ final class StructureRepository
 
         $statement->execute($parameters);
 
-        return (int) $statement->fetchColumn();
+        return \Core\Database\SqlDialect::insertedId($this->db, $statement);
     }
 
     /** @param array<string, mixed> $data */
@@ -165,7 +164,7 @@ final class StructureRepository
                     title = :title,
                     meta_description = :meta_description,
                     status = :status,
-                    is_active = CAST(:is_active AS BOOLEAN),
+                    is_active = :is_active,
                     sorting = :sorting,
                     publish_at = :publish_at,
                     updated_at = CURRENT_TIMESTAMP
@@ -184,7 +183,7 @@ final class StructureRepository
                 'title' => $data['title'],
                 'meta_description' => $data['meta_description'],
                 'status' => $data['status'],
-                'is_active' => (bool) $data['is_active'] ? 'true' : 'false',
+                'is_active' => (int) (bool) $data['is_active'],
                 'sorting' => $data['sorting'],
                 'publish_at' => $data['publish_at'],
             ]);
@@ -288,7 +287,7 @@ final class StructureRepository
         $statement = $this->db->prepare(
             <<<'SQL'
             UPDATE nodes
-            SET path = :new_prefix || substring(path FROM :offset),
+            SET path = CONCAT(:new_prefix, substring(path FROM :offset)),
                 updated_at = CURRENT_TIMESTAMP
             WHERE site_id = :site_id
               AND id <> :id

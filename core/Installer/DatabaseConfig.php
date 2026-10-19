@@ -14,12 +14,14 @@ final readonly class DatabaseConfig
         public string $database,
         public string $user,
         public string $password,
+        public string $driver = 'pgsql',
     ) {
+        if (!in_array($driver, ['pgsql', 'mysql'], true)) throw new RuntimeException('Выберите PostgreSQL или MySQL/MariaDB (legacy).');
         if (!$this->validHost($host)) {
-            throw new RuntimeException('Некорректный адрес PostgreSQL-сервера.');
+            throw new RuntimeException('Некорректный адрес сервера БД.');
         }
         if ($port < 1 || $port > 65535) {
-            throw new RuntimeException('Порт PostgreSQL должен быть в диапазоне 1–65535.');
+            throw new RuntimeException('Порт БД должен быть в диапазоне 1–65535.');
         }
         if (!$this->validIdentifier($database)) {
             throw new RuntimeException('Некорректное имя базы данных.');
@@ -35,9 +37,12 @@ final readonly class DatabaseConfig
     /** @param array<string, mixed> $input */
     public static function fromInput(array $input): self
     {
+        foreach (['host', 'database', 'user', 'password', 'driver'] as $key) {
+            if (isset($input[$key]) && !is_string($input[$key])) throw new RuntimeException('Некорректные параметры БД.');
+        }
         $port = filter_var($input['port'] ?? null, FILTER_VALIDATE_INT);
         if (!is_int($port)) {
-            throw new RuntimeException('Некорректный порт PostgreSQL.');
+            throw new RuntimeException('Некорректный порт БД.');
         }
 
         return new self(
@@ -46,6 +51,7 @@ final readonly class DatabaseConfig
             database: trim((string) ($input['database'] ?? '')),
             user: trim((string) ($input['user'] ?? '')),
             password: (string) ($input['password'] ?? ''),
+            driver: is_string($input['driver'] ?? null) ? $input['driver'] : 'pgsql',
         );
     }
 
@@ -58,6 +64,7 @@ final readonly class DatabaseConfig
             'database' => $this->database,
             'user' => $this->user,
             'password' => $this->password,
+            'driver' => $this->driver,
         ];
     }
 
@@ -70,6 +77,7 @@ final readonly class DatabaseConfig
             database: (string) ($value['database'] ?? ''),
             user: (string) ($value['user'] ?? ''),
             password: (string) ($value['password'] ?? ''),
+            driver: (string) ($value['driver'] ?? 'pgsql'),
         );
     }
 

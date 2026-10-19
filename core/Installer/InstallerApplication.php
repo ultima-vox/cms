@@ -72,6 +72,7 @@ final readonly class InstallerApplication
             'csrfToken' => Csrf::token(),
             'error' => $error,
             'values' => [
+                'driver' => is_array($stored) ? (string) ($stored['driver'] ?? 'pgsql') : 'pgsql',
                 'host' => is_array($stored) ? (string) ($stored['host'] ?? '127.0.0.1') : '127.0.0.1',
                 'port' => is_array($stored) ? (string) ($stored['port'] ?? '5432') : '5432',
                 'database' => is_array($stored) ? (string) ($stored['database'] ?? '') : '',

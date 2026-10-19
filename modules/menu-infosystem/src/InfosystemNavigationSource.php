@@ -193,7 +193,7 @@ final readonly class InfosystemNavigationSource implements NavigationSourceInter
             )
             SELECT id, parent_id, name, path, sorting, depth
             FROM visible_groups
-            ORDER BY parent_id NULLS FIRST, sorting, name, id
+            ORDER BY (parent_id IS NOT NULL), parent_id, sorting, name, id
             SQL
         );
         $statement->bindValue(':infosystem_id', $infosystemId, PDO::PARAM_INT);

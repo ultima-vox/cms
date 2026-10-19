@@ -24,18 +24,20 @@ final class LoginAttemptRepository
                     SELECT COUNT(*)
                     FROM login_attempts
                     WHERE lower(email) = lower(:email)
-                      AND ip_address = CAST(:ip_address AS inet)
-                      AND attempted_at >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'
+                      AND ip_address = :ip_address
+                      AND attempted_at >= :since_identity
                 ) AS identity_attempts,
                 (
                     SELECT COUNT(*)
                     FROM login_attempts
-                    WHERE ip_address = CAST(:ip_address AS inet)
-                      AND attempted_at >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'
+                    WHERE ip_address = :ip_address
+                      AND attempted_at >= :since_ip
                 ) AS ip_attempts
             SQL
         );
         $statement->execute([
+            'since_identity' => gmdate('Y-m-d H:i:s', time() - 900),
+            'since_ip' => gmdate('Y-m-d H:i:s', time() - 900),
             'email' => $email,
             'ip_address' => $ipAddress,
         ]);
@@ -55,7 +57,7 @@ final class LoginAttemptRepository
         $statement = $this->db->prepare(
             <<<'SQL'
             INSERT INTO login_attempts (email, ip_address)
-            VALUES (:email, CAST(:ip_address AS inet))
+            VALUES (:email, :ip_address)
             SQL
         );
         $statement->execute([
@@ -70,7 +72,7 @@ final class LoginAttemptRepository
             <<<'SQL'
             DELETE FROM login_attempts
             WHERE lower(email) = lower(:email)
-              AND ip_address = CAST(:ip_address AS inet)
+              AND ip_address = :ip_address
             SQL
         );
         $statement->execute([

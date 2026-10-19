@@ -43,7 +43,7 @@ final readonly class PageSelectionRepository
             <<<'SQL'
             UPDATE nodes
             SET page_type = :page_type,
-                page_config = CAST(:page_config AS jsonb),
+                page_config = :page_config,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
               AND site_id = :site_id

@@ -21,12 +21,8 @@ final readonly class ModuleStateRepository
             <<<'SQL'
             INSERT INTO installed_modules (code, name, version, extension_api, is_enabled)
             VALUES (:code, :name, :version, :extension_api, :is_enabled)
-            ON CONFLICT (code) DO UPDATE SET
-                name = EXCLUDED.name,
-                version = EXCLUDED.version,
-                extension_api = EXCLUDED.extension_api,
-                updated_at = CURRENT_TIMESTAMP
-            SQL
+
+            SQL . \Core\Database\SqlDialect::upsert($this->db, ['code'], ['name', 'version', 'extension_api', 'updated_at'])
         );
 
         foreach ($manifests as $manifest) {
@@ -50,7 +46,7 @@ final readonly class ModuleStateRepository
             $statement->execute(['code' => $manifest->code]);
             $row = $statement->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $exception) {
-            if ($exception->getCode() === '42P01') {
+            if (in_array($exception->getCode(), ['42P01', '42S02'], true)) {
                 return $manifest->defaultEnabled;
             }
             throw $exception;
@@ -101,7 +97,7 @@ final readonly class ModuleStateRepository
                 'SELECT code, name, version, extension_api, is_enabled FROM installed_modules ORDER BY code'
             )->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $exception) {
-            if ($exception->getCode() === '42P01') {
+            if (in_array($exception->getCode(), ['42P01', '42S02'], true)) {
                 return [];
             }
             throw $exception;

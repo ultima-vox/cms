@@ -15,7 +15,7 @@ final readonly class PendingExtensionSync
         if ($this->db->query('SELECT 1 FROM extension_sync_jobs LIMIT 1')->fetchColumn() === false) return;
         $this->db->beginTransaction();
         try {
-            $this->db->query("SELECT pg_advisory_xact_lock(hashtext('extension-metadata-sync'))");
+            \Core\Database\SqlDialect::lock($this->db, 'extension-metadata-sync', true);
             if ($this->db->query('SELECT 1 FROM extension_sync_jobs LIMIT 1')->fetchColumn() !== false) {
                 (new ModuleManager($this->db, $this->root))->sync();
                 $this->db->exec('DELETE FROM extension_sync_jobs');

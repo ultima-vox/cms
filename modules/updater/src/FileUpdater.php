@@ -54,6 +54,9 @@ final readonly class FileUpdater
         $opened = false;
         $changed = false;
         $transaction = null;
+        $mysql = $this->db !== null && \Core\Database\SqlDialect::mysql($this->db);
+        $mysqlSnapshot = null;
+        $mysqlDbLock = false;
         $commitAttempted = false;
         $metadata = ['from' => '', 'to' => $offer['version'], 'started_at' => gmdate(DATE_ATOM)];
         try {
@@ -155,8 +158,16 @@ final readonly class FileUpdater
             }
             if ($this->db !== null) {
                 if ($this->db->inTransaction()) throw new RuntimeException('Обновление нельзя запускать внутри другой транзакции.');
-                $this->db->beginTransaction();
-                $transaction = (string) $this->db->query('SELECT pg_current_xact_id()')->fetchColumn();
+                if ($mysql) {
+                    \Core\Database\SqlDialect::lock($this->db, 'ultima_vox_cms_update');
+                    $mysqlDbLock = true;
+                    $mysqlSnapshot = \Core\Database\MysqlSnapshot::create($this->db, $backup . '/database.jsonl');
+                    $metadata['mysql_snapshot_sha256'] = $mysqlSnapshot;
+                    $metadata['db_commit_token'] = bin2hex(random_bytes(16));
+                } else {
+                    $this->db->beginTransaction();
+                    $transaction = (string) $this->db->query('SELECT pg_current_xact_id()')->fetchColumn();
+                }
             }
             $metadata['db_transaction'] = $transaction;
             $this->write($backup . '/journal.json', json_encode($metadata + ['status' => 'prepared', 'files' => $journal], JSON_THROW_ON_ERROR));
@@ -178,8 +189,13 @@ final readonly class FileUpdater
             if ($this->db !== null) {
                 (new MigrationRunner($this->db, $this->root . '/database/migrations'))->migrate();
                 (new ModuleMigrationCoordinator($this->db, $this->root))->migrateEnabled();
+                if ($mysql) $this->db->beginTransaction();
                 (new ModuleManager($this->db, $this->root))->sync();
-                $this->db->exec('INSERT INTO extension_sync_jobs(singleton) VALUES(TRUE) ON CONFLICT(singleton) DO UPDATE SET requested_at = CURRENT_TIMESTAMP');
+                $this->db->exec('INSERT INTO extension_sync_jobs(singleton) VALUES(TRUE)' . \Core\Database\SqlDialect::upsert($this->db, ['singleton'], ['requested_at']));
+                if ($mysql) {
+                    $marker = $this->db->prepare('INSERT INTO update_commits(token) VALUES(:token)');
+                    $marker->execute(['token' => $metadata['db_commit_token']]);
+                }
                 $commitAttempted = true;
                 $this->db->commit();
             }
@@ -194,6 +210,12 @@ final readonly class FileUpdater
                 throw new RuntimeException('Не удалось завершить обновление. Запустите bin/update-recover.php для проверки результата транзакции.', 0, $exception);
             }
             if ($this->db?->inTransaction()) $this->db->rollBack();
+            if ($mysql && $mysqlSnapshot !== null && $changed) {
+                try { \Core\Database\MysqlSnapshot::restore($this->db, $backup . '/database.jsonl', $mysqlSnapshot); }
+                catch (Throwable $restoreError) {
+                    throw new RuntimeException('Не удалось восстановить MySQL. Режим обслуживания сохранён; запустите bin/update-recover.php с этой резервной копией.', 0, $restoreError);
+                }
+            }
             if ($changed) {
                 $rollbackFailed = false;
                 foreach (array_reverse($journal) as $entry) {
@@ -214,6 +236,7 @@ final readonly class FileUpdater
             }
             throw $exception;
         } finally {
+            if ($mysqlDbLock) \Core\Database\SqlDialect::unlock($this->db, 'ultima_vox_cms_update');
             if ($opened) $zip->close();
             if (is_file($zipPath)) unlink($zipPath);
             if (is_resource($requestLock)) { flock($requestLock, LOCK_UN); fclose($requestLock); }

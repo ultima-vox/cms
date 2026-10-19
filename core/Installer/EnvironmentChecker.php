@@ -25,7 +25,7 @@ final readonly class EnvironmentChecker
             ),
         ];
 
-        foreach (['dom', 'json', 'mbstring', 'pdo', 'pdo_pgsql'] as $extension) {
+        foreach (['dom', 'json', 'mbstring', 'pdo'] as $extension) {
             $checks[] = $this->check(
                 'ext-' . $extension,
                 'PHP extension: ' . $extension,
@@ -34,6 +34,10 @@ final readonly class EnvironmentChecker
                 extension_loaded($extension) ? 'доступно' : 'не загружено',
             );
         }
+
+        $checks[] = $this->check('database-driver', 'PDO PostgreSQL / MySQL',
+            extension_loaded('pdo_pgsql') || extension_loaded('pdo_mysql'), true,
+            'PostgreSQL — основной; MySQL/MariaDB — legacy. Нужен драйвер выбранной СУБД.');
 
         $checks[] = $this->check(
             'ext-zip',

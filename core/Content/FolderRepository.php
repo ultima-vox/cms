@@ -55,17 +55,19 @@ final readonly class FolderRepository
         $this->assertFolder($parent);
         if ($id !== null) $this->assertFolder($id);
         try {
-            $q = $this->db->prepare($id === null
-                ? 'INSERT INTO content_folders(site_id, scope, parent_id, name) VALUES (:site, :scope, :parent, :name) RETURNING id'
-                : 'UPDATE content_folders SET parent_id = :parent, name = :name, updated_at = CURRENT_TIMESTAMP WHERE site_id = :site AND scope = :scope AND id = :id RETURNING id');
+            $q = $this->db->prepare(($id === null
+                ? 'INSERT INTO content_folders(site_id, scope, parent_id, name) VALUES (:site, :scope, :parent, :name)'
+                : 'UPDATE content_folders SET parent_id = :parent, name = :name, updated_at = CURRENT_TIMESTAMP WHERE site_id = :site AND scope = :scope AND id = :id') . \Core\Database\SqlDialect::returningId($this->db));
             $data = ['site' => $this->siteId, 'scope' => $this->scope, 'parent' => $parent, 'name' => $name];
             if ($id !== null) $data['id'] = $id;
             $q->execute($data);
-            $saved = $q->fetchColumn();
+            $saved = \Core\Database\SqlDialect::mysql($this->db)
+                ? ($q->rowCount() === 1 ? ($id ?? (int) $this->db->lastInsertId()) : false)
+                : $q->fetchColumn();
             if ($saved === false) throw new RuntimeException('Папка не найдена.');
             return (int) $saved;
         } catch (PDOException $e) {
-            throw new RuntimeException($e->getCode() === '23505' ? 'Папка с таким названием уже существует.' : 'Не удалось переместить папку: проверьте родителя и отсутствие цикла.', 0, $e);
+            throw new RuntimeException(in_array($e->getCode(), ['23505', '23000'], true) && (($e->errorInfo[1] ?? 0) === 1062 || $e->getCode() === '23505') ? 'Папка с таким названием уже существует.' : 'Не удалось переместить папку: проверьте родителя и отсутствие цикла.', 0, $e);
         }
     }
     public function delete(int $id): void
@@ -75,7 +77,7 @@ final readonly class FolderRepository
             $q->execute(['site' => $this->siteId, 'scope' => $this->scope, 'id' => $id]);
             if ($q->rowCount() !== 1) throw new RuntimeException('Папка не найдена.');
         } catch (PDOException $e) {
-            if ($e->getCode() !== '23503') throw $e;
+            if ($e->getCode() !== '23503' && !in_array($e->errorInfo[1] ?? 0, [1451, 1452], true)) throw $e;
             throw new RuntimeException('Сначала переместите содержимое и дочерние папки. Удалить можно только пустую папку.');
         }
     }
