@@ -1,0 +1,37 @@
+{
+  "code": "mechaniki_reviews",
+  "name": "Отзывы",
+  "schema_version": 1,
+  "records": [
+    {
+      "slug": "review-001",
+      "name": "Сергей",
+      "text": "Отличный автосервис. Особая благодарность мастеру Александру. Обслуживаюсь у него не первый год. Всегда тщательно подходит к своей работе. Всё сделает до мелочей. Очень щепетильный. Советую.",
+      "date": "2026-09-22",
+      "rating": 5,
+      "source_url": "https://yandex.ru/maps/org/mekhaniki/4943088976/reviews/",
+      "verification": "source-link-present",
+      "sorting": 10
+    },
+    {
+      "slug": "review-002",
+      "name": "Олег",
+      "text": "Заезжал поменять масло. Александр сделал всё профессионально и аккуратно. Рекомендую.",
+      "date": "2025-09-25",
+      "rating": 5,
+      "source_url": "https://yandex.ru/maps/org/mekhaniki/4943088976/reviews/",
+      "verification": "source-link-present",
+      "sorting": 20
+    },
+    {
+      "slug": "review-003",
+      "name": "rewired",
+      "text": "Отличный сервис, переварили гофру на Opel Astra, заменили теплообменник, задние тормозные диски и все за пол дня. И главное не дорого! Если заказать у них запчасти, привезут на следующий день. Буду обслуживаться только тут, и всем рекомендую.",
+      "date": "2023-11-20",
+      "rating": 5,
+      "source_url": "https://yandex.ru/maps/org/mekhaniki/4943088976/reviews/",
+      "verification": "source-link-present",
+      "sorting": 30
+    }
+  ]
+}
