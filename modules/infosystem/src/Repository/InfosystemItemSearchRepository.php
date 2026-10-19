@@ -43,7 +43,9 @@ final class InfosystemItemSearchRepository
             $where[] = "(LOWER(i.name) LIKE LOWER(:query) ESCAPE '!' OR LOWER(i.slug) LIKE LOWER(:query) ESCAPE '!' OR LOWER(i.path) LIKE LOWER(:query) ESCAPE '!')";
             $params['query'] = '%' . $this->escapeLike($query) . '%';
         }
-        if ($groupId !== null) {
+        if ($groupId === 0) {
+            $where[] = 'i.group_id IS NULL';
+        } elseif ($groupId !== null) {
             $where[] = 'i.group_id = :group_id';
             $params['group_id'] = $groupId;
         }
