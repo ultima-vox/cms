@@ -15,6 +15,7 @@ use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
 $root = dirname(__DIR__, 2);
 require_once $root . '/vendor/autoload.php';
 require_once $root . '/modules/infosystem/autoload.php';
+require_once $root . '/modules/documents/autoload.php';
 Dotenv::createImmutable($root)->safeLoad();
 
 $apply = in_array('--apply', $argv, true);
@@ -300,6 +301,54 @@ try {
         $pageSelections->assign($nodeId, $siteId, $pageType, $configuration);
         $bind->execute(['node_id' => $nodeId, 'target_key' => $code]);
         $bindings[] = $path;
+    }
+
+    // Replace home HTML snapshots with static typed slots. Only a pristine
+    // imported document may be converted implicitly; preserve editor changes.
+    $documents = new \UltimaVox\Modules\Documents\Repository\DocumentRepository($db);
+    $home = $documents->findActiveByCode($siteId, 'mechaniki-home');
+    if ($home === null) {
+        throw new RuntimeException('Missing Mechaniki homepage document.');
+    }
+    $homeId = (int) $home['id'];
+    $published = $documents->currentPublishedVersion($homeId);
+    if ($published === null) {
+        throw new RuntimeException('Mechaniki homepage is not published.');
+    }
+    $current = (string) $published['content'];
+    $original = file_get_contents(__DIR__ . '/pages/home.html');
+    if (!is_string($original)) {
+        throw new RuntimeException('Missing packaged homepage source.');
+    }
+    $original = preg_replace('/<form\b/i', '<form inert aria-disabled="true"', $original);
+    if (!is_string($original)) {
+        throw new RuntimeException('Unable to prepare packaged homepage.');
+    }
+    $slotNames = ['symptoms', 'services', 'prices', 'works', 'reviews', 'faq'];
+    if ($current === $original) {
+        $replacements = 0;
+        $withSlots = preg_replace_callback(
+            '/<section\b[^>]*\bid="(symptoms|services|prices|works|reviews|faq)"[^>]*>[\s\S]*?<\/section>/i',
+            static function (array $match): string {
+                return '<div id="uv-slot-' . $match[1] . '"></div>';
+            },
+            $current,
+            -1,
+            $replacements,
+        );
+        if (!is_string($withSlots) || $replacements !== count($slotNames)) {
+            throw new RuntimeException('Unexpected homepage structure, refusing partial conversion.');
+        }
+        $versionId = $documents->createDraftVersion($homeId, $withSlots);
+        $documents->publishVersion($homeId, $versionId);
+    } else {
+        foreach ($slotNames as $slotName) {
+            if (!str_contains($current, '<div id="uv-slot-' . $slotName . '"></div>')) {
+                throw new RuntimeException(
+                    'Homepage was edited outside the imported version; migrate slots manually before activation.'
+                );
+            }
+        }
     }
 
     $db->commit();
