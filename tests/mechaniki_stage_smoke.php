@@ -61,6 +61,7 @@ if ((new SiteRepository($db))->findActiveByHost('ru.rewired.ru') !== null) {
 }
 
 $siteId = null;
+$moduleEnabled = $db->query("SELECT is_enabled FROM installed_modules WHERE code = 'mechaniki'")->fetchColumn();
 try {
     $insert = $db->query(
         "INSERT INTO sites (code, name) VALUES ('mechaniki-stage-smoke', 'Mechaniki smoke') RETURNING id"
@@ -138,9 +139,78 @@ try {
     if ((int) $versions->fetchColumn() !== 56) {
         throw new RuntimeException('Repeat staging activation created duplicate versions.');
     }
+
+    // The site-specific view package must be explicitly enabled before
+    // activating Infosystem-backed routes; other sites remain isolated.
+    $db->exec("UPDATE installed_modules SET is_enabled = TRUE WHERE code = 'mechaniki'");
+    $infosystemsCommand = escapeshellarg(PHP_BINARY)
+        . ' ' . escapeshellarg($root . '/sites/mechaniki/activate-infosystems.php') . ' --apply';
+    $output = [];
+    exec($infosystemsCommand . ' 2>&1', $output, $code);
+    if ($code !== 0) {
+        throw new RuntimeException('Mechaniki Infosystem activation failed: ' . implode("\n", $output));
+    }
+
+    $systemQuery = $db->prepare(
+        'SELECT COUNT(*) FROM infosystems WHERE site_id = :site_id AND code LIKE :prefix'
+    );
+    $systemQuery->execute(['site_id' => $siteId, 'prefix' => 'mechaniki_%']);
+    if ((int) $systemQuery->fetchColumn() !== 6) {
+        throw new RuntimeException('Mechaniki did not create all six Infosystems.');
+    }
+
+    $itemQuery = $db->prepare(
+        <<<'SQL'
+        SELECT COUNT(*)
+        FROM infosystem_items i
+        JOIN infosystems s ON s.id = i.infosystem_id
+        WHERE s.site_id = :site_id AND s.code LIKE 'mechaniki_%'
+        SQL
+    );
+    $itemQuery->execute(['site_id' => $siteId]);
+    if ((int) $itemQuery->fetchColumn() !== 103) {
+        throw new RuntimeException('Mechaniki Infosystem items are incomplete.');
+    }
+
+    $nodeQuery = $db->prepare(
+        <<<'SQL'
+        SELECT COUNT(*)
+        FROM nodes
+        WHERE site_id = :site_id
+          AND page_type IN ('infosystem.list', 'infosystem.item')
+        SQL
+    );
+    $nodeQuery->execute(['site_id' => $siteId]);
+    if ((int) $nodeQuery->fetchColumn() !== 49) {
+        throw new RuntimeException('Mechaniki dynamic Structure page bindings are incomplete.');
+    }
+
+    $detail = $db->prepare('SELECT page_type, page_config FROM nodes WHERE site_id = :site_id AND path = :path');
+    $detail->execute(['site_id' => $siteId, 'path' => '/services/podveska']);
+    $itemNode = $detail->fetch(PDO::FETCH_ASSOC);
+    if (!is_array($itemNode) || $itemNode['page_type'] !== 'infosystem.item') {
+        throw new RuntimeException('Suspension page is not an Infosystem item.');
+    }
+    $selection = json_decode((string) $itemNode['page_config'], true, flags: JSON_THROW_ON_ERROR);
+    if (($selection['item_path'] ?? null) !== '/podveska'
+        || ($selection['view'] ?? null) !== 'mechaniki.service.item') {
+        throw new RuntimeException('Suspension item type configuration is invalid.');
+    }
+
+    $output = [];
+    exec($infosystemsCommand . ' 2>&1', $output, $code);
+    if ($code !== 0) {
+        throw new RuntimeException('Repeat Infosystem activation failed: ' . implode("\n", $output));
+    }
+    $itemQuery->execute(['site_id' => $siteId]);
+    if ((int) $itemQuery->fetchColumn() !== 103) {
+        throw new RuntimeException('Repeat Infosystem activation duplicated items.');
+    }
 } finally {
+    $restore = $db->prepare('UPDATE installed_modules SET is_enabled = :enabled WHERE code = :code');
+    $restore->execute(['enabled' => $moduleEnabled, 'code' => 'mechaniki']);
     if ($siteId !== null) {
-        foreach (['nodes', 'documents', 'site_domains', 'layouts'] as $table) {
+        foreach (['nodes', 'documents', 'infosystems', 'site_domains', 'layouts'] as $table) {
             $delete = $db->prepare('DELETE FROM ' . $table . ' WHERE site_id = :site_id');
             $delete->execute(['site_id' => $siteId]);
         }
