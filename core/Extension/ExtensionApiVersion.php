@@ -6,7 +6,7 @@ namespace Core\Extension;
 
 final class ExtensionApiVersion
 {
-    public const VERSION = '1.1.0';
+    public const VERSION = '1.2.0';
 
     private function __construct()
     {

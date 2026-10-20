@@ -60,6 +60,7 @@ final class SitesModule implements ModuleInterface
             'sites.manage',
             5,
             'globe',
+            'system',
         );
 
         $siteTags = static function (Request $request, array $variables): array {

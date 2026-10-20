@@ -1,11 +1,11 @@
 {
   "code": "updater",
   "name": "Обновления CMS",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "extension_api": "^1.0",
   "default_enabled": true,
   "requires": {
-    "core": ">=0.4.0"
+    "core": ">=0.6.0"
   },
   "provider": "UltimaVox\\Modules\\Updater\\UpdaterModule"
 }

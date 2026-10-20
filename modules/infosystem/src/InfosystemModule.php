@@ -52,6 +52,7 @@ final class InfosystemModule implements ModuleInterface
             'infosystems.manage',
             30,
             'database',
+            'content',
         );
 
         $this->registerAdminRoutes($core, $bindings);

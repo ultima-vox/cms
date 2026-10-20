@@ -103,7 +103,7 @@ jobs:
       - name: Module manifest smoke test
         run: |
           php tests/module_manifest_smoke.php
-          php bin/console modules:list | grep $'^infosystem\t1.5.0\tInfosystems$'
+          php bin/console modules:list | grep $'^infosystem\t1.6.0\tInfosystems$'
 
       - name: Apply migrations
         run: php bin/console migrate
@@ -161,6 +161,7 @@ jobs:
           php tests/infosystem_money_smoke.php
           php tests/infosystem_list_smoke.php
           php tests/page_editor_handoff_smoke.php
+          php tests/admin_navigation_smoke.php
 
       - name: Document search and bounded list pagination
         run: |
@@ -174,9 +175,9 @@ jobs:
 
       - name: Module lifecycle smoke test
         run: |
-          php bin/console extensions:list | grep $'^infosystem\t1.5.0\tenabled\t\^1.0\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.6.0\tenabled\t\^1.0\tInfosystems$'
           php tests/module_lifecycle_smoke.php
-          php bin/console extensions:list | grep $'^infosystem\t1.5.0\tenabled\t\^1.0\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.6.0\tenabled\t\^1.0\tInfosystems$'
 
       - name: Extension permission sync smoke test
         run: |
@@ -511,6 +512,7 @@ jobs:
           php tests/infosystem_money_smoke.php
           php tests/infosystem_list_smoke.php
           php tests/page_editor_handoff_smoke.php
+          php tests/admin_navigation_smoke.php
           php tests/document_list_smoke.php
           php tests/module_removal_smoke.php
           php tests/content_folders_smoke.php

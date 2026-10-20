@@ -45,6 +45,7 @@ final readonly class DocumentsModule implements ModuleInterface
             'documents.manage',
             25,
             'file-text',
+            'content',
         );
         $this->registerAdminRoutes($core, $repository);
 

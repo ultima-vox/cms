@@ -57,6 +57,22 @@ final class AdminShellContext
         return $this->navigation;
     }
 
+    /** @return list<array{code: string, label: string, items: list<AdminNavigationItem>}> */
+    public function navigationSections(): array
+    {
+        $sections = [];
+        foreach (AdminApi::SECTION_LABELS as $code => $label) {
+            $items = array_values(array_filter(
+                $this->navigation(),
+                static fn (AdminNavigationItem $item): bool => $item->section === $code,
+            ));
+            if ($items !== []) {
+                $sections[] = ['code' => $code, 'label' => $label, 'items' => $items];
+            }
+        }
+        return $sections;
+    }
+
     public function site(): SiteContext
     {
         return $this->sites->admin();

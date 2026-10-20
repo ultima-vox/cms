@@ -6,7 +6,7 @@ namespace Core;
 
 final class Version
 {
-    public const STRING = '0.5.0';
+    public const STRING = '0.6.0';
 
     private function __construct()
     {
