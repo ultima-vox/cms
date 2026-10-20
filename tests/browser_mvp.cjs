@@ -52,6 +52,7 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
             }
         };
         await openNavigation();
+        await page.screenshot({path: `/tmp/cms-layout-navigation-${width}.png`, fullPage: true});
         assert.deepEqual(await navigation.getByRole('link').allTextContents(), ['Обзор', 'Контент', 'Оформление', 'Система']);
         const local = page.getByRole('navigation', {name: 'Меню раздела', exact: true});
         assert.equal(await local.locator('a[aria-current="page"]').getAttribute('href'), '/admin/modules');
