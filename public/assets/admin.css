@@ -637,6 +637,7 @@ code {
     background: var(--uv-surface);
     box-shadow: 0 -6px 20px rgba(16, 24, 40, .08);
 }
+.admin-actions--sticky > .admin-field__hint { flex: 1 1 260px; }
 .admin-actions--sticky [role="status"] { color: var(--uv-muted); font-size: 12px; }
 .admin-actions--sticky [role="status"]:empty { display: none; }
 .admin-form--actions :is(input, select, textarea, [contenteditable]) { scroll-margin-bottom: var(--uv-action-space, 180px); }
@@ -644,6 +645,7 @@ code {
 .admin-form[aria-busy="true"] button[aria-disabled="true"] { opacity: .6; cursor: wait; }
 @media (max-width: 600px) {
     .admin-actions--sticky { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .admin-actions--sticky > .admin-field__hint { grid-column: 1 / -1; }
     .admin-actions--sticky > .admin-button { min-width: 0; white-space: normal; text-align: center; }
 }
 @media (max-height: 360px) {

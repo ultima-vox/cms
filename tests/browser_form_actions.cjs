@@ -9,6 +9,15 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
     for (const [width, height, scripts] of [[1440, 1000, true], [1024, 1000, true], [390, 1000, true], [720, 500, true], [390, 1000, false]]) {
         const context = await browser.newContext({storageState: process.env.MVP_BROWSER_STATE, javaScriptEnabled: scripts, viewport: {width, height}});
         const page = await context.newPage();
+        // An existing browser/proxy may retain the old unversioned shared asset across an update.
+        // Serve its known submitter-disabling behavior only for that obsolete URL.
+        await page.route(base + '/assets/admin.js', route => route.fulfill({contentType: 'application/javascript', body: `
+            document.addEventListener('submit', event => {
+                if (event.target.hasAttribute('data-submit-pending')) {
+                    event.target.querySelectorAll('button[type=submit]').forEach(button => { button.disabled = true; });
+                }
+            });
+        `}));
         page.on('pageerror', error => errors.push(error.message));
         await page.goto(base + '/admin/documents/create');
         const form = page.locator('form.admin-form--actions');

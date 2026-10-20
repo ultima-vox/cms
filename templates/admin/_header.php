@@ -32,7 +32,7 @@ $initials = $displayName !== '' ? mb_strtoupper(mb_substr($displayName, 0, 2)) :
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= text($shellTitle) ?> — Ultima Vox CMS</title>
-    <link rel="stylesheet" href="/assets/admin.css">
+    <link rel="stylesheet" href="/assets/admin.css?v=<?= text(\Core\Version::STRING) ?>">
     <?php foreach ($shellStyles as $style): ?>
         <?php if (is_string($style) && $style !== ''): ?><link rel="stylesheet" href="<?= text($style) ?>"><?php endif; ?>
     <?php endforeach; ?>

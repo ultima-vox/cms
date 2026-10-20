@@ -18,9 +18,9 @@ echo $view->render('admin/_header.php', [
     </header>
 
     <?php if (!empty($saved)): ?><div class="admin-notice">Настройки сохранены.</div><?php endif; ?>
-    <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
+    <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error" role="alert"><?= text($error) ?></div><?php endif; ?>
 
-    <form class="admin-form" method="post" action="<?= text($infosystemId ? '/admin/infosystems/' . $infosystemId : '/admin/infosystems') ?>" id="infosystem-form">
+    <form class="admin-form admin-form--actions" data-submit-pending="Сохранение выполняется…" method="post" action="<?= text($infosystemId ? '/admin/infosystems/' . $infosystemId : '/admin/infosystems') ?>" id="infosystem-form">
         <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
         <?= $view->render('admin/folders/select.php', ['options' => $folder_options, 'selected' => $infosystem['folder_id'] ?? null]) ?>
         <section class="admin-panel"><h2 class="admin-panel__title">Основное</h2><div class="admin-form__grid">
@@ -50,7 +50,7 @@ echo $view->render('admin/_header.php', [
             <p class="admin-field__hint">Для типа <code>select</code> укажите опции через запятую. Флаг «фильтр» документирует поля, предназначенные для публичной фильтрации через GIN.</p>
         </section>
 
-        <div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="<?= text($infosystemId ? '/admin/infosystems/' . $infosystemId : '/admin/infosystems') ?>">Отмена</a></div>
+        <div class="admin-actions admin-actions--sticky" role="group" aria-label="Действия инфосистемы"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button admin-button--secondary" href="<?= text($infosystemId ? '/admin/infosystems/' . $infosystemId : '/admin/infosystems') ?>">Отмена</a><span role="status" aria-live="polite"></span></div>
     </form>
 
     <?php if ($infosystemId): ?>

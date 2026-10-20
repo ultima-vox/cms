@@ -103,7 +103,7 @@ jobs:
       - name: Module manifest smoke test
         run: |
           php tests/module_manifest_smoke.php
-          php bin/console modules:list | grep $'^infosystem\t1.6.0\tInfosystems$'
+          php bin/console modules:list | grep $'^infosystem\t1.6.1\tInfosystems$'
 
       - name: Apply migrations
         run: php bin/console migrate
@@ -175,9 +175,9 @@ jobs:
 
       - name: Module lifecycle smoke test
         run: |
-          php bin/console extensions:list | grep $'^infosystem\t1.6.0\tenabled\t\^1.0\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.6.1\tenabled\t\^1.0\tInfosystems$'
           php tests/module_lifecycle_smoke.php
-          php bin/console extensions:list | grep $'^infosystem\t1.6.0\tenabled\t\^1.0\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.6.1\tenabled\t\^1.0\tInfosystems$'
 
       - name: Extension permission sync smoke test
         run: |
