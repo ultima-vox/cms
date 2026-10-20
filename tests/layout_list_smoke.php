@@ -19,6 +19,9 @@ try {
     $other = SqlDialect::insertedId($db, $insert);
     $folder = (new FolderRepository($db, $site, 'layouts'))->save(null, 'Макеты', null);
     $repo = new LayoutRepository($db, $site);
+    // New sites provision their own system layout; measure it before adding this fixture.
+    $baselineRoot = $repo->page([])['total'];
+    $baselineAll = $repo->page([], null, true)['total'];
     for ($i = 1; $i <= 61; $i++) {
         $code = 'list-' . sprintf('%03d', $i);
         $repo->create('Макет ' . sprintf('%03d', $i), 'layouts/' . $code . '.php', null, $folder);
@@ -30,10 +33,10 @@ try {
     $second = $repo->page(['page' => '2'], $folder);
     $assert($first['total'] === 62 && $first['pages'] === 3 && count($first['rows']) === 25, 'Bounded list failed');
     $assert(array_intersect(array_column($first['rows'], 'id'), array_column($second['rows'], 'id')) === [], 'Pages overlap');
-    $assert($repo->page([])['total'] === 1, 'Root leaked folder layouts');
+    $assert($repo->page([])['total'] === $baselineRoot + 1, 'Root leaked folder layouts');
     $all = $repo->page(['per_page' => '100'], null, true);
-    $assert($all['total'] === 63 && count($all['rows']) === 63 && $repo->find($foreign) === null, 'Site isolation failed');
-    $assert(count($repo->all()) === 63, 'Internal template selectors changed');
+    $assert($all['total'] === $baselineAll + 63 && count($all['rows']) === $baselineAll + 63 && $repo->find($foreign) === null, 'Site isolation failed');
+    $assert(count($repo->all()) === $baselineAll + 63, 'Internal template selectors changed');
     foreach (['100%_!', '%', '_', '!', 'ёжик', 'list-061'] as $search) {
         $assert($repo->page(['q' => $search], $folder)['total'] === 1, 'Literal/Unicode/code search failed');
     }
