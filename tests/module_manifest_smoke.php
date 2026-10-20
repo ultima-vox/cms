@@ -17,12 +17,12 @@ foreach ($manifests as $manifest) {
     $byCode[$manifest->code] = $manifest;
 }
 
-foreach (['documents' => '1.4.0', 'infosystem' => '1.5.0', 'sites' => '1.2.0'] as $code => $version) {
+foreach (['documents' => '1.5.0', 'infosystem' => '1.6.0', 'sites' => '1.3.0', 'updater' => '1.4.0'] as $code => $version) {
     $manifest = $byCode[$code] ?? null;
     if ($manifest === null || $manifest->version !== $version) {
         throw new RuntimeException(sprintf('%s module manifest is missing or invalid.', $code));
     }
-    if (($manifest->requires['core'] ?? null) !== ($code === 'sites' ? '>=0.4.0' : '>=0.5.0')) {
+    if (($manifest->requires['core'] ?? null) !== '>=0.6.0') {
         throw new RuntimeException(sprintf('Core dependency was not parsed from %s manifest.', $code));
     }
     if ($manifest->extensionApi !== '^1.0' || !$manifest->defaultEnabled) {

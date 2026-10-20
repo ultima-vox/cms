@@ -54,3 +54,11 @@
 - [W3C disclosure navigation](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/) — семантика ссылочной навигации и раскрытия. Пример W3C не является готовым production-кодом для копирования.
 
 Размещение верхнего и бокового уровней — наше проектное решение для этой CMS. Не утверждается, что конкретная раскладка универсально лучше или дословно повторяет HostCMS. Не добавляются SPA, XML/XSLT, универсальный конструктор административных форм или тяжёлая библиотека ради навигации.
+
+## Поставка 1: metadata разделов
+
+Core0.6 / Extension API1.2 добавляют необязательный `section` в существующие `AdminApi::navigation()` и `AdminNavigationItem`, default `services`. `AdminShellContext::navigationSections()` группирует уже разрешённые пункты и убирает пустые разделы. Реальные владельцы сами объявляют размещение. Ни общий shell, ни права endpoint, ни БД этой поставкой не меняются.
+
+Documents1.5, Infosystem1.6, Sites1.3 и Updater1.4 требуют Core>=0.6, сохраняя совместимое семейство API `^1.0`. Это позволяет старому worker выполнять update metadata/migrations до свежей регистрации провайдеров; отдельная проверка populated upgrade обязательна. Не заменять compatible-family constraint на ^1.2 без изменения всего pipeline. `tests/admin_navigation_smoke.php` проверяет старые вызовы/конструктор, новые metadata, freeze/validation, реальную ограниченную роль, скрытие пустых разделов и fallback старого расширения на пяти СУБД.
+
+Статус: контракт — отдельная поставка; #156 остаётся открытой до нового shell и browser acceptance. Старый sidebar пока продолжает работать.

@@ -9,6 +9,14 @@ use RuntimeException;
 
 final class AdminApi
 {
+    /** Fixed task areas; module ownership is declared by each provider, never inferred from its code. */
+    public const SECTION_LABELS = [
+        'content' => 'Контент',
+        'design' => 'Оформление',
+        'services' => 'Сервисы',
+        'system' => 'Система',
+    ];
+
     /** @var array<string, AdminNavigationItem> */
     private array $navigation = [];
 
@@ -21,6 +29,7 @@ final class AdminApi
         ?string $permission = null,
         int $order = 100,
         string $icon = 'module',
+        string $section = 'services',
     ): void {
         $this->assertMutable();
         $code = trim($code);
@@ -28,6 +37,10 @@ final class AdminApi
         $path = trim($path);
         $permission = $permission !== null ? trim($permission) : null;
         $icon = trim($icon);
+        $section = trim($section);
+        if (!isset(self::SECTION_LABELS[$section])) {
+            throw new RuntimeException('Admin navigation section is invalid.');
+        }
 
         if (!preg_match('/^[a-z][a-z0-9._-]{0,79}$/', $code)) {
             throw new RuntimeException('Admin navigation code is invalid.');
@@ -55,6 +68,7 @@ final class AdminApi
             $permission !== '' ? $permission : null,
             $order,
             $icon,
+            $section,
         );
     }
 

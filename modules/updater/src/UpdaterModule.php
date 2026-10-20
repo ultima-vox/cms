@@ -29,7 +29,7 @@ final readonly class UpdaterModule implements ModuleInterface
         $view = (new AdminPhpRendererFactory($root, $auth, $core->admin(), $core->sites()))->create([dirname(__DIR__) . '/templates']);
         $updater = new FileUpdater($root, $db);
         $state = new UpdateState($root);
-        $core->admin()->navigation('updates', 'Обновления', '/admin/updates', 'updates.view', 100, 'module');
+        $core->admin()->navigation('updates', 'Обновления', '/admin/updates', 'updates.view', 100, 'module', 'system');
         $handler = static function (Request $request, array $variables = []) use ($core, $db, $auth, $view, $updater, $state): Response {
             unset($variables);
             $user = $auth->user();
