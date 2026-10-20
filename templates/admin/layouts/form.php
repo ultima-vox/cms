@@ -9,7 +9,7 @@ $title = $layoutId ? 'Редактирование макета' : 'Новый �
 echo $view->render('admin/_header.php', [
     'admin_active' => $adminActive,
     'admin_title' => $title,
-    'admin_styles' => ['/assets/layouts.css', '/assets/code-formatter.css', ...(is_file(dirname(__DIR__, 2) . '/public/assets/cms-editors.js') ? ['/assets/cms-editors.css'] : [])],
+    'admin_styles' => ['/assets/layouts.css', '/assets/code-formatter.css', ...(is_file(dirname(__DIR__, 3) . '/public/assets/cms-editors.js') ? ['/assets/cms-editors.css'] : [])],
 ]);
 ?>
 <div class="admin-dashboard">
@@ -68,4 +68,4 @@ echo $view->render('admin/_header.php', [
         </form>
     <?php endif; ?>
 </div>
-<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive, 'admin_scripts' => ['/assets/code-formatter.js', ...(is_file(dirname(__DIR__, 2) . '/public/assets/cms-editors.js') ? ['/assets/cms-editors.js'] : [])]]) ?>
+<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive, 'admin_scripts' => ['/assets/code-formatter.js', ...(is_file(dirname(__DIR__, 3) . '/public/assets/cms-editors.js') ? ['/assets/cms-editors.js'] : [])]]) ?>
