@@ -27,42 +27,20 @@
         });
     });
 
-    const shell = document.body;
-    const collapseButton = document.querySelector('[data-admin-collapse]');
-    const collapseKey = 'uv-admin-sidebar-collapsed';
-
-    const readPreference = (key) => {
-        try {
-            return window.localStorage.getItem(key);
-        } catch {
-            return null;
-        }
-    };
-
-    const writePreference = (key, value) => {
-        try {
-            window.localStorage.setItem(key, value);
-        } catch {
-            // UI preferences are optional; storage restrictions must not break admin navigation.
-        }
-    };
-
-    const setCollapsed = (collapsed) => {
-        shell.classList.toggle('admin-shell--collapsed', collapsed);
-        collapseButton?.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
-        const label = collapsed ? 'Развернуть меню' : 'Свернуть меню';
-        collapseButton?.setAttribute('aria-label', label);
-        collapseButton?.setAttribute('title', label);
-    };
-
-    if (collapseButton) {
-        setCollapsed(readPreference(collapseKey) === '1');
-        collapseButton.addEventListener('click', () => {
-            const collapsed = !shell.classList.contains('admin-shell--collapsed');
-            setCollapsed(collapsed);
-            writePreference(collapseKey, collapsed ? '1' : '0');
+    const disclosures = document.querySelectorAll('[data-admin-disclosure]');
+    const narrowNavigation = window.matchMedia('(max-width: 800px)');
+    const adaptNavigation = () => disclosures.forEach(panel => { panel.open = !narrowNavigation.matches; });
+    adaptNavigation();
+    narrowNavigation.addEventListener('change', adaptNavigation);
+    disclosures.forEach(panel => {
+        panel.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && narrowNavigation.matches && panel.open) {
+                event.preventDefault();
+                panel.open = false;
+                panel.querySelector('summary')?.focus();
+            }
         });
-    }
+    });
 
     document.querySelectorAll('[data-site-select]').forEach((select) => {
         select.addEventListener('change', () => select.form?.submit());

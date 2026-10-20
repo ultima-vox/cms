@@ -7,12 +7,22 @@ use Core\View\AdminShellContext;
 /** @var AdminShellContext $admin_shell */
 $shellUser = $admin_shell->user();
 $shellNavigation = $admin_shell->navigation();
+$shellSections = $admin_shell->navigationSections();
 $shellSite = $admin_shell->site();
 $shellSites = $admin_shell->sites();
 $shellCsrf = $admin_shell->csrfToken();
 $shellActive = isset($admin_active) && is_string($admin_active) ? $admin_active : 'dashboard';
 $shellTitle = isset($admin_title) && is_string($admin_title) ? $admin_title : 'Администрирование';
 $shellStyles = isset($admin_styles) && is_array($admin_styles) ? $admin_styles : [];
+$shellSection = null;
+foreach ($shellSections as $section) {
+    foreach ($section['items'] as $item) {
+        if ($item->code === $shellActive) {
+            $shellSection = $section;
+            break 2;
+        }
+    }
+}
 $displayName = is_array($shellUser) ? (string) ($shellUser['display_name'] ?? '') : '';
 $email = is_array($shellUser) ? (string) ($shellUser['email'] ?? '') : '';
 $initials = $displayName !== '' ? mb_strtoupper(mb_substr($displayName, 0, 2)) : 'UV';
@@ -29,36 +39,12 @@ $initials = $displayName !== '' ? mb_strtoupper(mb_substr($displayName, 0, 2)) :
     <?php endforeach; ?>
 </head>
 <body class="admin-shell">
-    <aside class="admin-shell__sidebar">
+    <a class="admin-skip" href="#admin-workspace">К содержимому</a>
+    <header class="admin-topbar">
         <a class="admin-brand" href="/admin" aria-label="Ultima Vox CMS">
             <span class="admin-brand__mark">UV</span>
             <span class="admin-brand__name">Ultima Vox CMS</span>
         </a>
-
-        <nav class="admin-nav" aria-label="Основная навигация">
-            <a class="admin-nav__item<?= $shellActive === 'dashboard' ? ' admin-nav__item--active' : '' ?>" href="/admin" aria-label="Обзор" title="Обзор"<?= $shellActive === 'dashboard' ? ' aria-current="page"' : '' ?>>
-                <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-home"></use></svg>
-                <span class="admin-nav__label">Обзор</span>
-            </a>
-            <?php foreach ($shellNavigation as $item): ?>
-                <?php $active = $shellActive === $item->code; ?>
-                <a class="admin-nav__item<?= $active ? ' admin-nav__item--active' : '' ?>" href="<?= text($item->path) ?>" aria-label="<?= text($item->label) ?>" title="<?= text($item->label) ?>"<?= $active ? ' aria-current="page"' : '' ?>>
-                    <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-<?= text($item->icon) ?>"></use></svg>
-                    <span class="admin-nav__label"><?= text($item->label) ?></span>
-                </a>
-            <?php endforeach; ?>
-        </nav>
-
-        <div class="admin-sidebar__footer">
-            <button class="admin-sidebar__button" type="button" data-admin-collapse aria-pressed="false" aria-label="Свернуть меню" title="Свернуть меню">
-                <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-collapse"></use></svg>
-                <span class="admin-sidebar__label">Свернуть</span>
-            </button>
-        </div>
-    </aside>
-
-    <main class="admin-shell__main admin-shell__main--dashboard">
-        <header class="admin-topbar">
             <strong class="admin-topbar__title"><?= text($shellTitle) ?></strong>
 
             <?php if (count($shellSites) > 1): ?>
@@ -97,3 +83,35 @@ $initials = $displayName !== '' ? mb_strtoupper(mb_substr($displayName, 0, 2)) :
                 </form>
             </div>
         </header>
+    <details class="admin-sections" data-admin-disclosure open>
+        <summary>Разделы · <?= text($shellSection['label'] ?? 'Обзор') ?></summary>
+        <nav aria-label="Основная навигация">
+            <ul class="admin-sections__list">
+                <li><a href="/admin"<?= $shellActive === 'dashboard' ? ' aria-current="page"' : '' ?>>Обзор</a></li>
+                <?php foreach ($shellSections as $section): ?>
+                    <li><a href="<?= text($section['items'][0]->path) ?>"<?= $shellSection !== null && $shellSection['code'] === $section['code'] ? ' aria-current="true"' : '' ?>><?= text($section['label']) ?></a></li>
+                <?php endforeach; ?>
+            </ul>
+        </nav>
+    </details>
+    <aside class="admin-shell__sidebar">
+        <details class="admin-local" data-admin-disclosure open>
+            <summary>Меню · <?= text($shellSection['label'] ?? 'Обзор') ?></summary>
+            <p class="admin-local__title"><?= text($shellSection['label'] ?? 'Обзор') ?></p>
+            <nav class="admin-nav" aria-label="Меню раздела">
+                <ul>
+                <?php if ($shellSection === null): ?>
+                    <li><a class="admin-nav__item" href="/admin"<?= $shellActive === 'dashboard' ? ' aria-current="page"' : '' ?>>Обзор</a></li>
+                <?php else: ?>
+                    <?php foreach ($shellSection['items'] as $item): ?>
+                        <li><a class="admin-nav__item<?= $shellActive === $item->code ? ' admin-nav__item--active' : '' ?>" href="<?= text($item->path) ?>"<?= $shellActive === $item->code ? ' aria-current="page"' : '' ?>>
+                            <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-<?= text($item->icon) ?>"></use></svg>
+                            <span class="admin-nav__label"><?= text($item->label) ?></span>
+                        </a></li>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </ul>
+            </nav>
+        </details>
+    </aside>
+    <main id="admin-workspace" tabindex="-1" class="admin-shell__main admin-shell__main--dashboard">
