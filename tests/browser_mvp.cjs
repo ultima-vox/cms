@@ -43,34 +43,46 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         await page.setViewportSize({width, height: 1000});
         await page.goto(base + '/admin/modules');
         const navigation = page.getByRole('navigation', {name: 'Основная навигация'});
-        const labels = await navigation.locator('.admin-nav__label').allTextContents();
-        const assertNamedNavigation = async () => {
-            for (const label of labels) {
-                assert.equal(await navigation.getByRole('link', {name: label.trim(), exact: true}).count(), 1, `Unnamed navigation at ${width}px: ${label}`);
+        const openNavigation = async () => {
+            if (width <= 800) {
+                await page.locator('.admin-sections > summary').focus();
+                await page.keyboard.press('Space');
+                await page.locator('.admin-local > summary').focus();
+                await page.keyboard.press('Space');
             }
-            assert.equal(await page.getByRole('button', {name: 'Поиск и команды', exact: true}).isVisible(), true);
         };
-        await assertNamedNavigation();
-        if (width > 800) {
-            // Keyboard activation must preserve role/name and state after reload.
-            await page.getByRole('button', {name: 'Свернуть меню', exact: true}).focus();
-            await page.keyboard.press('Space');
-            assert.equal(await page.getByRole('button', {name: 'Развернуть меню', exact: true}).getAttribute('aria-pressed'), 'true');
-        } else {
-            // A desktop collapsed preference may carry into the mobile viewport.
-            await page.evaluate(() => localStorage.setItem('uv-admin-sidebar-collapsed', '1'));
-        }
+        await openNavigation();
+        assert.deepEqual(await navigation.getByRole('link').allTextContents(), ['Обзор', 'Контент', 'Оформление', 'Система']);
+        const local = page.getByRole('navigation', {name: 'Меню раздела', exact: true});
+        assert.equal(await local.locator('a[aria-current="page"]').getAttribute('href'), '/admin/modules');
+        assert.equal(await local.locator('a[href="/admin/documents"]').count(), 0);
+        assert.equal(await page.getByRole('button', {name: 'Поиск и команды', exact: true}).isVisible(), true);
+        // An old desktop collapse preference must never hide the new labels.
+        await page.evaluate(() => localStorage.setItem('uv-admin-sidebar-collapsed', '1'));
         await page.reload();
-        await assertNamedNavigation();
-        assert.equal(await page.locator('[data-admin-collapse]').getAttribute('aria-label'), 'Развернуть меню');
-        if (width > 800) {
-            await page.getByRole('button', {name: 'Развернуть меню', exact: true}).focus();
+        await openNavigation();
+        await navigation.getByRole('link', {name: 'Контент', exact: true}).click();
+        if (width <= 800) await page.locator('.admin-local > summary').click();
+        await local.getByRole('link', {name: 'Документы', exact: true}).click();
+        assert.equal(new URL(page.url()).pathname, '/admin/documents');
+        if (width <= 800) await page.locator('.admin-sections > summary').click();
+        assert.equal(await navigation.getByRole('link', {name: 'Контент', exact: true}).getAttribute('aria-current'), 'true');
+        // Global palette retains allowed destinations outside the active section.
+        await page.keyboard.press('Control+k');
+        const palette = page.getByRole('dialog', {name: 'Поиск и команды', exact: true});
+        await palette.locator('[data-command-input]').fill('Макеты');
+        await page.keyboard.press('Enter');
+        await page.waitForURL(base + '/admin/layouts');
+        if (width <= 800) {
+            const summary = page.locator('.admin-local > summary');
+            await summary.focus();
             await page.keyboard.press('Space');
-            assert.equal(await page.getByRole('button', {name: 'Свернуть меню', exact: true}).getAttribute('aria-pressed'), 'false');
-        } else {
-            await page.evaluate(() => localStorage.removeItem('uv-admin-sidebar-collapsed'));
-            await page.reload();
+            await local.getByRole('link').first().focus();
+            await page.keyboard.press('Escape');
+            assert.equal(await page.locator('.admin-local').getAttribute('open'), null);
+            assert.equal(await summary.evaluate(node => node === document.activeElement), true);
         }
+        await page.goto(base + '/admin/modules');
         await page.screenshot({path: `/tmp/cms-layout-admin-${width}.png`, fullPage: true});
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Admin overflow at ${width}px`);
         for (const panel of await page.locator('.module-upload-panel').all()) {
@@ -244,6 +256,26 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
             }
         }
     }
+    // Native disclosure links also work without scripts; denied storage is harmless.
+    for (const javaScriptEnabled of [false, true]) {
+        const fallback = await browser.newContext({storageState: process.env.MVP_BROWSER_STATE, javaScriptEnabled, viewport: {width: 390, height: 900}});
+        if (javaScriptEnabled) await fallback.addInitScript(() => Object.defineProperty(window, 'localStorage', {get() { throw new Error('Storage unavailable'); }}));
+        const fallbackPage = await fallback.newPage();
+        fallbackPage.on('pageerror', error => errors.push(error.message));
+        await fallbackPage.goto(base + '/admin/modules');
+        if (javaScriptEnabled) await fallbackPage.locator('.admin-sections > summary').click();
+        await fallbackPage.getByRole('navigation', {name: 'Основная навигация'}).getByRole('link', {name: 'Контент', exact: true}).click();
+        if (javaScriptEnabled) await fallbackPage.locator('.admin-local > summary').click();
+        await fallbackPage.getByRole('navigation', {name: 'Меню раздела'}).getByRole('link', {name: 'Документы', exact: true}).click();
+        assert.equal(new URL(fallbackPage.url()).pathname, '/admin/documents');
+        assert(await fallbackPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+        await fallback.close();
+    }
+    // 1440px at 200% browser zoom has an effective CSS viewport of 720px.
+    await page.setViewportSize({width: 720, height: 500});
+    await page.goto(base + '/admin/modules');
+    assert.equal(await page.locator('.admin-sections > summary').isVisible(), true);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     await page.goto(base + '/admin/updates');
     await page.screenshot({path: '/tmp/cms-layout-updates.png', fullPage: true});
     assert.equal(errors.length, 0, errors.join('\n'));

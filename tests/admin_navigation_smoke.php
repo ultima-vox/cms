@@ -75,6 +75,33 @@ try {
     $assert(array_column($sections, 'code') === ['content', 'services'], 'Forbidden/empty sections leaked');
     $assert(array_column($sections[0]['items'], 'code') === ['documents'], 'Permission filtering was bypassed');
     $assert(array_column($sections[1]['items'], 'code') === ['old-extension'], 'Old extension became inaccessible');
+    $sites = new \UltimaVox\Modules\Sites\SitesManagementRepository($db);
+    $site = $sites->create('Navigation allowed site', 'nav-allowed');
+    $other = $sites->create('Navigation forbidden site', 'nav-forbidden');
+    $db->prepare('INSERT INTO user_sites(user_id,site_id) VALUES(:user,:site)')->execute(['user' => $user, 'site' => $site]);
+    $shell = new AdminShellContext($auth, $core->admin(), new \Core\Extension\Api\SitesApi(
+        new \Core\Repository\SiteRepository($db), new \Core\Site\SiteContext($site, 'nav-allowed', 'Navigation allowed site', ''),
+    ));
+    $renderer = new \Core\View\AdminPhpRenderer(dirname(__DIR__));
+    $renderer->addGlobal('admin_shell', $shell);
+    foreach (['documents' => 'Контент', 'old-extension' => 'Сервисы', 'dashboard' => 'Обзор'] as $active => $label) {
+        $html = $renderer->render('admin/_header.php', ['admin_active' => $active]);
+        $dom = new DOMDocument();
+        @$dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+        $xpath = new DOMXPath($dom);
+        $primary = '//nav[@aria-label="Основная навигация"]';
+        $local = '//nav[@aria-label="Меню раздела"]';
+        $assert($xpath->query($primary . '//a')->length === 3, 'Forbidden/empty primary section rendered');
+        $assert($xpath->query($local . '//a')->length === 1, 'Local navigation contains other sections');
+        $assert($xpath->evaluate('string(' . $primary . '//a[@aria-current])') === $label, 'Direct route lost active section');
+        $assert(!str_contains($html, 'Navigation forbidden site'), 'Forbidden site name leaked into shell');
+        foreach (['/admin/modules', '/admin/updates', '/admin/layouts', '/admin/infosystems'] as $forbidden) {
+            $assert(!str_contains($html, 'href="' . $forbidden . '"'), 'Forbidden owner rendered');
+        }
+    }
+    $footer = $renderer->render('admin/_footer.php');
+    $assert(str_contains($footer, 'href="/admin/documents"') && str_contains($footer, 'href="/admin/legacy"'), 'Palette lost cross-section legacy links');
+
 } finally {
     ($auth ?? null)?->logout();
     if ($db->inTransaction()) $db->rollBack();

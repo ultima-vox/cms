@@ -33,6 +33,11 @@ $renderer->addGlobal('admin_shell', new class ($site) {
         return [];
     }
 
+    public function navigationSections(): array
+    {
+        return [];
+    }
+
     public function site(): SiteContext
     {
         return $this->site;
