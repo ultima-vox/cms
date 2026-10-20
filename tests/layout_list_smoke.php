@@ -34,7 +34,7 @@ try {
     $all = $repo->page(['per_page' => '100'], null, true);
     $assert($all['total'] === 63 && count($all['rows']) === 63 && $repo->find($foreign) === null, 'Site isolation failed');
     $assert(count($repo->all()) === 63, 'Internal template selectors changed');
-    foreach (['100%_!', 'ёжик', 'list-061'] as $search) {
+    foreach (['100%_!', '%', '_', '!', 'ёжик', 'list-061'] as $search) {
         $assert($repo->page(['q' => $search], $folder)['total'] === 1, 'Literal/Unicode/code search failed');
     }
     $last = $repo->page(['page' => '999999', 'sort' => 'code'], $folder);

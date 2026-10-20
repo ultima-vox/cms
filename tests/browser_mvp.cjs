@@ -293,6 +293,14 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         await fallbackPage.getByRole('navigation', {name: 'Основная навигация'}).getByRole('link', {name: 'Документы', exact: true}).click();
         assert.equal(new URL(fallbackPage.url()).pathname, '/admin/documents');
         assert(await fallbackPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+        await fallbackPage.goto(base + '/admin/layouts?folder=all');
+        await fallbackPage.getByLabel('Название или код').fill('HTTP layout');
+        await fallbackPage.getByLabel('Сортировка', {exact: true}).selectOption('code');
+        await Promise.all([fallbackPage.waitForURL(url => url.searchParams.get('q') === 'HTTP layout'), fallbackPage.getByRole('button', {name: 'Применить', exact: true}).click()]);
+        assert.equal(await fallbackPage.locator('.layout-row').count(), 25);
+        await Promise.all([fallbackPage.waitForURL(url => url.searchParams.get('page') === '2'), fallbackPage.getByRole('link', {name: 'Далее', exact: true}).click()]);
+        assert.equal(await fallbackPage.locator('.layout-row').count(), 2);
+        assert(await fallbackPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
         await fallback.close();
     }
     // 1440px at 200% browser zoom has an effective CSS viewport of 720px.
