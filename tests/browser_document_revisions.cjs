@@ -12,8 +12,8 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         const first = await context.newPage();
         await first.goto(base + '/admin/documents/create');
         const created = await context.request.post(base + '/admin/documents', {maxRedirects: 0, form: {
-            _csrf: await first.locator('input[name=_csrf]').inputValue(),
-            _site_id: await first.locator('input[name=_site_id]').inputValue(),
+            _csrf: await first.locator('form.admin-form input[name=_csrf]').inputValue(),
+            _site_id: await first.locator('form.admin-form input[name=_site_id]').inputValue(),
             code: `revision-browser-${width}-${scripts}`, name: 'Revision browser', content: '<p>Original</p>', save_mode: 'draft',
         }});
         assert.equal(created.status(), 302, await created.text());
