@@ -25,7 +25,7 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         const originalRevision = await second.locator('[name=expected_revision]').inputValue();
         await first.locator('textarea[name=content]').fill('<p>Winner from first tab</p>');
         await Promise.all([first.waitForURL(url => url.searchParams.get('published') === '1'), first.getByRole('button', {name: 'Опубликовать новую версию', exact: true}).click()]);
-        const losingText = '<p>Unmerged second tab & edits</p>';
+        const losingText = '<p>Unmerged second tab &amp; edits</p>';
         await second.locator('textarea[name=content]').fill(losingText);
         await second.locator('input[name=name]').fill('Second tab changes');
         for (let retry = 0; retry < 2; retry++) {

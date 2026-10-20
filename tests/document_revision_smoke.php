@@ -92,7 +92,7 @@ try {
     echo "DOCUMENT REVISION OK: two independent concurrent authors, single winner, locking reads, stale/missing/foreign rejection, history/publication atomicity, unknown/deleted author, versionless documents\n";
 } finally {
     if ($db->inTransaction()) $db->rollBack();
-    foreach ($children as [$process, $pipes]) { proc_terminate($process); foreach ($pipes as $pipe) fclose($pipe); proc_close($process); }
+    foreach ($children as [$process, $pipes]) { if (is_resource($process)) proc_terminate($process); foreach ($pipes as $pipe) if (is_resource($pipe)) fclose($pipe); if (is_resource($process)) proc_close($process); }
     foreach ([$site, $other] as $id) if ($id !== null) $db->prepare('DELETE FROM sites WHERE id=:id')->execute(['id' => $id]);
     foreach ($users as $id) $db->prepare('DELETE FROM users WHERE id=:id')->execute(['id' => $id]);
 }

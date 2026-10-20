@@ -169,7 +169,7 @@ for name in ('site.css', 'site.js', 'logo.svg', 'OFL.txt'):
 contact_node = query("SELECT id FROM nodes WHERE site_id = 1 AND path = '/mechaniki/contacts'")
 contact_document = query(f"SELECT id FROM documents WHERE site_id = 1 AND code = 'node-{int(contact_node)}'")
 body, _ = request(client, f'/admin/documents/{contact_document}/edit')
-request(client, f'/admin/documents/{contact_document}', {'_csrf': token(body), 'name': 'Контакты', 'content': '<p>Редактирование пилотного сайта работает.</p>', 'save_mode': 'publish'}, expected=302)
+request(client, f'/admin/documents/{contact_document}', {'expected_revision': re.search(r'name="expected_revision" value="([^"]+)"', body).group(1), '_csrf': token(body), 'name': 'Контакты', 'content': '<p>Редактирование пилотного сайта работает.</p>', 'save_mode': 'publish'}, expected=302)
 body, _ = request(public, '/mechaniki/contacts')
 assert 'Редактирование пилотного сайта работает.' in body
 body, _ = request(public, '/poc')

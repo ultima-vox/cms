@@ -31,11 +31,11 @@ def verify_document_revisions(request, query):
         ]]
     winner = state()
     assert winner[:4] == ['Winner HTTP', '0', '2', '<p>Winner</p>']
-    loser = dict(b.hidden, name='Losing HTTP', content='<p>Keep my edits & changes</p>', save_mode='draft', folder_id=str(folder))
+    loser = dict(b.hidden, name='Losing HTTP', content='<p>Keep my edits &amp; changes</p>', save_mode='draft', folder_id=str(folder))
     body, _ = request(path, loser, expected=409)
     form = DocumentPage(body)
     assert form.hidden['expected_revision'] == b.hidden['expected_revision']
-    assert 'Keep my edits &amp; changes' in body and 'role="alert"' in body
+    assert 'Keep my edits &amp;amp; changes' in body and 'role="alert"' in body
     assert form.link('Открыть актуальную версию').startswith(editor)
     assert state() == winner, 'Conflict mutated metadata/history/publication/audit'
     # Old pre-update forms and malformed tokens must never be silently rebased to the winner.
