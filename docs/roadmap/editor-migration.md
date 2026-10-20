@@ -56,3 +56,11 @@ npm run build:editors
 ```
 
 **Do not commit the generated bundle without producing a lockfile and running browser tests.** This environment did not have npm registry access, so package installation/build and browser acceptance remain unverified.
+
+## Follow-up integration check — 21 October 2026
+
+- Fixed the project-root check for `templates/admin/layouts/form.php` (`dirname(__DIR__, 3)`).
+- Added `.github/workflows/editor-bundle.yml` to install npm dependencies, validate source, build the browser bundle and upload it as an artifact.
+- This workflow does **not** commit or deploy compiled assets. A passing run will verify bundle compilation, but a release process must still install or package the asset.
+- Infosystem TipTap integration remains gated: current rich content may include attributes/HTML structures that StarterKit does not preserve. Do not substitute TipTap until lossless conversion or explicit per-field migration is implemented.
+- The new workflow has not yet reported a result at the time this note was written; do not assert editor-build success.
