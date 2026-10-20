@@ -1,9 +1,19 @@
 (() => {
     'use strict';
 
-    document.addEventListener('submit', (event) => {
+    const restorePending = form => {
+        delete form.dataset.pending;
+        form.removeAttribute('aria-busy');
+        form.querySelectorAll('[data-pending-disabled]').forEach(button => {
+            button.removeAttribute('aria-disabled');
+            delete button.dataset.pendingDisabled;
+        });
+        const status = form.querySelector('[role="status"]');
+        if (status) status.textContent = '';
+    };
+    document.addEventListener('submit', event => {
         const form = event.target;
-        if (!(form instanceof HTMLFormElement)) return;
+        if (!(form instanceof HTMLFormElement) || event.defaultPrevented) return;
         if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
             event.preventDefault();
             return;
@@ -12,19 +22,48 @@
             if (form.dataset.pending === 'true') { event.preventDefault(); return; }
             form.dataset.pending = 'true';
             form.setAttribute('aria-busy', 'true');
-            form.querySelectorAll('button[type="submit"]').forEach(button => { if (!button.disabled) { button.disabled = true; button.dataset.pendingDisabled = 'true'; } });
+            // Keep the successful submitter enabled: its name/value is part of the native POST.
+            form.querySelectorAll('button[type="submit"]').forEach(button => {
+                if (!button.disabled && button.getAttribute('aria-disabled') !== 'true') {
+                    button.setAttribute('aria-disabled', 'true');
+                    button.dataset.pendingDisabled = 'true';
+                }
+            });
             const status = form.querySelector('[role="status"]');
             if (status) status.textContent = form.dataset.submitPending;
+            queueMicrotask(() => { if (event.defaultPrevented) restorePending(form); });
         }
     });
     window.addEventListener('pageshow', () => {
-        document.querySelectorAll('form[data-submit-pending]').forEach(form => {
-            delete form.dataset.pending;
-            form.removeAttribute('aria-busy');
-            form.querySelectorAll('[data-pending-disabled]').forEach(button => { button.disabled = false; delete button.dataset.pendingDisabled; });
-            const status = form.querySelector('[role="status"]');
-            if (status) status.textContent = '';
+        document.querySelectorAll('form[data-submit-pending]').forEach(restorePending);
+    });
+
+    document.querySelectorAll('.admin-form--actions').forEach(form => {
+        const bar = form.querySelector('.admin-actions--sticky');
+        if (!bar) return;
+        const fitActions = () => {
+            const height = bar.getBoundingClientRect().height;
+            const available = window.visualViewport?.height ?? window.innerHeight;
+            const flow = available < Math.max(360, height * 3);
+            form.classList.toggle('admin-form--actions-flow', flow);
+            form.style.setProperty('--uv-action-space', flow ? '0px' : `${height + 24}px`);
+        };
+        fitActions();
+        if ('ResizeObserver' in window) new ResizeObserver(fitActions).observe(bar);
+        window.addEventListener('resize', fitActions);
+        window.visualViewport?.addEventListener('resize', fitActions);
+        const revealField = event => window.requestAnimationFrame(() => {
+            const field = event.target;
+            if (!(field instanceof HTMLElement) || bar.contains(field)
+                || form.classList.contains('admin-form--actions-flow')) return;
+            const bounds = field.getBoundingClientRect();
+            const barBounds = bar.getBoundingClientRect();
+            if (bounds.bottom > barBounds.top - 12 && bounds.top < barBounds.bottom) {
+                field.scrollIntoView({block: 'nearest'});
+            }
         });
+        form.addEventListener('focusin', revealField);
+        form.addEventListener('invalid', revealField, true);
     });
 
     const disclosures = document.querySelectorAll('[data-admin-disclosure]');

@@ -9,10 +9,16 @@ class DocumentPage(HTMLParser):
         self.links = []
         self.hidden = {}
         self.anchor = None
+        self.action_bars = 0
+        self.submit_modes = []
         self.feed(body)
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        if tag == 'div' and 'admin-actions--sticky' in attrs.get('class', '').split():
+            self.action_bars += 1
+        if tag == 'button' and attrs.get('name') == 'save_mode':
+            self.submit_modes.append(attrs.get('value'))
         if tag == 'a':
             self.anchor = [attrs.get('href', ''), '']
         if tag == 'input' and attrs.get('type') == 'hidden':
@@ -54,6 +60,7 @@ def verify_document_return_context(request, site_id, folder, foreign_folder=None
 
     def assert_context(body, context=expected):
         page = DocumentPage(body)
+        assert page.action_bars == 1 and page.submit_modes == ['draft', 'publish'], (page.action_bars, page.submit_modes)
         for label in ('К документам', 'Отмена'):
             url = urlsplit(page.link(label))
             assert not url.scheme and not url.netloc and url.path == '/admin/documents'
