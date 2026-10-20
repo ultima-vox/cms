@@ -106,6 +106,7 @@ final class DocumentController
                 $data['content'],
                 $data['publish'],
                 $data['folder_id'],
+                (int) $this->auth->user()['id'],
             );
             $this->audit($request, 'document.create', $id, [
                 'code' => $data['code'],
@@ -146,6 +147,8 @@ final class DocumentController
                 $data['content'],
                 $data['publish'],
                 $data['folder_id'],
+                $this->expectedRevision($request->post['expected_revision'] ?? null),
+                (int) $this->auth->user()['id'],
             );
             $this->audit($request, 'document.version.create', $id, [
                 'code' => $existing['code'],
@@ -158,9 +161,9 @@ final class DocumentController
             );
         } catch (Throwable $exception) {
             return $this->formResponse(
-                array_merge($existing, $request->post),
+                array_merge($existing, $request->post, ['expected_revision' => $request->post['expected_revision'] ?? '']),
                 $exception->getMessage(),
-                422,
+                $exception instanceof DocumentConflictException ? 409 : 422,
                 returnContext: $returnContext,
                 pageReturn: $pageReturn,
             );
@@ -188,6 +191,7 @@ final class DocumentController
             'code' => '',
             'name' => '',
             'content' => $editable['content'] ?? '',
+            'expected_revision' => '',
         ], $document ?? []);
         if (array_key_exists('content', $document ?? [])) {
             $form['content'] = (string) $document['content'];
@@ -205,6 +209,11 @@ final class DocumentController
             'return_url' => $returnContext?->url($returnContext->page) ?? '/admin/documents',
             'return_parameters' => $returnContext?->returnParameters($this->siteId, $returnContext->page) ?? [],
             'page_return' => $pageReturn,
+            'conflict' => $status === 409,
+            'reload_url' => '/admin/documents/' . $documentId . '/edit?' . http_build_query(
+                ($pageReturn['parameters'] ?? []) + ($returnContext?->returnParameters($this->siteId, $returnContext->page) ?? []),
+                '', '&', PHP_QUERY_RFC3986,
+            ),
         ]), $status);
     }
 
@@ -263,6 +272,12 @@ final class DocumentController
             'publish' => $mode === 'publish',
             'folder_id' => \Core\Content\FolderRepository::id($input['folder_id'] ?? null),
         ];
+    }
+
+    private function expectedRevision(mixed $value): ?int
+    {
+        return is_string($value) && preg_match('/^(0|[1-9][0-9]{0,17})$/D', $value)
+            ? (int) $value : null;
     }
 
     private function requirePermission(): ?Response

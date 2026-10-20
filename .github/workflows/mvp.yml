@@ -75,6 +75,7 @@ jobs:
           if [ "$MVP_LAYOUT" = public ]; then
             NODE_PATH=/tmp/cms-browser/node_modules node tests/browser_mvp.cjs
             NODE_PATH=/tmp/cms-browser/node_modules node tests/browser_form_actions.cjs
+            NODE_PATH=/tmp/cms-browser/node_modules node tests/browser_document_revisions.cjs
             NODE_PATH=/tmp/cms-browser/node_modules node tests/browser_infosystem_actions.cjs
             MVP_EDITOR_BASELINE_DISPOSABLE=1 NODE_PATH=/tmp/cms-browser/node_modules node tests/browser_editor_baseline.cjs
           fi

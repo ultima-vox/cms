@@ -28,6 +28,7 @@ def verify_page_editor_handoff(request, query):
         _, headers = request(update, dict(post, save_mode=mode), expected=302)
         assert parse_qs(urlsplit(headers['Location']).query)['_page'] == [node]
         body, _ = request(headers['Location'])
+        post.update(DocumentPage(body).hidden)
         assert DocumentPage(body).link('К странице') == page_path
         assert '<p>Handoff content</p>' in body or '&lt;p&gt;Handoff content&lt;/p&gt;' in body
     body, _ = request(update, dict(post, name=''), expected=422)

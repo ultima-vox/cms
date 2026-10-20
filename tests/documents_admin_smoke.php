@@ -54,6 +54,7 @@ try {
         'Company details',
         '<p>Published two</p>',
         true,
+        expectedRevision: (int) $document['expected_revision'],
     );
     $published = $repository->currentPublishedVersion($documentId);
     if (!is_array($published)
@@ -89,6 +90,7 @@ try {
         'Company details',
         '<p>Draft three</p>',
         false,
+        expectedRevision: (int) $document['expected_revision'],
     );
     $editable = $management->editableVersion($documentId);
     if (!is_array($editable)

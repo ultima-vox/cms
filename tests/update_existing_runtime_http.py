@@ -38,3 +38,18 @@ result = subprocess.check_output(['psql', '-h', '127.0.0.1', '-U', 'cms', '-d', 
     "SELECT count(*) FROM extension_sync_jobs; SELECT count(*) FROM layouts WHERE code = 'upgrade-custom'; SELECT count(*) FROM nodes n JOIN layouts l ON l.id = n.layout_id WHERE n.site_id <> l.site_id;"], text=True)
 assert result.splitlines() == ['0', '2', '0'], result
 print('Fresh-worker HTTP upgrade OK: content preserved, layouts split, new permissions registered, folders usable')
+
+# Existing versions must survive the additive migration with unknown authors, then support guarded saves.
+body = request('/admin/documents?folder=all')
+editor = re.search(r'href="(/admin/documents/\d+/edit[^"]*)"', body).group(1).replace('&amp;', '&')
+body = request(editor)
+assert 'Не указан' in body and 'Автор' in body
+revision = re.search(r'name="expected_revision" value="([^"]+)"', body).group(1)
+path = editor.split('?')[0].removesuffix('/edit')
+request(path, {'_csrf': token(body), 'expected_revision': revision, 'name': 'Existing content after upgrade',
+    'content': '<p>After revision upgrade</p>', 'save_mode': 'draft'}, 302)
+body = request(editor)
+assert 'Upgrade operator' in body and 'After revision upgrade' in body
+request(path, {'_csrf': token(body), 'expected_revision': revision, 'name': 'Stale after upgrade',
+    'content': 'Must not replace', 'save_mode': 'publish'}, 409)
+print('Existing populated upgrade revisions OK: nullable historic authors, new author attribution and stale rejection')

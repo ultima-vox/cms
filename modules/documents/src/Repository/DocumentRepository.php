@@ -83,21 +83,22 @@ final class DocumentRepository
         return is_array($row) ? $row : null;
     }
 
-    public function createDraftVersion(int $documentId, string $content): int
+    public function createDraftVersion(int $documentId, string $content, ?int $authorUserId = null): int
     {
         $this->assertDocumentId($documentId);
 
-        return $this->transaction(function () use ($documentId, $content): int {
+        return $this->transaction(function () use ($documentId, $content, $authorUserId): int {
             $this->lockDocument($documentId);
 
             $statement = $this->db->prepare(
                 <<<'SQL'
-                INSERT INTO document_versions (document_id, version, content, status)
+                INSERT INTO document_versions (document_id, version, content, status, author_user_id)
                 SELECT
                     :document_id,
                     COALESCE(MAX(version), 0) + 1,
                     :content,
-                    'draft'
+                    'draft',
+                    :author
                 FROM document_versions
                 WHERE document_id = :document_id
 
@@ -105,10 +106,31 @@ final class DocumentRepository
             $statement->execute([
                 'document_id' => $documentId,
                 'content' => $content,
+                'author' => $authorUserId,
             ]);
 
             return \Core\Database\SqlDialect::insertedId($this->db, $statement);
         });
+    }
+
+    /** Called within the owner's save transaction before any metadata/content mutation. */
+    public function assertCurrentRevision(int $documentId, int $siteId, ?int $expectedRevision): void
+    {
+        if (!$this->db->inTransaction()) {
+            throw new RuntimeException('Revision checks require a save transaction.');
+        }
+        $lock = $this->db->prepare('SELECT id FROM documents WHERE id = :id AND site_id = :site FOR UPDATE');
+        $lock->execute(['id' => $documentId, 'site' => $siteId]);
+        if ($lock->fetchColumn() === false) {
+            throw new RuntimeException('Document was not found for the current site.');
+        }
+        // Locking reads see the committed winner even under InnoDB REPEATABLE READ.
+        $latest = $this->db->prepare('SELECT id FROM document_versions WHERE document_id = :id ORDER BY version DESC, id DESC LIMIT 1 FOR UPDATE');
+        $latest->execute(['id' => $documentId]);
+        $revision = (int) ($latest->fetchColumn() ?: 0);
+        if ($expectedRevision === null || $expectedRevision < 0 || $expectedRevision !== $revision) {
+            throw new \UltimaVox\Modules\Documents\Admin\DocumentConflictException();
+        }
     }
 
     public function publishVersion(int $documentId, int $versionId): void

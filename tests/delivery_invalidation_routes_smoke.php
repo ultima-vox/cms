@@ -92,7 +92,7 @@ try {
 
     $updateDocument = $core->routes()->handler('documents.update');
     $documentPath = '/admin/documents/' . $documentId;
-    $data = ['name' => 'Delivery main', 'content' => '<p>After publication</p>', 'save_mode' => 'publish'];
+    $data = ['expected_revision' => (string) $versionId, 'name' => 'Delivery main', 'content' => '<p>After publication</p>', 'save_mode' => 'publish'];
     $response = $updateDocument($post($documentPath, $data + ['_csrf' => 'invalid']), ['id' => (string) $documentId]);
     if ($response->statusCode() !== 419 || $core->cache()->get('document-output') !== $html || !is_file($docStatic)) {
         throw new RuntimeException('Rejected Documents mutation evicted valid cached output.');
@@ -103,6 +103,15 @@ try {
         || $core->cache()->get('other-site') !== 'Other site' || !is_file($otherStatic)
         || (string) $renderer->render($document, new RenderContext()) !== '<p>After publication</p>') {
         throw new RuntimeException('Documents publication did not invalidate only its dependent output.');
+    }
+
+    // A stale retry must neither publish nor evict the winner's cached output/audit a success.
+    $core->cache()->put('conflict-output', 'Winner', $context->dependencies(), 60);
+    $auditCount = (int) $db->query("SELECT COUNT(*) FROM audit_log WHERE action='document.version.create' AND entity_id=" . $documentId)->fetchColumn();
+    $response = $updateDocument($post($documentPath, $data + ['_csrf' => $csrf]), ['id' => (string) $documentId]);
+    if ($response->statusCode() !== 409 || $core->cache()->get('conflict-output') !== 'Winner'
+        || (int) $db->query("SELECT COUNT(*) FROM audit_log WHERE action='document.version.create' AND entity_id=" . $documentId)->fetchColumn() !== $auditCount) {
+        throw new RuntimeException('Conflict evicted valid cache or recorded a successful mutation.');
     }
 
     $insertSystem = $db->prepare(

@@ -161,6 +161,7 @@ jobs:
           php tests/infosystem_money_smoke.php
           php tests/infosystem_list_smoke.php
           php tests/layout_list_smoke.php
+          php tests/document_revision_smoke.php
           php tests/page_editor_handoff_smoke.php
           php tests/admin_navigation_smoke.php
 
@@ -513,6 +514,7 @@ jobs:
           php tests/infosystem_money_smoke.php
           php tests/infosystem_list_smoke.php
           php tests/layout_list_smoke.php
+          php tests/document_revision_smoke.php
           php tests/page_editor_handoff_smoke.php
           php tests/admin_navigation_smoke.php
           php tests/document_list_smoke.php
