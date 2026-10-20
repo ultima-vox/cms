@@ -31,7 +31,8 @@
             });
             const status = form.querySelector('[role="status"]');
             if (status) status.textContent = form.dataset.submitPending;
-            queueMicrotask(() => { if (event.defaultPrevented) restorePending(form); });
+            // A task runs after every submit listener; microtasks can run between native callbacks.
+            setTimeout(() => { if (event.defaultPrevented) restorePending(form); }, 0);
         }
     });
     window.addEventListener('pageshow', () => {
