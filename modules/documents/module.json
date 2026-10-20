@@ -1,11 +1,11 @@
 {
   "code": "documents",
   "name": "Documents",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "extension_api": "^1.0",
   "default_enabled": true,
   "requires": {
-    "core": ">=0.6.0"
+    "core": ">=0.6.1"
   },
   "provider": "UltimaVox\\Modules\\Documents\\DocumentsModule",
   "migration_after": [

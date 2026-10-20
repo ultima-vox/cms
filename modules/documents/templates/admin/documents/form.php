@@ -26,7 +26,7 @@ echo $view->render('admin/_header.php', [
     </header>
 
     <?php if (!empty($error)): ?>
-        <div class="admin-notice admin-notice--error"><?= text($error) ?></div>
+        <div class="admin-notice admin-notice--error" role="alert"><?= text($error) ?></div>
     <?php endif; ?>
     <?php if (!empty($saved)): ?>
         <div class="admin-notice admin-notice--success">Черновик сохранён новой версией.</div>
@@ -35,7 +35,7 @@ echo $view->render('admin/_header.php', [
         <div class="admin-notice admin-notice--success">Новая версия опубликована.</div>
     <?php endif; ?>
 
-    <form class="admin-form" method="post" action="<?= text($isCreate ? '/admin/documents' : '/admin/documents/' . $documentId) ?>">
+    <form class="admin-form admin-form--actions" data-submit-pending="Сохранение выполняется…" method="post" action="<?= text($isCreate ? '/admin/documents' : '/admin/documents/' . $documentId) ?>">
         <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
         <?php foreach ($page_return['parameters'] ?? [] as $key => $value): ?><input type="hidden" name="<?= text($key) ?>" value="<?= text($value) ?>"><?php endforeach; ?>
         <?php if ($return_parameters !== []): ?>
@@ -82,10 +82,11 @@ echo $view->render('admin/_header.php', [
             </label>
         </section>
 
-        <div class="admin-actions">
+        <div class="admin-actions admin-actions--sticky" role="group" aria-label="Действия документа">
             <button class="admin-button admin-button--secondary" type="submit" name="save_mode" value="draft">Сохранить черновик</button>
             <button class="admin-button admin-button--primary" type="submit" name="save_mode" value="publish">Опубликовать новую версию</button>
             <a class="admin-button admin-button--secondary" href="<?= text($page_return['url'] ?? $return_url) ?>">Отмена</a>
+            <span role="status" aria-live="polite"></span>
         </div>
     </form>
 
