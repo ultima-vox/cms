@@ -42,6 +42,16 @@
         });
     });
 
+    document.querySelectorAll('[data-admin-section]').forEach(section => {
+        section.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !narrowNavigation.matches && section.open) {
+                event.preventDefault();
+                section.open = false;
+                section.querySelector('summary')?.focus();
+            }
+        });
+    });
+
     document.querySelectorAll('[data-site-select]').forEach((select) => {
         select.addEventListener('change', () => select.form?.submit());
     });

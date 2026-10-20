@@ -45,48 +45,54 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         const navigation = page.getByRole('navigation', {name: 'Основная навигация'});
         const openNavigation = async () => {
             if (width <= 800) {
-                await page.locator('.admin-sections > summary').focus();
-                await page.keyboard.press('Space');
-                await page.locator('.admin-local > summary').focus();
+                await page.locator('.admin-navigation > summary').focus();
                 await page.keyboard.press('Space');
             }
         };
         await openNavigation();
+        assert.deepEqual(await navigation.locator('[data-admin-section] > summary').allTextContents(), ['Контент', 'Оформление', 'Система']);
+        assert.equal(await navigation.locator('a[aria-current="page"]').getAttribute('href'), '/admin/modules');
+        assert.equal(await navigation.locator('a[href="/admin/documents"]').count(), 1);
+        assert.equal(await navigation.locator('a[href="/admin/documents"]').isVisible(), false);
+        assert.equal(await page.locator('.admin-sections').count(), 0, 'Horizontal primary navigation returned');
+        assert.equal(await page.getByRole('button', {name: 'Поиск и команды', exact: true}).isVisible(), true);
         if (width <= 800) {
             const sitePicker = await page.getByRole('combobox', {name: 'Текущий сайт', exact: true}).boundingBox();
-            assert(sitePicker.width >= 150, 'Mobile site context is squeezed into an unreadable control');
+            assert(sitePicker.width >= 150, 'Mobile site context is unreadable');
+        } else {
+            const sidebar = await page.locator('.admin-shell__sidebar').boundingBox();
+            const workspace = await page.locator('#admin-workspace').boundingBox();
+            assert(sidebar.x < workspace.x && Math.abs(sidebar.y - workspace.y) < 1, 'Sections must be beside the workspace');
         }
         await page.screenshot({path: `/tmp/cms-layout-navigation-${width}.png`, fullPage: true});
-        assert.deepEqual(await navigation.getByRole('link').allTextContents(), ['Обзор', 'Контент', 'Оформление', 'Система']);
-        const local = page.getByRole('navigation', {name: 'Меню раздела', exact: true});
-        assert.equal(await local.locator('a[aria-current="page"]').getAttribute('href'), '/admin/modules');
-        assert.equal(await local.locator('a[href="/admin/documents"]').count(), 0);
-        assert.equal(await page.getByRole('button', {name: 'Поиск и команды', exact: true}).isVisible(), true);
-        // An old desktop collapse preference must never hide the new labels.
+        // Old collapse storage cannot hide navigation. Only the route determines the active group.
         await page.evaluate(() => localStorage.setItem('uv-admin-sidebar-collapsed', '1'));
         await page.reload();
         await openNavigation();
-        await navigation.getByRole('link', {name: 'Контент', exact: true}).click();
-        if (width <= 800) await page.locator('.admin-local > summary').click();
-        await local.getByRole('link', {name: 'Документы', exact: true}).click();
+        const previousUrl = page.url();
+        await navigation.locator('[data-admin-section="content"] > summary').focus();
+        await page.keyboard.press('Space');
+        assert.equal(page.url(), previousUrl, 'Expanding a group must not navigate or discard form state');
+        await navigation.getByRole('link', {name: 'Документы', exact: true}).click();
         assert.equal(new URL(page.url()).pathname, '/admin/documents');
-        if (width <= 800) await page.locator('.admin-sections > summary').click();
-        assert.equal(await navigation.getByRole('link', {name: 'Контент', exact: true}).getAttribute('aria-current'), 'true');
-        // Global palette retains allowed destinations outside the active section.
+        await openNavigation();
+        assert.equal(await navigation.locator('[data-admin-section="content"]').getAttribute('open'), '');
+        assert.equal(await navigation.getByRole('link', {name: 'Документы', exact: true}).getAttribute('aria-current'), 'page');
+        // Palette keeps destinations in other, collapsed groups.
         await page.keyboard.press('Control+k');
         const palette = page.getByRole('dialog', {name: 'Поиск и команды', exact: true});
         await palette.locator('[data-command-input]').fill('Макеты');
         await page.keyboard.press('Enter');
         await page.waitForURL(base + '/admin/layouts');
-        if (width <= 800) {
-            const summary = page.locator('.admin-local > summary');
-            await summary.focus();
-            await page.keyboard.press('Space');
-            await local.getByRole('link').first().focus();
-            await page.keyboard.press('Escape');
-            assert.equal(await page.locator('.admin-local').getAttribute('open'), null);
-            assert.equal(await summary.evaluate(node => node === document.activeElement), true);
-        }
+        await openNavigation();
+        await navigation.getByRole('link', {name: 'Макеты', exact: true}).focus();
+        await page.keyboard.press('Escape');
+        const closed = width <= 800 ? '.admin-navigation' : '[data-admin-section="design"]';
+        assert.equal(await page.locator(closed).getAttribute('open'), null);
+        assert.equal(await page.locator(closed + ' > summary').evaluate(node => node === document.activeElement), true);
+        await page.reload();
+        await openNavigation();
+        assert.equal(await navigation.getByRole('link', {name: 'Макеты', exact: true}).isVisible(), true);
         await page.goto(base + '/admin/modules');
         await page.screenshot({path: `/tmp/cms-layout-admin-${width}.png`, fullPage: true});
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Admin overflow at ${width}px`);
@@ -268,10 +274,9 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         const fallbackPage = await fallback.newPage();
         fallbackPage.on('pageerror', error => errors.push(error.message));
         await fallbackPage.goto(base + '/admin/modules');
-        if (javaScriptEnabled) await fallbackPage.locator('.admin-sections > summary').click();
-        await fallbackPage.getByRole('navigation', {name: 'Основная навигация'}).getByRole('link', {name: 'Контент', exact: true}).click();
-        if (javaScriptEnabled) await fallbackPage.locator('.admin-local > summary').click();
-        await fallbackPage.getByRole('navigation', {name: 'Меню раздела'}).getByRole('link', {name: 'Документы', exact: true}).click();
+        if (javaScriptEnabled) await fallbackPage.locator('.admin-navigation > summary').click();
+        await fallbackPage.locator('[data-admin-section=content] > summary').click();
+        await fallbackPage.getByRole('navigation', {name: 'Основная навигация'}).getByRole('link', {name: 'Документы', exact: true}).click();
         assert.equal(new URL(fallbackPage.url()).pathname, '/admin/documents');
         assert(await fallbackPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
         await fallback.close();
@@ -279,7 +284,7 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
     // 1440px at 200% browser zoom has an effective CSS viewport of 720px.
     await page.setViewportSize({width: 720, height: 500});
     await page.goto(base + '/admin/modules');
-    assert.equal(await page.locator('.admin-sections > summary').isVisible(), true);
+    assert.equal(await page.locator('.admin-navigation > summary').isVisible(), true);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     await page.goto(base + '/admin/updates');
     await page.screenshot({path: '/tmp/cms-layout-updates.png', fullPage: true});
