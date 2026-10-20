@@ -348,3 +348,6 @@ query("INSERT INTO infosystems(site_id,code,name,field_schema,is_active) SELECT 
 
 from infosystem_list_http import verify_infosystem_lists
 verify_infosystem_lists(lambda path, data=None, expected=200: request(client, path, data, expected=expected))
+
+from layout_list_http import verify_layout_lists
+verify_layout_lists(lambda path, data=None, expected=200: request(client, path, data, expected=expected))

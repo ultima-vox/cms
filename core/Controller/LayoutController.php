@@ -38,9 +38,11 @@ final class LayoutController
 
         try { $browser = $this->folders->browser($request->query['folder'] ?? null, '/admin/layouts'); }
         catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
+        $listing = $this->layouts->page($request->query, $browser['selected'], $browser['all']);
         return Response::html($this->view->render('admin/layouts/index.php', [
             'folder_browser' => $browser,
-            'layouts' => $this->folders->filter($this->layouts->all(), $browser),
+            'layouts' => $listing['rows'],
+            'listing' => $listing,
             'deleted' => isset($request->query['deleted']),
         ]));
     }

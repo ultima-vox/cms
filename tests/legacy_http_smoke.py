@@ -85,3 +85,6 @@ verify_page_editor_handoff(request, handoff_fixture_query)
 
 from infosystem_list_http import verify_infosystem_lists
 verify_infosystem_lists(request)
+
+from layout_list_http import verify_layout_lists
+verify_layout_lists(request)

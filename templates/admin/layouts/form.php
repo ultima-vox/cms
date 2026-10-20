@@ -9,7 +9,7 @@ $title = $layoutId ? 'Редактирование макета' : 'Новый �
 echo $view->render('admin/_header.php', [
     'admin_active' => $adminActive,
     'admin_title' => $title,
-    'admin_styles' => ['/assets/layouts.css', '/assets/code-formatter.css'],
+    'admin_styles' => ['/assets/layouts.css?v=' . \Core\Version::STRING, '/assets/code-formatter.css'],
 ]);
 ?>
 <div class="admin-dashboard">
