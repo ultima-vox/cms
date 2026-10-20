@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 $adminActive = 'documents';
+$versionStatuses = ['draft' => 'Черновик', 'published' => 'Опубликована', 'archived' => 'Архивная'];
 $documentId = isset($document['id']) && is_numeric($document['id']) ? (int) $document['id'] : null;
 $isCreate = $documentId === null;
 $title = $isCreate ? 'Новый документ' : 'Редактирование документа';
@@ -74,7 +75,7 @@ echo $view->render('admin/_header.php', [
         <section class="admin-panel">
             <h2 class="admin-panel__title">Содержимое</h2>
             <?php if (!$isCreate && is_array($editable_version ?? null)): ?>
-                <p class="admin-panel__description">Последняя версия документа: версия v<?= text($editable_version['version'] ?? '') ?>, статус <?= text($editable_version['status'] ?? '') ?>.</p>
+                <p class="admin-panel__description">Последняя версия: v<?= text($editable_version['version'] ?? '') ?> · <?= text($versionStatuses[$editable_version['status'] ?? ''] ?? 'Неизвестный статус') ?>.</p>
             <?php endif; ?>
             <label class="admin-field admin-field--wide">
                 <span class="admin-field__label">HTML</span>
@@ -104,7 +105,7 @@ echo $view->render('admin/_header.php', [
                         <?php foreach ($versions as $version): ?>
                             <tr>
                                 <td>v<?= text($version['version'] ?? '') ?></td>
-                                <td><?= text($version['status'] ?? '') ?></td>
+                                <td><?= text($versionStatuses[$version['status'] ?? ''] ?? 'Неизвестный статус') ?></td>
                                 <td><?= text($version['author_name'] ?? 'Не указан') ?></td>
                                 <td><?= text($version['created_at'] ?? '') ?></td>
                                 <td><?= text($version['published_at'] ?? '—') ?></td>
