@@ -22,7 +22,7 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         await draft.click();
         assert.equal(await form.getAttribute('aria-busy'), null);
         await page.getByLabel('Название', {exact: true}).fill('   ');
-        await page.getByLabel('Код', {exact: true}).fill(`actions-${width}-${scripts ? 'js' : 'native'}`);
+        await form.locator('input[name=code]').fill(`actions-${width}-${scripts ? 'js' : 'native'}`);
         await page.locator('textarea[name=content]').fill('<p>Action bar original content</p>');
         // Simulate a user-resized long textarea; no application DOM or logic is mocked.
         await page.locator('textarea[name=content]').evaluate(field => { field.style.height = '1600px'; });
@@ -69,7 +69,11 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
             });
             await publish.focus();
             await page.keyboard.press('Enter');
-            await requestSeen;
+            let deadline;
+            await Promise.race([requestSeen, new Promise((_, reject) => {
+                deadline = setTimeout(() => reject(new Error('Native publication POST was not observed')), 15000);
+            })]);
+            clearTimeout(deadline);
             assert.equal(await form.getAttribute('aria-busy'), 'true');
             assert.equal(await publish.getAttribute('aria-disabled'), 'true');
             assert.equal(await publish.isDisabled(), false, 'Native submitter must remain a successful control');
