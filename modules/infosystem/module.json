@@ -5,7 +5,7 @@
   "extension_api": "^1.0",
   "default_enabled": true,
   "requires": {
-    "core": ">=0.6.1"
+    "core": ">=0.6.2"
   },
   "provider": "UltimaVox\\Modules\\Infosystem\\InfosystemProvider"
 }

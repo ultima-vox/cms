@@ -40,7 +40,7 @@ $shellScripts = isset($admin_scripts) && is_array($admin_scripts) ? $admin_scrip
         </div>
     </dialog>
 
-    <script src="/assets/admin.js" defer></script>
+    <script src="/assets/admin.js?v=<?= text(\Core\Version::STRING) ?>" defer></script>
     <?php foreach ($shellScripts as $script): ?>
         <?php if (is_string($script) && $script !== ''): ?><script src="<?= text($script) ?>" defer></script><?php endif; ?>
     <?php endforeach; ?>
