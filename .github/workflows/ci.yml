@@ -55,6 +55,15 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Package private Mechaniki site resources in all distributions
+        env:
+          CMS_VERSION: 0.1.999
+        run: |
+          python3 tools/package_mvp.py /tmp/mechaniki-public.zip
+          python3 tools/package_mvp.py /tmp/mechaniki-webroot.zip --webroot
+          python3 tools/package_update.py /tmp/mechaniki-update.zip
+          python3 tests/mechaniki_distribution_smoke.py /tmp/mechaniki-public.zip /tmp/mechaniki-webroot.zip /tmp/mechaniki-update.zip
+
       - name: PHP syntax check
         run: |
           find core public templates tests modules -type f -name '*.php' -print0 | xargs -0 -n1 php -l
@@ -70,6 +79,11 @@ jobs:
           ! grep -R -n 'TwigRenderer\|TwigTemplateLinter\|AdminTwigRendererFactory' core modules tests bin
           ! grep -n '"twig/twig"' composer.json composer.lock
           ! grep -R -n 'name: Legacy/admin T[w]ig syntax check' .github/workflows bin
+
+      - name: Module ownership guard
+        run: |
+          python3 tools/check_core_boundaries.py
+          python3 tests/core_boundaries_check_test.py
 
       - name: Infosystem legacy content architecture check
         run: |
@@ -89,7 +103,7 @@ jobs:
       - name: Module manifest smoke test
         run: |
           php tests/module_manifest_smoke.php
-          php bin/console modules:list | grep $'^infosystem\t1.3.0\tInfosystems$'
+          php bin/console modules:list | grep $'^infosystem\t1.5.0\tInfosystems$'
 
       - name: Apply migrations
         run: php bin/console migrate
@@ -141,12 +155,16 @@ jobs:
         run: php bin/console extensions:sync
 
       - name: Portable database repository contract
-        run: php tests/database_driver_smoke.php
+        run: |
+          php tests/database_driver_smoke.php
+          php tests/infosystem_property_validation_smoke.php
+          php tests/infosystem_money_smoke.php
+          php tests/infosystem_list_smoke.php
+          php tests/page_editor_handoff_smoke.php
 
       - name: Document search and bounded list pagination
         run: |
           php tests/document_list_smoke.php
-          php tests/infosystem_list_smoke.php
 
       - name: Site-scoped content folders
         run: php tests/content_folders_smoke.php
@@ -156,9 +174,9 @@ jobs:
 
       - name: Module lifecycle smoke test
         run: |
-          php bin/console extensions:list | grep $'^infosystem\t1.3.0\tenabled\t\^1.0\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.5.0\tenabled\t\^1.0\tInfosystems$'
           php tests/module_lifecycle_smoke.php
-          php bin/console extensions:list | grep $'^infosystem\t1.3.0\tenabled\t\^1.0\tInfosystems$'
+          php bin/console extensions:list | grep $'^infosystem\t1.5.0\tenabled\t\^1.0\tInfosystems$'
 
       - name: Extension permission sync smoke test
         run: |
@@ -191,6 +209,9 @@ jobs:
           test "$editor_code_edit" = "0"
         env:
           PGPASSWORD: cms
+
+      - name: Physical module removal and fresh-process isolation
+        run: php tests/module_removal_smoke.php
 
       - name: Database health check
         run: php bin/console health
@@ -348,6 +369,19 @@ jobs:
       - name: Site resolution and isolation smoke test
         run: php tests/site_resolution_smoke.php
 
+      - name: Mechaniki local media safety smoke
+        run: |
+          php -l modules/mechaniki/site/sync-media.php
+          php tests/mechaniki_media_smoke.php
+          php -r '$m = json_decode(file_get_contents("modules/mechaniki/site/media-manifest.json"), true, flags: JSON_THROW_ON_ERROR); if (count($m["assets"]) !== 14) exit(1);'
+
+      - name: Mechaniki root-site integration smoke
+        run: |
+          php -l modules/mechaniki/site/activate.php
+          php -l modules/mechaniki/site/activate-infosystems.php
+          find modules/mechaniki/templates/public -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php tests/mechaniki_stage_smoke.php
+
       - name: Static page generation integration test
         run: |
           php tests/static_page_generation_smoke.php
@@ -363,6 +397,21 @@ jobs:
 
       - name: Infosystem module facade smoke test
         run: php tests/infosystem_module_smoke.php
+
+      - name: Infosystem folder browser and rich editor smoke
+        run: |
+          php -l modules/infosystem/src/Admin/SiteStylesheetResolver.php
+          php -l modules/infosystem/templates/admin/infosystems/item_form.php
+          php tests/infosystem_editor_browser_smoke.php
+          node --check public/assets/infosystem-editor.js
+
+      - name: Source formatting safety tests
+        run: |
+          node --check public/assets/code-formatter.js
+          node tests/code_formatter_smoke.cjs
+          node tests/infosystem_money_smoke.cjs
+
+
 
       - name: Admin item search smoke test
         run: php tests/admin_search_smoke.php
@@ -458,8 +507,12 @@ jobs:
           php bin/console extensions:sync
           php bin/console health
           php tests/database_driver_smoke.php
-          php tests/document_list_smoke.php
+          php tests/infosystem_property_validation_smoke.php
+          php tests/infosystem_money_smoke.php
           php tests/infosystem_list_smoke.php
+          php tests/page_editor_handoff_smoke.php
+          php tests/document_list_smoke.php
+          php tests/module_removal_smoke.php
           php tests/content_folders_smoke.php
           php tests/mysql_update_smoke.php
           php tests/mysql_migration_failure_smoke.php
@@ -473,7 +526,7 @@ jobs:
           unzip -q /tmp/legacy-webroot.zip -d /tmp/legacy-webroot
       - name: Fresh shared-hosting installation and editor journey
         run: |
-          env -u APP_ENV -u APP_URL -u DB_DRIVER -u DB_HOST -u DB_PORT -u DB_NAME -u DB_USER -u DB_PASS php -S 127.0.0.1:8089 -t /tmp/legacy-webroot /tmp/legacy-webroot/index.php > /tmp/legacy-http.log 2>&1 &
+          env -u APP_ENV -u APP_URL -u DB_DRIVER -u DB_HOST -u DB_PORT -u DB_NAME -u DB_USER -u DB_PASS INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8089 PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8089 -t /tmp/legacy-webroot /tmp/legacy-webroot/index.php > /tmp/legacy-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill "$SERVER_PID"' EXIT
           for n in $(seq 1 30); do
@@ -486,4 +539,103 @@ jobs:
         with:
           name: legacy-diagnostics-${{ strategy.job-index }}
           path: /tmp/legacy-http.log
+          if-no-files-found: ignore
+
+  apache-hosting:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        layout: [public, webroot]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cms_apache
+          POSTGRES_USER: cms
+          POSTGRES_PASSWORD: cms
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U cms -d cms_apache"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      MVP_URL: http://127.0.0.1:8086
+      MVP_LAYOUT: ${{ matrix.layout }}
+      MVP_DB_NAME: cms_apache
+      MVP_DB_USER: cms
+      MVP_DB_PASS: cms
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, dom, mbstring, zip
+          coverage: none
+      - run: composer install --no-dev --classmap-authoritative --no-interaction --prefer-dist --no-progress
+      - name: Build real Apache PHP 8.4 fixture
+        run: docker build -t cms-apache tests/fixtures/apache
+      - name: Package a clean hosting installation
+        run: |
+          if [ "$MVP_LAYOUT" = webroot ]; then
+            python3 tools/package_mvp.py /tmp/apache-hosting.zip --webroot
+          else
+            python3 tools/package_mvp.py /tmp/apache-hosting.zip
+          fi
+          mkdir /tmp/cms-apache
+          unzip -q /tmp/apache-hosting.zip -d /tmp/cms-apache
+          if [ "$MVP_LAYOUT" = webroot ]; then APP_PATH=/tmp/cms-apache/app; else APP_PATH=/tmp/cms-apache; fi
+          printf 'CMS_PRIVATE_PROOF' > "$APP_PATH/storage/logs/private-proof.txt"
+      - name: Install and edit through Apache with actual htaccess rules
+        run: |
+          if [ "$MVP_LAYOUT" = webroot ]; then DOCUMENT_ROOT=/var/www/cms; else DOCUMENT_ROOT=/var/www/cms/public; fi
+          docker run --detach --name cms-apache --network host -e INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8086 -e CMS_DOCUMENT_ROOT="$DOCUMENT_ROOT" -v /tmp/cms-apache:/var/www/cms cms-apache
+          trap 'docker logs cms-apache > /tmp/cms-apache.log 2>&1; docker rm -f cms-apache' EXIT
+          docker exec cms-apache chown -R www-data:www-data /var/www/cms
+          for n in $(seq 1 30); do
+            if curl --fail --silent --output /dev/null "$MVP_URL/install"; then break; fi
+            sleep 1
+          done
+          python3 tests/apache_private_files_smoke.py --before-install
+          python3 tests/mvp_http_smoke.py
+          python3 tests/apache_private_files_smoke.py
+          docker exec cms-apache php -r 'if (PHP_VERSION_ID < 80400 || PHP_SAPI !== "cli") exit(1);'
+      - name: Prove negative Apache fixture detects private file exposure
+        if: matrix.layout == 'webroot'
+        run: |
+          sed 's/AllowOverride All/AllowOverride None\n        FallbackResource \/index.php/' tests/fixtures/apache/site.conf > /tmp/apache-unsafe.conf
+          mkdir /tmp/cms-apache-unsafe
+          unzip -q /tmp/apache-hosting.zip -d /tmp/cms-apache-unsafe
+          PGPASSWORD=cms psql -h 127.0.0.1 -U cms -d postgres -c 'CREATE DATABASE cms_apache_unsafe;'
+          docker run --detach --name cms-apache-unsafe --network host -e INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8086 -e CMS_DOCUMENT_ROOT=/var/www/cms -v /tmp/cms-apache-unsafe:/var/www/cms -v /tmp/apache-unsafe.conf:/etc/apache2/sites-available/000-default.conf:ro cms-apache
+          trap 'docker logs cms-apache-unsafe > /tmp/cms-apache-unsafe.log 2>&1; docker rm -f cms-apache-unsafe' EXIT
+          docker exec cms-apache-unsafe chown -R www-data:www-data /var/www/cms
+          for n in $(seq 1 30); do
+            if curl --silent --output /dev/null "$MVP_URL/app/composer.json"; then break; fi
+            sleep 1
+          done
+          python3 tests/apache_private_files_smoke.py --expect-unsafe
+          python3 tests/installer_hosting_http_smoke.py
+          if python3 tests/apache_private_files_smoke.py; then
+            echo 'Protection test incorrectly accepted unsafe hosting'
+            exit 1
+          fi
+      - name: Reject redirects without following the supplied destination
+        if: matrix.layout == 'webroot'
+        run: |
+          python3 -m http.server 8091 --bind 127.0.0.1 > /tmp/cms-probe-redirect-target.log 2>&1 &
+          CANARY_PID=$!
+          sed '/Options FollowSymLinks/a\        RedirectMatch 302 ^/assets/cms-install-probe- http://127.0.0.1:8091/' tests/fixtures/apache/site.conf > /tmp/apache-redirect.conf
+          docker run --detach --name cms-apache-redirect --network host -e INSTALLER_LOCAL_ORIGIN=http://127.0.0.1:8086 -e CMS_DOCUMENT_ROOT=/var/www/cms -v /tmp/cms-apache-unsafe:/var/www/cms -v /tmp/apache-redirect.conf:/etc/apache2/sites-available/000-default.conf:ro cms-apache
+          trap 'docker logs cms-apache-redirect > /tmp/cms-apache-redirect.log 2>&1; docker rm -f cms-apache-redirect; kill "$CANARY_PID"' EXIT
+          for n in $(seq 1 30); do
+            if curl --silent --output /dev/null "$MVP_URL/install"; then break; fi
+            sleep 1
+          done
+          EXPECTED_PROBE_ERROR='URL не возвращает контрольный файл' python3 tests/installer_hosting_http_smoke.py
+          if grep -q 'GET /' /tmp/cms-probe-redirect-target.log; then echo 'Probe followed a redirect to the canary'; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: apache-diagnostics-${{ matrix.layout }}
+          path: /tmp/cms-apache*.log
           if-no-files-found: ignore

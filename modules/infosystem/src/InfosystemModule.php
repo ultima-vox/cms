@@ -24,6 +24,7 @@ use RuntimeException;
 use UltimaVox\Modules\Infosystem\Admin\InfosystemBindingController;
 use UltimaVox\Modules\Infosystem\Admin\InfosystemController;
 use UltimaVox\Modules\Infosystem\Admin\InfosystemItemListController;
+use UltimaVox\Modules\Infosystem\Admin\SiteStylesheetResolver;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemItemSearchRepository;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemRepository;
@@ -76,6 +77,12 @@ final class InfosystemModule implements ModuleInterface
             'infosystem.list',
             'infosystem.items',
             'modules/infosystem/templates/list.php',
+        );
+
+        $core->templates()->view(
+            'infosystem.item',
+            'infosystem.item',
+            'modules/infosystem/templates/item.php',
         );
 
         $core->templates()->facade(
@@ -131,6 +138,7 @@ final class InfosystemModule implements ModuleInterface
             $core->sites(),
         ))->create([dirname(__DIR__) . '/templates']);
         $management = new InfosystemManagementRepository($db, $siteId);
+        $pageNavigation = new \Core\Page\PageEditorNavigation($core->pages(), new StructureRepository($db, $siteId), $auth, $siteId);
         $controller = new InfosystemController(
             $auth,
             $management,
@@ -138,12 +146,18 @@ final class InfosystemModule implements ModuleInterface
             new AuditLogRepository($db, $core->sites()->adminId()),
             $adminView,
             new \Core\Content\FolderRepository($db, $siteId, 'infosystems'),
+            new SiteStylesheetResolver(
+                $core->runtime()->rootPath(),
+                new \Core\Repository\LayoutRepository($db, $siteId),
+            ),
+            $pageNavigation,
         );
         $listController = new InfosystemItemListController(
             $auth,
             $management,
             new InfosystemItemSearchRepository($db),
             $adminView,
+            $pageNavigation,
         );
         $bindingController = new InfosystemBindingController(
             $auth,

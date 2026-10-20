@@ -22,7 +22,8 @@ def request(path, data=None, expected=200):
     except urllib.error.HTTPError as error:
         response = error
     body = response.read().decode()
-    assert response.code == expected, f'{path}: {response.code}, {body[:600]}'
+    detail = re.search(r'<div class="installer-result is-error">(.*?)</div>', body, re.S)
+    assert response.code == expected, f'{path}: {response.code}, {detail.group(1) if detail else body[:600]}'
     return body, response.headers
 
 def token(body):
@@ -59,3 +60,28 @@ for path in ['/app', '/app/.env', '/app/composer.json', '/app/vendor/autoload.ph
 body, _ = request('/')
 assert 'Legacy HTTP site' in body
 print('LEGACY HTTP OK: PostgreSQL default, explicit MySQL install, login, all admin sections, document, folder, private files')
+
+from document_context_http import DocumentPage, verify_document_return_context
+body, _ = request("/admin/documents")
+folder_link = DocumentPage(body).link("Legacy folder")
+folder_id = int(urllib.parse.parse_qs(urllib.parse.urlsplit(folder_link).query)["folder"][0])
+verify_document_return_context(request, 1, folder_id)
+
+from infosystem_property_http import verify_infosystem_properties
+verify_infosystem_properties(request)
+
+from page_editor_handoff_http import verify_page_editor_handoff
+import shutil
+import subprocess
+
+def handoff_fixture_query(sql):
+    env = os.environ.copy()
+    env['MYSQL_PWD'] = 'cms'
+    return subprocess.check_output([shutil.which('mariadb') or shutil.which('mysql'),
+        '-h127.0.0.1', '-P' + os.environ.get('DB_PORT', '3306'), '-ucms',
+        '--batch', '--skip-column-names', 'cms_legacy_http', '-e', sql], env=env, text=True).strip()
+
+verify_page_editor_handoff(request, handoff_fixture_query)
+
+from infosystem_list_http import verify_infosystem_lists
+verify_infosystem_lists(request)

@@ -1,0 +1,25 @@
+/* Data presentation and reference tokens; accepted page geometry stays intact. */
+.review-list { display:grid; gap:28px; }
+.review-list .verified-review { margin:0; padding:24px 0; }
+.review-list .verified-review blockquote { font-size:clamp(18px,2vw,22px); line-height:1.65; }
+.review-stars { display:block; color:var(--red); letter-spacing:.12em; margin-bottom:20px; font-size:18px; }
+.verified-review figcaption { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; }
+.verified-review figcaption strong { color:var(--text); }
+.verified-review figcaption a { min-height:44px; display:inline-flex; align-items:center; text-decoration:underline; text-underline-offset:4px; }
+.reviews .section-heading { margin-bottom:24px; }
+.reviews>.wrap>.quiet-link { margin-top:24px; }
+.booking-honeypot { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.booking-fallback { font-size:14px; line-height:1.6; }
+.booking-fallback a { display:inline-flex; align-items:center; min-height:44px; text-decoration:underline; text-underline-offset:3px; }
+.ds-colors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.ds-color { padding:24px; min-height:120px; border:1px solid var(--border); border-radius:10px; }
+.ds-color strong,.ds-color span { display:block; }
+.ds-color--navy { background:var(--navy); color:#fff; }
+.ds-color--red { background:var(--red); color:#fff; }
+.ds-color--warm { background:var(--bg); }
+.ds-color--text { background:var(--text); color:#fff; }
+.ds-type,.ds-icons { margin-top:32px; }
+.ds-icons { display:flex; flex-wrap:wrap; gap:24px; }
+.ds-spacing,.ds-archetypes { padding-left:24px; line-height:2; }
+[data-motion-demo] { margin-top:28px; }
+@media(min-width:768px) { .reviews .review-list { grid-template-columns:repeat(2,minmax(0,1fr)); gap:48px; } .customer-reviews .review-list { max-width:900px; } .ds-colors { grid-template-columns:repeat(4,minmax(0,1fr)); } }

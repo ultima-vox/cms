@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "content-site": {
+      "status": "implemented",
+      "fixture": "tests/g0_content_fixture.php",
+      "runner": "tools/g0_content_baseline.py",
+      "primary": {
+        "nodes": 1000,
+        "published_documents": 999,
+        "infosystem_items": 10000
+      },
+      "secondary": {
+        "nodes": 2,
+        "published_documents": 1,
+        "infosystem_items": 20
+      },
+      "checks": [
+        "overlapping host/path cache isolation",
+        "draft and inactive content excluded",
+        "foreign document and item IDs return 404"
+      ],
+      "evidence": "docs/roadmap/baselines/content-v1-2026-10-19.json"
+    },
+    "multilingual-corporate": {
+      "status": "blocked",
+      "reason": "Localization and regions owners are absent; this is a fixture contract, not seeded data or a passing test.",
+      "depends_on": [
+        116
+      ],
+      "planned": {
+        "sites": 2,
+        "locales": [
+          "ru",
+          "en"
+        ],
+        "regions": 2
+      },
+      "required_checks": [
+        "translation publication and fallback",
+        "site/locale/region URL and cache isolation",
+        "ACL",
+        "canonical and hreflang consistency"
+      ]
+    },
+    "commerce-site": {
+      "status": "blocked",
+      "reason": "Catalog, order and payment owners are absent; no synthetic orders or claimed commerce benchmark.",
+      "depends_on": [
+        117,
+        118,
+        119
+      ],
+      "planned": {
+        "sites": 2,
+        "products": 10000,
+        "skus": 30000
+      },
+      "required_checks": [
+        "exact server-calculated prices",
+        "site ownership",
+        "concurrent stock handling",
+        "idempotent checkout and sandbox retries"
+      ]
+    }
+  }
+}

@@ -8,7 +8,7 @@ use RuntimeException;
 
 final class FieldSchema
 {
-    private const TYPES = ['text', 'textarea', 'number', 'boolean', 'select', 'date'];
+    private const TYPES = ['text', 'textarea', 'number', 'money', 'boolean', 'select', 'date'];
 
     /** @return list<array<string, mixed>> */
     public function decode(string $json): array
@@ -80,6 +80,27 @@ final class FieldSchema
         return $result;
     }
 
+    /** Editor amounts are in major units; repository/JSON amounts remain integer minor units.
+     * @param list<array<string, mixed>> $schema
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public function normalizeEditorProperties(array $schema, array $input): array
+    {
+        foreach ($schema as $field) {
+            if ($field['type'] !== 'money') {
+                continue;
+            }
+            $code = (string) $field['code'];
+            try {
+                $input[$code] = MoneyValue::parse($input[$code] ?? null);
+            } catch (\InvalidArgumentException $exception) {
+                throw new PropertyValidationException($code, $exception->getMessage());
+            }
+        }
+        return $this->normalizeProperties($schema, $input);
+    }
+
     /** @param list<array<string, mixed>> $schema
      *  @param array<string, mixed> $input
      *  @return array<string, mixed>
@@ -95,15 +116,30 @@ final class FieldSchema
 
             if ($type === 'boolean') {
                 $value = $raw === '1' || $raw === 1 || $raw === true || $raw === 'on';
+            } elseif ($type === 'money') {
+                try {
+                    $value = MoneyValue::minor($raw);
+                } catch (\InvalidArgumentException $exception) {
+                    throw new PropertyValidationException($code, $exception->getMessage());
+                }
             } elseif ($type === 'number') {
                 if ($raw === null || $raw === '') {
                     $value = null;
                 } elseif (!is_numeric($raw)) {
-                    throw new RuntimeException(sprintf('Поле «%s» должно быть числом.', $field['name']));
+                    throw new PropertyValidationException($code, sprintf('Поле «%s» должно быть числом.', $field['name']));
                 } else {
                     $value = (float) $raw;
+                    // Preserve the existing approximate float contract, but never store infinity
+                    // or silently turn a nonzero out-of-range decimal into zero.
+                    $mantissa = preg_split('/[eE]/', trim((string) $raw), 2)[0];
+                    if (!is_finite($value) || ($value === 0.0 && preg_match('/[1-9]/', $mantissa))) {
+                        throw new PropertyValidationException($code, sprintf('Число в поле «%s» вне допустимого диапазона.', $field['name']));
+                    }
                 }
             } else {
+                if ($raw !== null && !is_scalar($raw)) {
+                    throw new PropertyValidationException($code, sprintf('Некорректное значение поля «%s».', $field['name']));
+                }
                 $value = $raw === null ? null : trim((string) $raw);
                 if ($value === '') {
                     $value = null;
@@ -111,13 +147,16 @@ final class FieldSchema
             }
 
             if (($field['required'] ?? false) && $value === null) {
-                throw new RuntimeException(sprintf('Поле «%s» обязательно.', $field['name']));
+                throw new PropertyValidationException($code, sprintf('Поле «%s» обязательно.', $field['name']));
             }
             if ($type === 'select' && $value !== null && !in_array($value, $field['options'], true)) {
-                throw new RuntimeException(sprintf('Некорректное значение поля «%s».', $field['name']));
+                throw new PropertyValidationException($code, sprintf('Некорректное значение поля «%s».', $field['name']));
             }
-            if ($type === 'date' && $value !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-                throw new RuntimeException(sprintf('Некорректная дата в поле «%s».', $field['name']));
+            if ($type === 'date' && $value !== null && (
+                !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $value)
+                || !checkdate((int) substr($value, 5, 2), (int) substr($value, 8, 2), (int) substr($value, 0, 4))
+            )) {
+                throw new PropertyValidationException($code, sprintf('Некорректная дата в поле «%s».', $field['name']));
             }
 
             if ($value !== null) {

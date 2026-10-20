@@ -23,6 +23,8 @@ final class DocumentController
         private readonly AuditLogRepository $audit,
         private readonly AdminPhpRenderer $view,
         private readonly \Core\Content\FolderRepository $folders,
+        private readonly int $siteId,
+        private readonly \Core\Page\PageEditorNavigation $pageNavigation,
     ) {
     }
 
@@ -57,7 +59,7 @@ final class DocumentController
 
         try { $folder = $this->folders->browser($request->query['folder'] ?? null, '/admin/documents')['selected']; }
         catch (\RuntimeException) { return Response::html('<h1>404 Not Found</h1>', 404); }
-        return $this->formResponse(['folder_id' => $folder]);
+        return $this->formResponse(['folder_id' => $folder], returnContext: $this->returnContext($request->query));
     }
 
     /** @param array<string, string> $variables */
@@ -79,6 +81,8 @@ final class DocumentController
             200,
             isset($request->query['saved']),
             isset($request->query['published']),
+            $this->returnContext($request->query),
+            $this->pageNavigation->returnContext($request->query, '/admin/documents/' . $id . '/edit'),
         );
     }
 
@@ -93,6 +97,7 @@ final class DocumentController
             return $csrf;
         }
 
+        $returnContext = $this->returnContext($request->post);
         try {
             $data = $this->formData($request->post, true);
             $id = $this->service->create(
@@ -108,10 +113,10 @@ final class DocumentController
             ]);
 
             return Response::redirect(
-                '/admin/documents/' . $id . '/edit?' . ($data['publish'] ? 'published=1' : 'saved=1'),
+                $this->savedUrl($id, $data['publish'], $returnContext),
             );
         } catch (Throwable $exception) {
-            return $this->formResponse($request->post, $exception->getMessage(), 422);
+            return $this->formResponse($request->post, $exception->getMessage(), 422, returnContext: $returnContext);
         }
     }
 
@@ -131,6 +136,8 @@ final class DocumentController
             return Response::html('<h1>404 Not Found</h1>', 404);
         }
 
+        $returnContext = $this->returnContext($request->post);
+        $pageReturn = $this->pageNavigation->returnContext($request->post, '/admin/documents/' . $id . '/edit');
         try {
             $data = $this->formData($request->post, false);
             $versionId = $this->service->save(
@@ -147,13 +154,15 @@ final class DocumentController
             ]);
 
             return Response::redirect(
-                '/admin/documents/' . $id . '/edit?' . ($data['publish'] ? 'published=1' : 'saved=1'),
+                $this->savedUrl($id, $data['publish'], $returnContext, $pageReturn),
             );
         } catch (Throwable $exception) {
             return $this->formResponse(
                 array_merge($existing, $request->post),
                 $exception->getMessage(),
                 422,
+                returnContext: $returnContext,
+                pageReturn: $pageReturn,
             );
         }
     }
@@ -165,6 +174,8 @@ final class DocumentController
         int $status = 200,
         bool $saved = false,
         bool $published = false,
+        ?DocumentListQuery $returnContext = null,
+        ?array $pageReturn = null,
     ): Response {
         $documentId = isset($document['id']) && is_numeric($document['id'])
             ? (int) $document['id']
@@ -191,7 +202,40 @@ final class DocumentController
             'error' => $error,
             'saved' => $saved,
             'published' => $published,
+            'return_url' => $returnContext?->url($returnContext->page) ?? '/admin/documents',
+            'return_parameters' => $returnContext?->returnParameters($this->siteId, $returnContext->page) ?? [],
+            'page_return' => $pageReturn,
         ]), $status);
+    }
+
+    /** Context is per link/tab, bounded to this site's list, never a supplied redirect URL. */
+    private function returnContext(array $input): ?DocumentListQuery
+    {
+        if (($input['_list_site'] ?? null) !== (string) $this->siteId || !is_array($input['_list'] ?? null)) {
+            return null;
+        }
+
+        $query = $input['_list'];
+        $all = ($query['folder'] ?? null) === 'all';
+        try {
+            $folder = $all ? null : \Core\Content\FolderRepository::id($query['folder'] ?? null);
+            $this->folders->assertFolder($folder);
+        } catch (RuntimeException) {
+            return null;
+        }
+
+        return DocumentListQuery::fromQuery($query, $folder, $all);
+    }
+
+    private function savedUrl(int $id, bool $published, ?DocumentListQuery $context, ?array $pageReturn = null): string
+    {
+        $url = '/admin/documents/' . $id . '/edit?' . ($published ? 'published=1' : 'saved=1');
+        if ($pageReturn !== null) {
+            $url .= '&' . http_build_query($pageReturn['parameters'], '', '&', PHP_QUERY_RFC3986);
+        }
+        return $context === null ? $url : $url . '&' . http_build_query(
+            $context->returnParameters($this->siteId, $context->page), '', '&', PHP_QUERY_RFC3986,
+        );
     }
 
     /** @param array<string, mixed> $input @return array{code:string,name:string,content:string,publish:bool} */

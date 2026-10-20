@@ -178,6 +178,69 @@ final class InfosystemRepository
         return $items;
     }
 
+    /** @return array<string, mixed>|null */
+    public function findPublishedItemByPath(int $siteId, int $infosystemId, string $path): ?array
+    {
+        if ($siteId < 1 || $infosystemId < 1
+            || strlen($path) > 255
+            || preg_match('#^/[a-z0-9-]+(?:/[a-z0-9-]+)*$#D', $path) !== 1) {
+            return null;
+        }
+
+        $statement = $this->db->prepare(
+            <<<'SQL'
+            WITH RECURSIVE visible_groups AS (
+                SELECT id
+                FROM infosystem_groups
+                WHERE infosystem_id = :infosystem_id
+                  AND parent_id IS NULL
+                  AND is_active = TRUE
+
+                UNION ALL
+
+                SELECT child.id
+                FROM infosystem_groups child
+                JOIN visible_groups parent ON parent.id = child.parent_id
+                WHERE child.infosystem_id = :infosystem_id
+                  AND child.is_active = TRUE
+            )
+            SELECT
+                i.id, i.infosystem_id, i.group_id, i.name, i.slug, i.path,
+                i.description, i.content, i.meta_description, i.sorting,
+                i.properties, i.created_at, i.updated_at,
+                g.name AS group_name, g.path AS group_path
+            FROM infosystem_items i
+            JOIN infosystems s ON s.id = i.infosystem_id
+            LEFT JOIN infosystem_groups g ON g.id = i.group_id
+            WHERE s.site_id = :site_id
+              AND s.is_active = TRUE
+              AND i.infosystem_id = :infosystem_id
+              AND i.path = :item_path
+              AND i.is_active = TRUE
+              AND i.status = 'published'
+              AND (i.publish_at IS NULL OR i.publish_at <= CURRENT_TIMESTAMP)
+              AND (i.group_id IS NULL OR i.group_id IN (SELECT id FROM visible_groups))
+            LIMIT 1
+            SQL
+        );
+        $statement->execute([
+            'site_id' => $siteId,
+            'infosystem_id' => $infosystemId,
+            'item_path' => $path,
+        ]);
+        $row = $statement->fetch();
+
+        if (!is_array($row)) {
+            return null;
+        }
+
+        if (is_string($row['properties'] ?? null)) {
+            $row['properties'] = json_decode($row['properties'], true, flags: JSON_THROW_ON_ERROR);
+        }
+
+        return $row;
+    }
+
     /** @param array<string, mixed> $record @return array<string, mixed> */
     private function normalizeInfosystem(array $record): array
     {

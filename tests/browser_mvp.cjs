@@ -8,10 +8,69 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
     await context.exposeFunction('__recordCspViolation', (directive, blocked) => errors.push(`CSP ${directive}: ${blocked}`));
     await context.addInitScript(() => window.addEventListener('securitypolicyviolation', event => window.__recordCspViolation(event.violatedDirective, event.blockedURI)));
     const page = await context.newPage();
+    const fixtures = JSON.parse(require('node:fs').readFileSync('/tmp/cms-folder-browser.json', 'utf8'));
     page.on('pageerror', error => errors.push(error.message));
+    const listContext = url => Object.fromEntries(['folder', 'q', 'status', 'sort', 'per_page', 'page'].map(key => [
+        key, url.searchParams.get(key) ?? ({page: '1', sort: 'name', per_page: '25'}[key] || ''),
+    ]));
+    const documentRoundTrip = async width => {
+        const expected = listContext(new URL(page.url()));
+        for (const label of ['К документам', 'Отмена']) {
+            await Promise.all([
+                page.waitForURL(url => /^\/admin\/documents\/\d+\/edit$/.test(url.pathname)),
+                page.locator('tbody tr').first().locator('a').first().click(),
+            ]);
+            if (label === 'К документам') {
+                await page.locator('textarea[name=content]').fill(`<p>List context ${width}px</p>`);
+                await Promise.all([
+                    page.waitForURL(url => url.pathname.endsWith('/edit') && url.searchParams.get('saved') === '1'),
+                    page.getByRole('button', {name: 'Сохранить черновик', exact: true}).click(),
+                ]);
+            }
+            await Promise.all([
+                page.waitForURL(url => url.pathname === '/admin/documents'),
+                page.getByRole('link', {name: label, exact: true}).click(),
+            ]);
+            assert.deepEqual(listContext(new URL(page.url())), expected, `Lost list context at ${width}px`);
+            assert.equal(await page.locator('tbody tr').count(), 1);
+            assert.equal(await page.getByLabel('Название или код').inputValue(), expected.q);
+            assert.equal(await page.getByLabel('Публикация', {exact: true}).inputValue(), expected.status);
+            assert.equal(await page.getByLabel('Сортировка', {exact: true}).inputValue(), expected.sort);
+            assert.equal(await page.getByLabel('На странице', {exact: true}).inputValue(), expected.per_page);
+        }
+    };
     for (const width of [1440, 1024, 390]) {
         await page.setViewportSize({width, height: 1000});
         await page.goto(base + '/admin/modules');
+        const navigation = page.getByRole('navigation', {name: 'Основная навигация'});
+        const labels = await navigation.locator('.admin-nav__label').allTextContents();
+        const assertNamedNavigation = async () => {
+            for (const label of labels) {
+                assert.equal(await navigation.getByRole('link', {name: label.trim(), exact: true}).count(), 1, `Unnamed navigation at ${width}px: ${label}`);
+            }
+            assert.equal(await page.getByRole('button', {name: 'Поиск и команды', exact: true}).isVisible(), true);
+        };
+        await assertNamedNavigation();
+        if (width > 800) {
+            // Keyboard activation must preserve role/name and state after reload.
+            await page.getByRole('button', {name: 'Свернуть меню', exact: true}).focus();
+            await page.keyboard.press('Space');
+            assert.equal(await page.getByRole('button', {name: 'Развернуть меню', exact: true}).getAttribute('aria-pressed'), 'true');
+        } else {
+            // A desktop collapsed preference may carry into the mobile viewport.
+            await page.evaluate(() => localStorage.setItem('uv-admin-sidebar-collapsed', '1'));
+        }
+        await page.reload();
+        await assertNamedNavigation();
+        assert.equal(await page.locator('[data-admin-collapse]').getAttribute('aria-label'), 'Развернуть меню');
+        if (width > 800) {
+            await page.getByRole('button', {name: 'Развернуть меню', exact: true}).focus();
+            await page.keyboard.press('Space');
+            assert.equal(await page.getByRole('button', {name: 'Свернуть меню', exact: true}).getAttribute('aria-pressed'), 'false');
+        } else {
+            await page.evaluate(() => localStorage.removeItem('uv-admin-sidebar-collapsed'));
+            await page.reload();
+        }
         await page.screenshot({path: `/tmp/cms-layout-admin-${width}.png`, fullPage: true});
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Admin overflow at ${width}px`);
         for (const panel of await page.locator('.module-upload-panel').all()) {
@@ -38,6 +97,12 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         assert.equal(await page.getByLabel('Название или код').inputValue(), 'Browser list');
         assert.equal(await page.getByLabel('Публикация', {exact: true}).inputValue(), 'unpublished');
         assert.equal(new URL(page.url()).searchParams.get('folder'), 'all');
+        await documentRoundTrip(width);
+        await page.goto(base + '/admin/documents?' + new URLSearchParams({
+            folder: String(fixtures.folder), q: 'Return context', status: 'unpublished', sort: 'code', per_page: '25', page: '2',
+        }));
+        assert.equal(await page.locator('tbody tr').count(), 1);
+        await documentRoundTrip(width);
         await page.goto(base + '/admin/infosystems?folder=all');
         await page.getByLabel('Название или код').fill('Browser catalog');
         await page.getByLabel('Активность', {exact: true}).selectOption('inactive');
@@ -69,7 +134,6 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
             assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
         }
     }
-    const fixtures = JSON.parse(require('node:fs').readFileSync('/tmp/cms-folder-browser.json', 'utf8'));
     await page.goto(base + `/admin/folders/documents/${fixtures.folder}/edit`);
     let deletes = 0;
     page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith(`/folders/documents/${fixtures.folder}/delete`)) deletes++; });
@@ -91,6 +155,89 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
     await page.locator('[name="fields[0][code]"]').fill('csp_field');
     await Promise.all([page.waitForURL(`**/infosystems/${fixtures.infosystem}/edit?saved=1`), page.locator('#infosystem-form button[type="submit"]').click()]);
     assert.equal(await page.locator('[name="fields[0][name]"]').inputValue(), 'Поле CSP');
+    // HostCMS-style group browser and tabbed editor.
+    await page.goto(base + "/admin/infosystems/" + fixtures.infosystem);
+    assert.equal(await page.locator(".content-section").count(), 1);
+    assert.equal(await page.locator(".is-browser__list, .admin-empty").count(), 1);
+    assert.equal(await page.locator(".is-breadcrumbs").count(), 1);
+    await page.getByRole("link", {name: /Новый элемент/}).click();
+    assert.equal(await page.locator('[data-tab="main"]').getAttribute("aria-selected"), "true");
+    await page.locator('[data-tab="description"]').click();
+    assert.equal(await page.locator('[data-tab-panel="description"]').isVisible(), true);
+    assert.equal(await page.locator('[data-tab-panel="main"]').isVisible(), false);
+    assert.equal(await page.locator('textarea[data-rich-editor="content"]').count(), 1);
+    assert.equal(await page.locator('.uv-rich__toolbar').count(), 2);
+    await page.locator('[data-rich-editor="content"]').fill('<p>HTML source remains editable</p>');
+    await page.locator('[data-tab="seo"]').click();
+    assert.equal(await page.locator('textarea[name="meta_description"]').isVisible(), true);
+    await page.locator('[data-tab="description"]').click();
+    const contentEditor = page.locator('.uv-rich').filter({has: page.locator('textarea[data-rich-editor="content"]')});
+    await contentEditor.locator('[data-editor-mode="preview"]').click();
+    assert.equal(await contentEditor.locator('iframe[title^="Предпросмотр"]').isVisible(), true);
+    assert.equal(await page.locator('textarea[data-rich-editor="content"]').inputValue(), '<p>HTML source remains editable</p>');
+    await contentEditor.locator('[data-editor-mode="source"]').click();
+    assert.equal(await page.locator('textarea[data-rich-editor="content"]').isVisible(), true);
+    const handoffFixture = JSON.parse(require('node:fs').readFileSync('/tmp/cms-page-editor-browser.json', 'utf8'));
+    for (const width of [1440, 1024, 390]) {
+        await page.setViewportSize({width, height: 1000});
+        for (const [settings, editor, isItem] of [[handoffFixture.page, handoffFixture.editor, false], [handoffFixture.is_page, handoffFixture.is_editor, true]]) {
+            await page.goto(base + settings);
+            for (const back of ['К странице', 'Отмена']) {
+                await page.getByRole('link', {name: 'Редактировать содержимое', exact: true}).focus();
+                await Promise.all([page.waitForURL(url => url.pathname === editor), page.keyboard.press('Enter')]);
+                assert.equal(await page.getByRole('link', {name: 'К странице', exact: true}).getAttribute('href'), settings);
+                if (back === 'К странице') {
+                    if (isItem) await page.locator('[data-tab="description"]').click();
+                    await page.locator('textarea[name=content]').fill(`<p>Page handoff ${width}px</p>`);
+                    await Promise.all([
+                        page.waitForURL(url => url.pathname === editor && (url.searchParams.has('saved') || url.searchParams.has('published'))),
+                        page.getByRole('button', {name: isItem ? 'Сохранить' : 'Сохранить черновик', exact: true}).click(),
+                    ]);
+                }
+                await page.getByRole('link', {name: back, exact: true}).focus();
+                await Promise.all([page.waitForURL(url => url.pathname === settings), page.keyboard.press('Enter')]);
+                assert.equal(await page.getByRole('link', {name: 'Редактировать содержимое', exact: true}).isVisible(), true);
+                assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Page settings overflow at ${width}px`);
+            }
+        }
+    }
+    const propertyFixture = JSON.parse(require('node:fs').readFileSync('/tmp/cms-property-browser.json', 'utf8'));
+    for (const width of [1440, 1024, 390]) {
+        await page.setViewportSize({width, height: 1000});
+        for (const [code, invalid, corrected] of [['event_date', '2026-02-31', '2024-02-29'], ['amount', '1e309', '-1250.5'], ['price', '100.005', '35000,50']]) {
+            await page.goto(base + propertyFixture.edit + '#main');
+            await page.locator('[data-tab="properties"]').click();
+            const field = page.locator(`[name="properties[${code}]"]`);
+            // Bypass native input constraints to verify server validation and its actual 422 page.
+            await field.evaluate(input => { input.type = 'text'; input.form.noValidate = true; });
+            await field.fill(invalid);
+            await Promise.all([
+                page.waitForNavigation({waitUntil: 'domcontentloaded'}),
+                page.getByRole('button', {name: 'Сохранить', exact: true}).click(),
+            ]);
+            assert.equal(await page.locator('[data-tab="properties"]').getAttribute('aria-selected'), 'true');
+            assert.equal(await field.getAttribute('aria-invalid'), 'true');
+            assert.equal(await field.inputValue(), invalid);
+            assert.equal(await field.getAttribute('aria-describedby'), `property-error-${code}`);
+            assert.equal(await page.locator(`#property-error-${code}[role="alert"]`).isVisible(), true);
+            assert.equal(await field.evaluate(input => input === document.activeElement), true);
+            await field.fill(corrected);
+            if (code === 'price') {
+                assert.equal(await field.inputValue(), '35000.50', 'Comma was not normalized during input');
+                await field.blur();
+                assert.equal(await field.inputValue(), '35 000.50', 'Thousands grouping was not applied');
+            }
+            await Promise.all([
+                page.waitForURL(url => url.pathname.endsWith('/edit') && url.searchParams.get('saved') === '1'),
+                page.getByRole('button', {name: 'Сохранить', exact: true}).click(),
+            ]);
+            assert.equal(await page.locator('[aria-invalid="true"]').count(), 0);
+            if (code === 'price') {
+                await page.locator('[data-tab="properties"]').click();
+                assert.equal(await field.inputValue(), '35 000.50', 'Saved ruble amount changed');
+            }
+        }
+    }
     await page.goto(base + '/admin/updates');
     await page.screenshot({path: '/tmp/cms-layout-updates.png', fullPage: true});
     assert.equal(errors.length, 0, errors.join('\n'));

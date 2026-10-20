@@ -1,0 +1,106 @@
+{
+  "code": "mechaniki_symptoms",
+  "name": "Симптомы и неисправности",
+  "schema_version": 1,
+  "records": [
+    {
+      "path": "/problems/check-engine",
+      "item_path": "/check-engine",
+      "slug": "check-engine",
+      "name": "Горит Check Engine — с чего начать?",
+      "lead": "Индикатор сообщает об ошибке в управлении двигателем. Важно понять, как он горит и что изменилось в работе автомобиля; код ошибки сам по себе не называет неисправную деталь.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/3/group_653/group_653.jpg",
+      "source_file": "pages/problems/check-engine.html"
+    },
+    {
+      "path": "/problems/dvigatel-troit",
+      "item_path": "/dvigatel-troit",
+      "slug": "dvigatel-troit",
+      "name": "Двигатель троит или работает неровно",
+      "lead": "Неровная работа может быть связана с зажиганием, подачей топлива, подсосом воздуха или механическим состоянием двигателя.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/7/group_657/group_657.jpeg",
+      "source_file": "pages/problems/dvigatel-troit.html"
+    },
+    {
+      "path": "/problems/kondicioner-ne-holodit",
+      "item_path": "/kondicioner-ne-holodit",
+      "slug": "kondicioner-ne-holodit",
+      "name": "Кондиционер не холодит",
+      "lead": "Недостаточное охлаждение бывает связано с утечкой, загрязнением или неисправностью компонентов. Заправка не заменяет диагностику.",
+      "image": "/assets/mechaniki/workshop.webp",
+      "source_file": "pages/problems/kondicioner-ne-holodit.html"
+    },
+    {
+      "path": "/problems/neizvestnaya-problema",
+      "item_path": "/neizvestnaya-problema",
+      "slug": "neizvestnaya-problema",
+      "name": "Не знаете, что сломалось? Опишите изменения",
+      "lead": "Для начала достаточно описать, что изменилось. Не нужно заранее определять неисправную деталь.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/3/group_653/group_653.jpg",
+      "source_file": "pages/problems/neizvestnaya-problema.html"
+    },
+    {
+      "path": "/problems/peregrev",
+      "item_path": "/peregrev",
+      "slug": "peregrev",
+      "name": "Двигатель перегревается: что делать?",
+      "lead": "Высокая температура может указывать на недостаток охлаждающей жидкости, неисправность вентилятора, термостата или циркуляции.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/7/group_657/group_657.jpeg",
+      "source_file": "pages/problems/peregrev.html"
+    },
+    {
+      "path": "/problems/ploho-zavoditsya",
+      "item_path": "/ploho-zavoditsya",
+      "slug": "ploho-zavoditsya",
+      "name": "Автомобиль плохо заводится",
+      "lead": "Важно различить: стартер не вращает двигатель или вращает, но двигатель не запускается.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/4/group_654/group_654.jpeg",
+      "source_file": "pages/problems/ploho-zavoditsya.html"
+    },
+    {
+      "path": "/problems/shum",
+      "item_path": "/shum",
+      "slug": "shum",
+      "name": "Появился посторонний шум в автомобиле",
+      "lead": "Укажите, где слышен звук и связан ли он со скоростью, оборотами двигателя или дорожными неровностями.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/3/group_653/group_653.jpg",
+      "source_file": "pages/problems/shum.html"
+    },
+    {
+      "path": "/problems/skrip-tormozov",
+      "item_path": "/skrip-tormozov",
+      "slug": "skrip-tormozov",
+      "name": "Скрипят тормоза: нужен осмотр",
+      "lead": "Шум может быть связан с износом, загрязнением или состоянием тормозных механизмов. Нужен осмотр.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/2/group_652/group_652.jpg",
+      "source_file": "pages/problems/skrip-tormozov.html"
+    },
+    {
+      "path": "/problems/stuk",
+      "item_path": "/stuk",
+      "slug": "stuk",
+      "name": "Стук на неровностях: что проверять?",
+      "lead": "Источником могут быть элементы подвески, рулевого управления или крепления. Важно понять, с какой стороны и при каких условиях слышен звук.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/0/group_650/group_650.jpeg",
+      "source_file": "pages/problems/stuk.html"
+    },
+    {
+      "path": "/problems/uvodit-avtomobil",
+      "item_path": "/uvodit-avtomobil",
+      "slug": "uvodit-avtomobil",
+      "name": "Автомобиль уводит в сторону",
+      "lead": "Причины могут быть связаны с шинами, углами установки колёс, подвеской или тормозами.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/0/group_650/group_650.jpeg",
+      "source_file": "pages/problems/uvodit-avtomobil.html"
+    },
+    {
+      "path": "/problems/vibraciya",
+      "item_path": "/vibraciya",
+      "slug": "vibraciya",
+      "name": "Вибрация автомобиля: найдём направление проверки",
+      "lead": "Причина зависит от того, появляется ли вибрация на холостом ходу, при разгоне, торможении или на определённой скорости.",
+      "image": "https://mechaniki.ru/upload/shop_5/6/5/3/group_653/group_653.jpg",
+      "source_file": "pages/problems/vibraciya.html"
+    }
+  ]
+}

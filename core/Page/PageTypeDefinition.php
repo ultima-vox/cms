@@ -25,6 +25,7 @@ final readonly class PageTypeDefinition
         public bool $isDefault = false,
         public int $sorting = 0,
         string $description = '',
+        public ?PageEditorLinkProviderInterface $editorLinkProvider = null,
     ) {
         $code = strtolower(trim($code));
         if (!preg_match('/^[a-z][a-z0-9._-]{0,127}$/', $code)) {

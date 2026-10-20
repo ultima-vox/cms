@@ -46,6 +46,12 @@ try {
     $invalid = $q(['q' => [], 'page' => [], 'per_page' => '1000000', 'sort' => 'name; DROP TABLE infosystems', 'status' => []], $folder);
     $assert($invalid->search === '' && $invalid->page === 1 && $invalid->perPage === 25 && $invalid->sort === 'name' && $invalid->status === '', 'Malformed inputs accepted');
     $assert($repo->page($q(['q' => 'missing'], $folder))['total'] === 0, 'Empty search failed');
+    $tieA = $repo->create('Tie', 'tie-a', null, [], true, $folder);
+    $tieB = $repo->create('Tie', 'tie-b', null, [], true, $folder);
+    $ties = $repo->page($q(['q' => 'Tie'], $folder));
+    $assert(array_map('intval', array_column($ties['rows'], 'id')) === [$tieA, $tieB], 'Equal names lost deterministic ID order');
+    $ties = $repo->page($q(['q' => 'Tie', 'sort' => 'name_desc'], $folder));
+    $assert(array_map('intval', array_column($ties['rows'], 'id')) === [$tieB, $tieA], 'Equal names lost reverse ID order');
     $foreignFolder = (new FolderRepository($db, $other, 'infosystems'))->save(null, 'Foreign', null);
     $failed = false;
     try { $repo->page($q([], $foreignFolder)); } catch (RuntimeException) { $failed = true; }

@@ -13,6 +13,7 @@ use Core\View\AdminPhpRenderer;
 use RuntimeException;
 use Throwable;
 use UltimaVox\Modules\Infosystem\FieldSchema;
+use UltimaVox\Modules\Infosystem\PropertyValidationException;
 use UltimaVox\Modules\Infosystem\Repository\InfosystemManagementRepository;
 
 final class InfosystemController
@@ -24,6 +25,8 @@ final class InfosystemController
         private readonly AuditLogRepository $audit,
         private readonly AdminPhpRenderer $view,
         private readonly \Core\Content\FolderRepository $folders,
+        private readonly SiteStylesheetResolver $siteStyles,
+        private readonly \Core\Page\PageEditorNavigation $pageNavigation,
     ) {
     }
 
@@ -193,7 +196,6 @@ final class InfosystemController
     /** @param array<string, string> $variables */
     public function createGroupForm(Request $request, array $variables = []): Response
     {
-        unset($request);
         if (($denied = $this->requirePermission()) !== null) {
             return $denied;
         }
@@ -203,7 +205,12 @@ final class InfosystemController
             return $system;
         }
 
-        return $this->groupFormResponse($system, null);
+        $parentId = $this->nullablePositiveInt($request->query['parent_id'] ?? null);
+        if ($parentId !== null && $this->infosystems->findGroup($infosystemId, $parentId) === null) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
+        }
+
+        return $this->groupFormResponse($system, ['parent_id' => $parentId]);
     }
 
     /** @param array<string, string> $variables */
@@ -329,7 +336,6 @@ final class InfosystemController
     /** @param array<string, string> $variables */
     public function createItemForm(Request $request, array $variables = []): Response
     {
-        unset($request);
         if (($denied = $this->requirePermission()) !== null) {
             return $denied;
         }
@@ -339,7 +345,12 @@ final class InfosystemController
             return $system;
         }
 
-        return $this->itemFormResponse($system, null);
+        $groupId = $this->nullablePositiveInt($request->query['group_id'] ?? null);
+        if ($groupId !== null && $this->infosystems->findGroup($infosystemId, $groupId) === null) {
+            return Response::html('<h1>404 Not Found</h1>', 404);
+        }
+
+        return $this->itemFormResponse($system, ['group_id' => $groupId]);
     }
 
     /** @param array<string, string> $variables */
@@ -358,7 +369,8 @@ final class InfosystemController
             return Response::html('<h1>404 Not Found</h1>', 404);
         }
 
-        return $this->itemFormResponse($system, $item, null, 200, isset($request->query['saved']));
+        return $this->itemFormResponse($system, $item, null, 200, isset($request->query['saved']), pageReturn:
+            $this->pageNavigation->returnContext($request->query, '/admin/infosystems/' . $infosystemId . '/items/' . (int) $item['id'] . '/edit'));
     }
 
     /** @param array<string, string> $variables */
@@ -382,7 +394,10 @@ final class InfosystemController
             $this->audit($request, 'infosystem_item.create', 'infosystem_item', $itemId, ['infosystem_id' => $infosystemId]);
             return Response::redirect('/admin/infosystems/' . $infosystemId . '/items/' . $itemId . '/edit?saved=1');
         } catch (Throwable $exception) {
-            return $this->itemFormResponse($system, $request->post, $exception->getMessage(), 422);
+            return $this->itemFormResponse(
+                $system, $request->post, $exception->getMessage(), 422,
+                fieldErrors: $exception instanceof PropertyValidationException ? [$exception->fieldCode => $exception->getMessage()] : [],
+            );
         }
     }
 
@@ -406,17 +421,21 @@ final class InfosystemController
             return Response::html('<h1>404 Not Found</h1>', 404);
         }
 
+        $pageReturn = $this->pageNavigation->returnContext($request->post, '/admin/infosystems/' . $infosystemId . '/items/' . $itemId . '/edit');
         try {
             $data = $this->itemData($request->post, $system);
             $this->infosystems->saveItem($itemId, $infosystemId, $data['group_id'], $data);
             $this->audit($request, 'infosystem_item.update', 'infosystem_item', $itemId, ['infosystem_id' => $infosystemId]);
-            return Response::redirect('/admin/infosystems/' . $infosystemId . '/items/' . $itemId . '/edit?saved=1');
+            return Response::redirect('/admin/infosystems/' . $infosystemId . '/items/' . $itemId . '/edit?saved=1'
+                . ($pageReturn !== null ? '&' . http_build_query($pageReturn['parameters'], '', '&', PHP_QUERY_RFC3986) : ''));
         } catch (Throwable $exception) {
             return $this->itemFormResponse(
                 $system,
                 array_merge($existing, $request->post),
                 $exception->getMessage(),
                 422,
+                fieldErrors: $exception instanceof PropertyValidationException ? [$exception->fieldCode => $exception->getMessage()] : [],
+                pageReturn: $pageReturn,
             );
         }
     }
@@ -462,6 +481,7 @@ final class InfosystemController
             'csrf_token' => Csrf::token(),
             'error' => $error,
             'saved' => $saved,
+            'editor_styles' => $this->siteStyles->resolve(),
         ]), $status);
     }
 
@@ -494,6 +514,8 @@ final class InfosystemController
         ?string $error = null,
         int $status = 200,
         bool $saved = false,
+        array $fieldErrors = [],
+        ?array $pageReturn = null,
     ): Response {
         $form = array_merge([
             'id' => null,
@@ -518,6 +540,9 @@ final class InfosystemController
         return Response::html($this->view->render('admin/infosystems/item_form.php', [
             'infosystem' => $system,
             'item' => $form,
+            'field_errors' => $fieldErrors,
+            'properties_are_input' => $status === 422,
+            'page_return' => $pageReturn,
             'fields' => is_array($system['field_schema'] ?? null) ? $system['field_schema'] : [],
             'groups' => $this->flattenGroups($this->infosystems->groups((int) $system['id'])),
             'csrf_token' => Csrf::token(),
@@ -602,7 +627,7 @@ final class InfosystemController
             throw new RuntimeException('Некорректные дополнительные свойства.');
         }
         $schema = is_array($system['field_schema'] ?? null) ? $system['field_schema'] : [];
-        $properties = $this->fieldSchema->normalizeProperties($schema, $propertiesInput);
+        $properties = $this->fieldSchema->normalizeEditorProperties($schema, $propertiesInput);
         $publishAt = trim((string) ($input['publish_at'] ?? ''));
 
         return [

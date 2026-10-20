@@ -39,13 +39,38 @@ final readonly class DocumentListQuery
 
     public function url(int $page): string
     {
-        return '/admin/documents?' . http_build_query([
+        return '/admin/documents?' . http_build_query($this->parameters($page), '', '&', PHP_QUERY_RFC3986);
+    }
+
+    public function parameters(int $page): array
+    {
+        return [
             'folder' => $this->allFolders ? 'all' : ($this->folderId ?? ''),
             'q' => $this->search,
             'status' => $this->status,
             'sort' => $this->sort,
             'per_page' => $this->perPage,
             'page' => max(1, $page),
-        ], '', '&', PHP_QUERY_RFC3986);
+        ];
+    }
+
+    public function returnParameters(int $siteId, int $page): array
+    {
+        return ['_list_site' => $siteId, '_list' => $this->parameters($page)];
+    }
+
+    public function editUrl(int $id, int $siteId, int $page): string
+    {
+        return '/admin/documents/' . $id . '/edit?' . http_build_query(
+            $this->returnParameters($siteId, $page), '', '&', PHP_QUERY_RFC3986,
+        );
+    }
+
+    public function createUrl(int $siteId, int $page): string
+    {
+        return '/admin/documents/create?' . http_build_query(
+            ['folder' => $this->folderId ?? ''] + $this->returnParameters($siteId, $page),
+            '', '&', PHP_QUERY_RFC3986,
+        );
     }
 }

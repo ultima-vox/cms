@@ -22,6 +22,7 @@ echo $view->render('admin/_header.php', [
             <?php $code = (string) ($field['code'] ?? ''); $filterValue = $filters['properties'][$code] ?? null; ?>
             <label class="admin-field"><span class="admin-field__label"><?= text($field['name'] ?? '') ?></span>
                 <?php if (($field['type'] ?? '') === 'select'): ?><select class="admin-select" name="properties[<?= text($code) ?>]"><option value="">Любое значение</option><?php foreach ((array) ($field['options'] ?? []) as $option): ?><option value="<?= text($option) ?>"<?= $filterValue === $option ? ' selected' : '' ?>><?= text($option) ?></option><?php endforeach; ?></select>
+                <?php elseif (($field['type'] ?? '') === 'money'): ?><input class="admin-input" name="properties[<?= text($code) ?>]" value="<?= text($filterValue) ?>" type="text" inputmode="decimal" data-money-input placeholder="1 234.56">
                 <?php elseif (($field['type'] ?? '') === 'boolean'): ?><select class="admin-select" name="properties[<?= text($code) ?>]"><option value="">Любое</option><option value="1"<?= $filterValue === true ? ' selected' : '' ?>>Да</option><option value="0"<?= $filterValue === false ? ' selected' : '' ?>>Нет</option></select>
                 <?php else: ?><input class="admin-input" name="properties[<?= text($code) ?>]" value="<?= text(is_scalar($filterValue) ? $filterValue : '') ?>" type="<?= ($field['type'] ?? '') === 'number' ? 'number' : (($field['type'] ?? '') === 'date' ? 'date' : 'text') ?>"><?php endif; ?>
             </label>
@@ -38,4 +39,4 @@ echo $view->render('admin/_header.php', [
         <nav class="admin-pagination" aria-label="Страницы"><?php if ($page > 1): ?><a class="admin-button" href="?<?= text($query . $separator . 'page=' . ($page - 1)) ?>">← Назад</a><?php endif; ?><span class="admin-pagination__summary">Страница <?= text($page) ?> из <?= text($pages) ?></span><?php if ($page < $pages): ?><a class="admin-button" href="?<?= text($query . $separator . 'page=' . ($page + 1)) ?>">Далее →</a><?php endif; ?></nav>
     <?php endif; ?>
 </div>
-<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive]) ?>
+<?= $view->render('admin/_footer.php', ['admin_active' => $adminActive, 'admin_scripts' => ['/assets/infosystem-money.js']]) ?>

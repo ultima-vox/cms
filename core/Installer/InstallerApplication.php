@@ -50,7 +50,11 @@ final readonly class InstallerApplication
             return;
         }
 
-        Response::redirect('/install')->send();
+        if ($request->path === '/') {
+            Response::redirect('/install')->send();
+        } else {
+            Response::html('<h1>404 Not Found</h1>', 404)->send();
+        }
     }
 
     private function preflight(): void

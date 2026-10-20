@@ -53,7 +53,13 @@ final class Response
 
     public function send(): void
     {
-        http_response_code($this->status);
+        // Apache substitutes 500 for an unknown numeric status without a reason phrase.
+        // Keep the existing CSRF contract on every SAPI by sending an explicit status line.
+        if ($this->status === 419) {
+            header('HTTP/1.1 419 CSRF Token Mismatch');
+        } else {
+            http_response_code($this->status);
+        }
 
         foreach ($this->headers as $name => $value) {
             header($name . ': ' . $value, true);

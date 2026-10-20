@@ -61,5 +61,12 @@ try {
     $url = $q(['q' => '<script>&"', 'status' => 'draft', 'sort' => 'code', 'per_page' => '50'], $folder)->url(2);
     parse_str((string) parse_url($url, PHP_URL_QUERY), $params);
     $assert($params['folder'] === (string) $folder && $params['q'] === '<script>&"' && $params['page'] === '2' && $params['status'] === 'draft', 'Pagination lost encoded filter context');
+    $editor = $q(['q' => '<script>&"', 'status' => 'draft', 'sort' => 'code', 'per_page' => '50'], $folder)->editUrl($ids[0], $site, 2);
+    parse_str((string) parse_url($editor, PHP_URL_QUERY), $context);
+    $assert(parse_url($editor, PHP_URL_PATH) === '/admin/documents/' . $ids[0] . '/edit', 'Editor route changed');
+    $assert($context['_list_site'] === (string) $site && $context['_list'] === $params, 'Editor link lost encoded list context');
+    $create = $q([], null, true)->createUrl($site, 1);
+    parse_str((string) parse_url($create, PHP_URL_QUERY), $context);
+    $assert($context['folder'] === '' && $context['_list']['folder'] === 'all', 'All-materials create must assign root but return to all');
     echo "DOCUMENT LIST OK: bounded pages, folder/site isolation, literal Unicode/code search, publication filters, malformed inputs, preserved links\n";
 } finally { if ($db->inTransaction()) $db->rollBack(); }
