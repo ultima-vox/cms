@@ -52,6 +52,10 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
             }
         };
         await openNavigation();
+        if (width <= 800) {
+            const sitePicker = await page.getByRole('combobox', {name: 'Текущий сайт', exact: true}).boundingBox();
+            assert(sitePicker.width >= 150, 'Mobile site context is squeezed into an unreadable control');
+        }
         await page.screenshot({path: `/tmp/cms-layout-navigation-${width}.png`, fullPage: true});
         assert.deepEqual(await navigation.getByRole('link').allTextContents(), ['Обзор', 'Контент', 'Оформление', 'Система']);
         const local = page.getByRole('navigation', {name: 'Меню раздела', exact: true});

@@ -894,21 +894,18 @@ code {
     }
 
     .admin-topbar {
-        height: auto;
-        min-height: 58px;
-        padding: 9px 16px;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr) auto;
+        grid-template-areas: "brand title search" "site site user";
+        gap: 10px 8px;
+        padding: 10px 16px;
     }
 
-    .admin-topbar__title {
-        flex: 1;
-        min-width: 150px;
-    }
-
-    .admin-site-switcher {
-        min-width: 0;
-        flex: 1;
-    }
+    .admin-topbar .admin-brand { grid-area: brand; padding: 0; }
+    .admin-topbar__title { grid-area: title; min-width: 0; overflow-wrap: anywhere; }
+    .admin-topbar .admin-site-switcher { grid-area: site; width: 100%; max-width: none; min-width: 0; }
+    .admin-topbar .admin-user-menu { grid-area: user; }
+    .admin-topbar .admin-search-trigger { grid-area: search; justify-self: end; }
 
     .admin-search-trigger {
         width: 44px;
