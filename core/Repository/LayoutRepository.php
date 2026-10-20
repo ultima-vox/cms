@@ -20,6 +20,66 @@ final readonly class LayoutRepository
         $q->execute(['site' => $this->siteId]);
         return $q->fetchAll(PDO::FETCH_ASSOC);
     }
+    /**
+     * Bounded administration list. Internal template selectors keep using all().
+     *
+     * @return array{rows: array, total: int, page: int, pages: int, per_page: int, filters: array}
+     */
+    public function page(array $query, ?int $folderId = null, bool $allFolders = false): array
+    {
+        (new FolderRepository($this->db, $this->siteId, 'layouts'))->assertFolder($folderId);
+        $string = static fn (mixed $value): string => is_string($value) ? trim($value) : '';
+        $search = mb_substr($string($query['q'] ?? ''), 0, 160);
+        $sort = $string($query['sort'] ?? '');
+        $sort = in_array($sort, ['name', 'name_desc', 'code'], true) ? $sort : 'name';
+        $requestedPage = $string($query['page'] ?? '');
+        $requestedPage = preg_match('/^[1-9][0-9]{0,5}$/D', $requestedPage) ? (int) $requestedPage : 1;
+        $size = $string($query['per_page'] ?? '');
+        $size = in_array($size, ['25', '50', '100'], true) ? (int) $size : 25;
+        $where = ['l.site_id = :site'];
+        $params = ['site' => $this->siteId];
+        if (!$allFolders) {
+            $where[] = $folderId === null ? 'l.folder_id IS NULL' : 'l.folder_id = :folder';
+            if ($folderId !== null) {
+                $params['folder'] = $folderId;
+            }
+        }
+        if ($search !== '') {
+            // Treat user input as a literal substring on both supported database adapters.
+            $pattern = '%' . strtr($search, ['!' => '!!', '%' => '!%', '_' => '!_']) . '%';
+            $where[] = "(LOWER(l.name) LIKE LOWER(:search_name) ESCAPE '!' OR LOWER(l.code) LIKE LOWER(:search_code) ESCAPE '!')";
+            $params['search_name'] = $pattern;
+            $params['search_code'] = $pattern;
+        }
+        $condition = ' WHERE ' . implode(' AND ', $where);
+        $count = $this->db->prepare('SELECT COUNT(*) FROM layouts l' . $condition);
+        $count->execute($params);
+        $total = (int) $count->fetchColumn();
+        $pages = max(1, (int) ceil($total / $size));
+        $page = min($requestedPage, $pages);
+        $order = match ($sort) {
+            'name_desc' => 'l.name DESC, l.id DESC',
+            'code' => 'l.code, l.id',
+            default => 'l.name, l.id',
+        };
+        $statement = $this->db->prepare(
+            'SELECT l.*, (SELECT COUNT(*) FROM nodes n WHERE n.layout_id=l.id AND n.site_id=l.site_id) AS node_count'
+            . ' FROM layouts l' . $condition . ' ORDER BY ' . $order . ' LIMIT :limit OFFSET :offset',
+        );
+        foreach ($params as $key => $value) {
+            $statement->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $statement->bindValue(':limit', $size, PDO::PARAM_INT);
+        $statement->bindValue(':offset', ($page - 1) * $size, PDO::PARAM_INT);
+        $statement->execute();
+
+        return [
+            'rows' => $statement->fetchAll(PDO::FETCH_ASSOC),
+            'total' => $total, 'page' => $page, 'pages' => $pages, 'per_page' => $size,
+            'filters' => ['folder' => $allFolders ? 'all' : ($folderId ?? ''), 'q' => $search,
+                'sort' => $sort, 'per_page' => $size],
+        ];
+    }
     public function find(int $id): ?array
     {
         $q = $this->db->prepare('SELECT l.*, (SELECT COUNT(*) FROM nodes n WHERE n.layout_id=l.id AND n.site_id=l.site_id) AS node_count FROM layouts l WHERE l.site_id = :site AND l.id = :id');
