@@ -180,3 +180,8 @@ The Infosystem index now uses `InfosystemListQuery` and `InfosystemManagementRep
 C07 remains **partial** overall: this closes the Infosystem-list portion; layouts (#124) and explicit-ID bulk operations (#127) still require their own acceptance. The original PR98 implementation is reused and refreshed against current main rather than replaced by a competing PR.
 
 Evidence: `tests/infosystem_list_smoke.php` covers folder/root/all scope, two-site isolation, Unicode and literal wildcard search, active/inactive states, non-overlapping pages, deterministic equal-name ordering, limits, malformed inputs and foreign folders on five DBs. `tests/infosystem_list_http.py` exercises the real list and navigation through PG/legacy installations, including XSS escaping and cross-site refusal. `tests/browser_mvp.cjs` checks the filter/page journey at 1440/1024/390px. These are bounded editor-list checks, not a production concurrency or FASTPANEL deployment claim.
+
+
+### G1 UX rebaseline — 2026-10-20
+
+На main e0476aff проведено сопоставление редакторских процессов с официальными источниками: [HostCMS UX parity](hostcms-ux-parity.md), [ADR навигации](../architecture/admin-ux-navigation.md). Это корректировка очереди и критериев, без runtime/schema changes. Flat admin navigation остаётся partial; favorites, saved list views/columns, shared sticky actions, dirty guard и revision-aware form recovery не считаются реализованными. Завершённые #123/#142/#149 сохраняют свою bounded приёмку. #156/P0 и #158/P0 предшествуют следующему UI расширению; #157/#159 дополняют #109. G1 остаётся открытым, production1.0 — NO-GO.

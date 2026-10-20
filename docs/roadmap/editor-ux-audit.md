@@ -91,3 +91,10 @@ Documents 1.3.1 сохраняет folder/q/status/sort/per_page/page в вал�
 ### G1: Infosystem list search and pagination
 
 PR98 / #123: the Infosystem index exposes name/code search, activity, sort and page-size controls in the shared admin layout. Folder scope and filters survive pagination; empty results show recovery guidance. The index no longer fetches all systems before PHP filtering. The reused implementation has five-DB repository/HTTP contracts and three-width browser coverage. Returning from an individual system's settings with the entire previous filter state is not added by this change; Documents' independently implemented editor-return contract is preserved.
+
+
+## Коррекция UX-очереди — 2026-10-20
+
+Baseline main e0476aff / dev v0.1.169. Исторические G0 наблюдения выше остаются привязаны к своим SHA. [Новая матрица HostCMS → наша CMS](hostcms-ux-parity.md) разделяет уже проверенные сценарии и отсутствующую редакторскую приёмку. [ADR](../architecture/admin-ux-navigation.md) задаёт верхние основные разделы и локальное меню текущего контекста вместо общего плоского sidebar.
+
+Первым UI PR идёт #156 (сначала совместимое metadata, затем shell), после него #158 (действия длинных форм). Далее остаются #124/#125/#128; #126 требует revision contract; #157 отвечает за личные shortcuts и saved views, #159 расширяет explicit-ID паттерн #127 на IS. PR154 продолжает интеграцию выбранного готового редактора; ни библиотека, ни iframe-preview сами по себе не закрывают WYSIWYG/preview/autosave acceptance. Новый интерфейс, личные виды и защита незавершённых форм пока не реализованы этим документом.

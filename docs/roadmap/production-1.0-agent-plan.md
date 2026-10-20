@@ -127,6 +127,8 @@ C. Отдельный full-featured модуль визуальных форм �
 
 Зависимости: G0.
 
+Уточнение очереди от 2026-10-20 по замечанию владельца: перед расширением списков и числа модулей реализовать #156 (глобальная/контекстная навигация), затем #158 (действия длинных форм). [ADR навигации](../architecture/admin-ux-navigation.md) и [HostCMS UX parity](hostcms-ux-parity.md) фиксируют source baseline, реальные пробелы и проверяемые сценарии. #157 добавляет личные закладки/сохранённые виды отдельными owner PR, #159 — IS selected-ID операции после #127. #124–#128 и #110 сохраняются; G0 не переоткрывается, фазы G2–G10 и технические ограничения не отменяются. Документация плана не означает готовый новый UI.
+
 - Структура: drag/reorder c keyboard fallback, понятные типы страниц, видимые site + URL, breadcrumbs, масса действий без случайного пересечения сайтов; root и изменение URL безопасны.
 - Общий интерфейс списков: search, filters, columns, sorting, pagination, batch select of explicit IDs, bulk publish/move/archive, сохранение фильтра после редактирования.
 - Documents: preview draft без публикации, version diff/restore, schedule, optimistic concurrency conflict, editor guard unsaved changes, автосохранение черновика с контролем ревизии.
