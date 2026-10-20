@@ -21,3 +21,13 @@
 .is-browser__footer .admin-pagination{margin:0}
 @media(max-width:900px){.is-browser__head{display:none}.is-browser__row{grid-template-columns:1fr auto}.is-browser__row>:nth-child(2),.is-browser__row code{grid-column:1/-1}.is-browser__row>:nth-child(3){grid-column:1}}
 @media(max-width:560px){.is-browser__row{gap:8px;padding:13px}.is-browser__name{grid-column:1/-1}.is-breadcrumbs{font-size:12px}}
+
+/* Counters retain their labels when the desktop column header is hidden. */
+.infosystem-row__metric-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media(max-width:1050px){
+    .infosystem-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 16px}
+    .infosystem-row>div:first-child,.infosystem-row>code,.infosystem-row>.admin-button{grid-column:1/-1;min-width:0;overflow-wrap:anywhere}
+    .infosystem-row>.admin-button{justify-self:start}
+    .infosystem-row__metric{display:grid;gap:3px;min-width:0}
+    .infosystem-row__metric-label{position:static;width:auto;height:auto;margin:0;overflow:visible;clip-path:none;white-space:normal;color:var(--uv-muted);font-size:11px}
+}

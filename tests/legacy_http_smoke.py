@@ -82,3 +82,6 @@ def handoff_fixture_query(sql):
         '--batch', '--skip-column-names', 'cms_legacy_http', '-e', sql], env=env, text=True).strip()
 
 verify_page_editor_handoff(request, handoff_fixture_query)
+
+from infosystem_list_http import verify_infosystem_lists
+verify_infosystem_lists(request)

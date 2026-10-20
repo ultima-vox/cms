@@ -6,6 +6,7 @@ use Core\Site\SiteContext;
 use Core\View\AdminPhpRenderer;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
+require_once dirname(__DIR__) . '/modules/infosystem/autoload.php';
 
 $rootPath = dirname(__DIR__);
 $coreTemplate = $rootPath . '/templates/admin/infosystems/index.php';
@@ -51,10 +52,13 @@ $renderer->addGlobal('admin_shell', new class ($site) {
 $html = $renderer->render('admin/infosystems/index.php', [
     'deleted' => false,
     'infosystems' => [],
+    'folder_browser' => ['path' => '/admin/infosystems', 'scope' => 'infosystems', 'selected' => null, 'all' => false, 'current' => null, 'ancestors' => [], 'children' => []],
+    'list_query' => \UltimaVox\Modules\Infosystem\Admin\InfosystemListQuery::fromQuery([], null, false),
+    'listing' => ['total' => 0, 'page' => 1, 'pages' => 1, 'per_page' => 25],
 ]);
 
 if (!str_contains($html, 'Инфосистемы — Ultima Vox CMS')
-    || !str_contains($html, 'Инфосистем пока нет')
+    || !str_contains($html, 'Ничего не найдено')
     || !str_contains($html, 'Поиск и команды')) {
     throw new RuntimeException('Module-owned infosystem template did not render through the shared admin shell.');
 }

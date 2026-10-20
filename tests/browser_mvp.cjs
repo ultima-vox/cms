@@ -103,6 +103,25 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         }));
         assert.equal(await page.locator('tbody tr').count(), 1);
         await documentRoundTrip(width);
+        await page.goto(base + '/admin/infosystems?folder=all');
+        await page.getByLabel('Название или код').fill('Browser catalog');
+        await page.getByLabel('Активность', {exact: true}).selectOption('inactive');
+        await page.getByLabel('Сортировка', {exact: true}).selectOption('code');
+        await Promise.all([page.waitForURL(url => url.searchParams.get('q') === 'Browser catalog'), page.getByRole('button', {name: 'Применить', exact: true}).click()]);
+        assert.equal(await page.locator('.infosystem-row').count(), 25);
+        const metrics = page.locator('.infosystem-row').first().locator('.infosystem-row__metric');
+        assert.deepEqual(await metrics.locator('.infosystem-row__metric-label').allTextContents(), ['Группы', 'Элементы', 'Узлы']);
+        if (width <= 1050) {
+            const boxes = await metrics.evaluateAll(nodes => nodes.map(node => ({top: node.getBoundingClientRect().top, labelWidth: node.firstElementChild.getBoundingClientRect().width})));
+            assert(boxes.every(box => box.labelWidth > 20 && Math.abs(box.top - boxes[0].top) < 1), 'Mobile counters must have readable labels in one row');
+        }
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Infosystem list overflow at ${width}px`);
+        await page.screenshot({path: `/tmp/cms-layout-infosystems-${width}.png`, fullPage: true});
+        await Promise.all([page.waitForURL(url => url.searchParams.get('page') === '2'), page.getByRole('link', {name: 'Далее', exact: true}).click()]);
+        assert.equal(await page.locator('.infosystem-row').count(), 1);
+        assert.equal(await page.getByLabel('Активность', {exact: true}).inputValue(), 'inactive');
+        assert.equal(await page.getByLabel('Название или код').inputValue(), 'Browser catalog');
+        assert.equal(new URL(page.url()).searchParams.get('folder'), 'all');
         const failed = [];
         page.on('response', response => { if (response.status() >= 400) failed.push(response.url()); });
         await page.goto(base + '/mechaniki');

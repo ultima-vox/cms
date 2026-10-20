@@ -342,3 +342,9 @@ from page_editor_handoff_http import verify_page_editor_handoff
 handoff = verify_page_editor_handoff(lambda path, data=None, expected=200: request(client, path, data, expected=expected), query)
 with open("/tmp/cms-page-editor-browser.json", "w") as handle:
     json.dump(handoff, handle)
+
+# Disposable fixtures for the bounded Infosystem list browser journey.
+query("INSERT INTO infosystems(site_id,code,name,field_schema,is_active) SELECT 1, 'browser-list-' || n, 'Browser catalog ' || n, '[]'::jsonb, FALSE FROM generate_series(1,26) n")
+
+from infosystem_list_http import verify_infosystem_lists
+verify_infosystem_lists(lambda path, data=None, expected=200: request(client, path, data, expected=expected))
