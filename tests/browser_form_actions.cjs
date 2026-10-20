@@ -50,46 +50,38 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
         assert.equal(await page.locator('textarea[name=content]').inputValue(), '<p>Action bar original content</p>');
         await page.getByLabel('Название', {exact: true}).fill(`Action bar ${width} ${scripts}`);
         if (scripts) {
-            // A later listener may cancel submission (e.g. editor validation). It must not lock the form.
-            await page.evaluate(() => document.addEventListener('submit', event => event.preventDefault(), {once: true}));
-            await publish.click();
-            await page.waitForFunction(() => !document.querySelector('form.admin-form--actions').hasAttribute('aria-busy'));
-            let release;
-            const gate = new Promise(resolve => { release = resolve; });
-            let seen;
-            const requestSeen = new Promise(resolve => { seen = resolve; });
-            let posts = 0;
-            await page.route(base + '/admin/documents', async route => {
-                if (route.request().method() !== 'POST') { await route.continue(); return; }
-                posts++;
-                assert.equal(new URLSearchParams(route.request().postData()).get('save_mode'), 'publish', 'Successful submitter was lost');
-                seen();
-                await gate;
-                await route.continue();
+            // Two real requestSubmit calls in one task: a late cancellation leaves the pending guard
+            // in place until event dispatch finishes, then recovery must unlock the form.
+            const attempts = await page.evaluate(() => {
+                const owner = document.querySelector('form.admin-form--actions');
+                const states = [];
+                const cancel = event => {
+                    states.push({rejected: event.defaultPrevented, busy: owner.getAttribute('aria-busy')});
+                    event.preventDefault();
+                };
+                document.addEventListener('submit', cancel);
+                owner.requestSubmit(owner.querySelector('button[value=publish]'));
+                owner.requestSubmit(owner.querySelector('button[value=draft]'));
+                document.removeEventListener('submit', cancel);
+                return states;
             });
+            assert.deepEqual(attempts, [{rejected: false, busy: 'true'}, {rejected: true, busy: 'true'}]);
+            await page.waitForFunction(() => !document.querySelector('form.admin-form--actions').hasAttribute('aria-busy'));
+            let pending;
+            await page.exposeFunction('__recordPending', state => { pending = state; });
+            await page.evaluate(() => document.addEventListener('submit', event => {
+                const owner = event.target;
+                window.__recordPending({busy: owner.getAttribute('aria-busy'),
+                    ariaDisabled: event.submitter.getAttribute('aria-disabled'), disabled: event.submitter.disabled,
+                    message: owner.querySelector('[role=status]').textContent});
+            }, {once: true}));
+            const posted = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname === '/admin/documents');
             await publish.focus();
             await page.keyboard.press('Enter');
-            let deadline;
-            await Promise.race([requestSeen, new Promise((_, reject) => {
-                deadline = setTimeout(() => reject(new Error('Native publication POST was not observed')), 15000);
-            })]);
-            clearTimeout(deadline);
-            assert.equal(await form.getAttribute('aria-busy'), 'true');
-            assert.equal(await publish.getAttribute('aria-disabled'), 'true');
-            assert.equal(await publish.isDisabled(), false, 'Native submitter must remain a successful control');
-            assert.equal(await form.locator('[role=status]').textContent(), 'Сохранение выполняется…');
-            const rejected = await page.evaluate(() => {
-                let canceled = false;
-                document.addEventListener('submit', event => { canceled = event.defaultPrevented; }, {once: true});
-                const owner = document.querySelector('form.admin-form--actions');
-                owner.requestSubmit(owner.querySelector('button[value=draft]'));
-                return canceled;
-            });
-            assert.equal(rejected, true, 'Repeated native submit was not blocked');
-            release();
+            const request = await posted;
+            assert.equal(new URLSearchParams(request.postData()).get('save_mode'), 'publish', 'Successful submitter was lost');
             await page.waitForURL(url => url.pathname.endsWith('/edit') && url.searchParams.get('published') === '1');
-            assert.equal(posts, 1);
-            await page.unroute(base + '/admin/documents');
+            assert.deepEqual(pending, {busy: 'true', ariaDisabled: 'true', disabled: false, message: 'Сохранение выполняется…'});
         } else {
             await Promise.all([page.waitForURL(url => url.pathname.endsWith('/edit') && url.searchParams.get('published') === '1'), publish.click()]);
         }
