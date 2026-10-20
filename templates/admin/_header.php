@@ -6,7 +6,6 @@ use Core\View\AdminShellContext;
 
 /** @var AdminShellContext $admin_shell */
 $shellUser = $admin_shell->user();
-$shellNavigation = $admin_shell->navigation();
 $shellSections = $admin_shell->navigationSections();
 $shellSite = $admin_shell->site();
 $shellSites = $admin_shell->sites();
@@ -83,33 +82,31 @@ $initials = $displayName !== '' ? mb_strtoupper(mb_substr($displayName, 0, 2)) :
                 </form>
             </div>
         </header>
-    <details class="admin-sections" data-admin-disclosure open>
-        <summary>Разделы · <?= text($shellSection['label'] ?? 'Обзор') ?></summary>
-        <nav aria-label="Основная навигация">
-            <ul class="admin-sections__list">
-                <li><a href="/admin"<?= $shellActive === 'dashboard' ? ' aria-current="page"' : '' ?>>Обзор</a></li>
-                <?php foreach ($shellSections as $section): ?>
-                    <li><a href="<?= text($section['items'][0]->path) ?>"<?= $shellSection !== null && $shellSection['code'] === $section['code'] ? ' aria-current="true"' : '' ?>><?= text($section['label']) ?></a></li>
-                <?php endforeach; ?>
-            </ul>
-        </nav>
-    </details>
     <aside class="admin-shell__sidebar">
-        <details class="admin-local" data-admin-disclosure open>
-            <summary>Меню · <?= text($shellSection['label'] ?? 'Обзор') ?></summary>
-            <p class="admin-local__title"><?= text($shellSection['label'] ?? 'Обзор') ?></p>
-            <nav class="admin-nav" aria-label="Меню раздела">
+        <details class="admin-navigation" data-admin-disclosure open>
+            <summary>Навигация · <?= text($shellSection['label'] ?? 'Обзор') ?></summary>
+            <nav class="admin-nav" aria-label="Основная навигация">
                 <ul>
-                <?php if ($shellSection === null): ?>
-                    <li><a class="admin-nav__item" href="/admin"<?= $shellActive === 'dashboard' ? ' aria-current="page"' : '' ?>>Обзор</a></li>
-                <?php else: ?>
-                    <?php foreach ($shellSection['items'] as $item): ?>
-                        <li><a class="admin-nav__item<?= $shellActive === $item->code ? ' admin-nav__item--active' : '' ?>" href="<?= text($item->path) ?>"<?= $shellActive === $item->code ? ' aria-current="page"' : '' ?>>
-                            <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-<?= text($item->icon) ?>"></use></svg>
-                            <span class="admin-nav__label"><?= text($item->label) ?></span>
-                        </a></li>
+                    <li><a class="admin-nav__item" href="/admin"<?= $shellActive === 'dashboard' ? ' aria-current="page"' : '' ?>>
+                        <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-home"></use></svg>
+                        <span>Обзор</span>
+                    </a></li>
+                    <?php foreach ($shellSections as $section): ?>
+                        <?php $sectionActive = $shellSection !== null && $shellSection['code'] === $section['code']; ?>
+                        <li>
+                            <details class="admin-nav__section<?= $sectionActive ? ' admin-nav__section--active' : '' ?>" name="admin-sections" data-admin-section="<?= text($section['code']) ?>"<?= $sectionActive ? ' open' : '' ?>>
+                                <summary><?= text($section['label']) ?></summary>
+                                <ul class="admin-nav__children">
+                                    <?php foreach ($section['items'] as $item): ?>
+                                        <li><a class="admin-nav__item" href="<?= text($item->path) ?>"<?= $shellActive === $item->code ? ' aria-current="page"' : '' ?>>
+                                            <svg class="admin-icon" aria-hidden="true"><use href="/assets/admin-icons.svg#icon-<?= text($item->icon) ?>"></use></svg>
+                                            <span class="admin-nav__label"><?= text($item->label) ?></span>
+                                        </a></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </details>
+                        </li>
                     <?php endforeach; ?>
-                <?php endif; ?>
                 </ul>
             </nav>
         </details>

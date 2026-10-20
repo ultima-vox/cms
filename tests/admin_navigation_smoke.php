@@ -84,16 +84,20 @@ try {
     ));
     $renderer = new \Core\View\AdminPhpRenderer(dirname(__DIR__));
     $renderer->addGlobal('admin_shell', $shell);
-    foreach (['documents' => 'Контент', 'old-extension' => 'Сервисы', 'dashboard' => 'Обзор'] as $active => $label) {
+    foreach (['documents' => ['Документы', 'content'], 'old-extension' => ['Legacy extension', 'services'], 'dashboard' => ['Обзор', null]] as $active => [$label, $sectionCode]) {
         $html = $renderer->render('admin/_header.php', ['admin_active' => $active]);
         $dom = new DOMDocument();
         @$dom->loadHTML('<?xml encoding="UTF-8">' . $html);
         $xpath = new DOMXPath($dom);
         $primary = '//nav[@aria-label="Основная навигация"]';
-        $local = '//nav[@aria-label="Меню раздела"]';
+        $groups = $primary . '//details[@data-admin-section]';
         $assert($xpath->query($primary . '//a')->length === 3, 'Forbidden/empty primary section rendered');
-        $assert($xpath->query($local . '//a')->length === 1, 'Local navigation contains other sections');
-        $assert($xpath->evaluate('string(' . $primary . '//a[@aria-current])') === $label, 'Direct route lost active section');
+        $assert($xpath->query($groups)->length === 2, 'Forbidden/empty group rendered');
+        $assert($xpath->query($groups . '[@open]')->length === ($sectionCode === null ? 0 : 1), 'Active route did not open exactly its group');
+        if ($sectionCode !== null) {
+            $assert($xpath->query($groups . '[@data-admin-section="' . $sectionCode . '"][@open]')->length === 1, 'Wrong group expanded');
+        }
+        $assert(trim($xpath->evaluate('string(' . $primary . '//a[@aria-current])')) === $label, 'Direct route lost active section');
         $assert(!str_contains($html, 'Navigation forbidden site'), 'Forbidden site name leaked into shell');
         foreach (['/admin/modules', '/admin/updates', '/admin/layouts', '/admin/infosystems'] as $forbidden) {
             $assert(!str_contains($html, 'href="' . $forbidden . '"'), 'Forbidden owner rendered');
