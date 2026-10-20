@@ -132,14 +132,15 @@ assert document_id.isdigit(), 'Provisioned document absent'
 path = f'/admin/documents/{document_id}'
 body, _ = request(client, path + '/edit')
 csrf = token(body)
-request(client, path, {'_csrf': csrf, 'name': 'MVP page', 'content': '<p>Published MVP content</p>', 'save_mode': 'publish'}, expected=302)
+revision = lambda: re.search(r'name="expected_revision" value="([^"]+)"', request(client, path + '/edit')[0]).group(1)
+request(client, path, {'expected_revision': revision(), '_csrf': csrf, 'name': 'MVP page', 'content': '<p>Published MVP content</p>', 'save_mode': 'publish'}, expected=302)
 body, _ = request(public, '/poc')
 assert 'Published MVP content' in body
 request(client, path, {'_csrf': 'invalid', 'name': 'MVP page', 'content': '<p>Must not publish</p>', 'save_mode': 'publish'}, expected=419)
-request(client, path, {'_csrf': csrf, 'name': 'MVP page', 'content': '<p>Draft MVP content</p>', 'save_mode': 'draft'}, expected=302)
+request(client, path, {'expected_revision': revision(), '_csrf': csrf, 'name': 'MVP page', 'content': '<p>Draft MVP content</p>', 'save_mode': 'draft'}, expected=302)
 body, _ = request(public, '/poc')
 assert 'Published MVP content' in body and 'Draft MVP content' not in body
-request(client, path, {'_csrf': csrf, 'name': 'MVP page', 'content': '<p>Updated MVP content</p>', 'save_mode': 'publish'}, expected=302)
+request(client, path, {'expected_revision': revision(), '_csrf': csrf, 'name': 'MVP page', 'content': '<p>Updated MVP content</p>', 'save_mode': 'publish'}, expected=302)
 body, _ = request(public, '/poc')
 assert 'Updated MVP content' in body and 'Published MVP content' not in body
 print('MVP HTTP OK: install -> login -> create page -> publish -> anonymous read -> draft -> republish')
@@ -168,7 +169,7 @@ for name in ('site.css', 'site.js', 'logo.svg', 'OFL.txt'):
 contact_node = query("SELECT id FROM nodes WHERE site_id = 1 AND path = '/mechaniki/contacts'")
 contact_document = query(f"SELECT id FROM documents WHERE site_id = 1 AND code = 'node-{int(contact_node)}'")
 body, _ = request(client, f'/admin/documents/{contact_document}/edit')
-request(client, f'/admin/documents/{contact_document}', {'_csrf': token(body), 'name': 'Контакты', 'content': '<p>Редактирование пилотного сайта работает.</p>', 'save_mode': 'publish'}, expected=302)
+request(client, f'/admin/documents/{contact_document}', {'expected_revision': re.search(r'name="expected_revision" value="([^"]+)"', body).group(1), '_csrf': token(body), 'name': 'Контакты', 'content': '<p>Редактирование пилотного сайта работает.</p>', 'save_mode': 'publish'}, expected=302)
 body, _ = request(public, '/mechaniki/contacts')
 assert 'Редактирование пилотного сайта работает.' in body
 body, _ = request(public, '/poc')
@@ -243,12 +244,12 @@ assert 'Секрет сайта А' not in body
 body, _ = request(client, f'/admin/documents?folder={child_a}')
 assert 'Секрет сайта А' in body
 # Move a document and a containing folder without changing the document's code.
-request(client, f'/admin/documents/{doc_a}', {'_csrf': token(body), 'name': 'Секрет сайта А', 'content': '<p>Секрет сайта А</p>', 'folder_id': folder_a, 'save_mode': 'publish'}, expected=302)
+request(client, f'/admin/documents/{doc_a}', {'expected_revision': re.search(r'name="expected_revision" value="([^"]+)"', request(client, f'/admin/documents/{doc_a}/edit')[0]).group(1), '_csrf': token(body), 'name': 'Секрет сайта А', 'content': '<p>Секрет сайта А</p>', 'folder_id': folder_a, 'save_mode': 'publish'}, expected=302)
 body, _ = request(client, f'/admin/documents?folder={child_a}')
 assert 'Секрет сайта А' not in body
 body, _ = request(client, f'/admin/documents?folder={folder_a}')
 assert 'Секрет сайта А' in body
-request(client, f'/admin/documents/{doc_a}', {'_csrf': token(body), 'name': 'Секрет сайта А', 'content': '<p>Секрет сайта А</p>', 'folder_id': child_a, 'save_mode': 'publish'}, expected=302)
+request(client, f'/admin/documents/{doc_a}', {'expected_revision': re.search(r'name="expected_revision" value="([^"]+)"', request(client, f'/admin/documents/{doc_a}/edit')[0]).group(1), '_csrf': token(body), 'name': 'Секрет сайта А', 'content': '<p>Секрет сайта А</p>', 'folder_id': child_a, 'save_mode': 'publish'}, expected=302)
 new_parent = folder('documents', 'Другой раздел')
 body, _ = request(client, f'/admin/folders/documents/{child_a}/edit')
 request(client, f'/admin/folders/documents/{child_a}', {'_csrf': token(body), 'name': 'Переименованная папка', 'parent_id': new_parent}, expected=302)
@@ -277,7 +278,7 @@ request(client, f'/admin/folders/documents/{folder_a}/edit', expected=404)
 request(client, f'/admin/documents/{doc_a}/edit', expected=404)
 request(client, f'/admin/infosystems/{is_a}/edit', expected=404)
 request(client, f'/admin/layouts/{layout_a}/edit', expected=404)
-request(client, f'/admin/documents/{doc_a}', {'_csrf': token(body), 'name': 'Intrusion', 'content': 'bad', 'save_mode': 'publish'}, expected=404)
+request(client, f'/admin/documents/{doc_a}', {'expected_revision': '0', '_csrf': token(body), 'name': 'Intrusion', 'content': 'bad', 'save_mode': 'publish'}, expected=404)
 # A stale form from another tab is rejected before it can create in the wrong site.
 request(client, '/admin/documents', {'_csrf': token(body), '_site_id': '1', 'name': 'Wrong site', 'code': 'wrong-site', 'content': '', 'save_mode': 'draft'}, expected=409)
 request(client, '/admin/documents', {'_csrf': token(body), 'name': 'Foreign folder', 'code': 'foreign-folder', 'folder_id': child_a, 'content': '', 'save_mode': 'draft'}, expected=422)
@@ -351,3 +352,6 @@ verify_infosystem_lists(lambda path, data=None, expected=200: request(client, pa
 
 from layout_list_http import verify_layout_lists
 verify_layout_lists(lambda path, data=None, expected=200: request(client, path, data, expected=expected))
+
+from document_revision_http import verify_document_revisions
+verify_document_revisions(lambda path, data=None, expected=200: request(client, path, data, expected=expected), query)

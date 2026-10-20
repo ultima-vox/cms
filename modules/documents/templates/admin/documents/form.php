@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 $adminActive = 'documents';
+$versionStatuses = ['draft' => 'Черновик', 'published' => 'Опубликована', 'archived' => 'Архивная'];
 $documentId = isset($document['id']) && is_numeric($document['id']) ? (int) $document['id'] : null;
 $isCreate = $documentId === null;
 $title = $isCreate ? 'Новый документ' : 'Редактирование документа';
@@ -26,7 +27,7 @@ echo $view->render('admin/_header.php', [
     </header>
 
     <?php if (!empty($error)): ?>
-        <div class="admin-notice admin-notice--error" role="alert"><?= text($error) ?></div>
+        <div class="admin-notice admin-notice--error" role="alert"><?= text($error) ?><?php if ($conflict): ?> <a class="admin-link" href="<?= text($reload_url) ?>" target="_blank" rel="noopener">Открыть актуальную версию</a><?php endif; ?></div>
     <?php endif; ?>
     <?php if (!empty($saved)): ?>
         <div class="admin-notice admin-notice--success">Черновик сохранён новой версией.</div>
@@ -37,6 +38,7 @@ echo $view->render('admin/_header.php', [
 
     <form class="admin-form admin-form--actions" data-submit-pending="Сохранение выполняется…" method="post" action="<?= text($isCreate ? '/admin/documents' : '/admin/documents/' . $documentId) ?>">
         <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
+        <?php if (!$isCreate): ?><input type="hidden" name="expected_revision" value="<?= text(is_scalar($document['expected_revision'] ?? null) ? $document['expected_revision'] : '') ?>"><?php endif; ?>
         <?php foreach ($page_return['parameters'] ?? [] as $key => $value): ?><input type="hidden" name="<?= text($key) ?>" value="<?= text($value) ?>"><?php endforeach; ?>
         <?php if ($return_parameters !== []): ?>
             <input type="hidden" name="_list_site" value="<?= text($return_parameters['_list_site']) ?>">
@@ -73,7 +75,7 @@ echo $view->render('admin/_header.php', [
         <section class="admin-panel">
             <h2 class="admin-panel__title">Содержимое</h2>
             <?php if (!$isCreate && is_array($editable_version ?? null)): ?>
-                <p class="admin-panel__description">Основа редактора: версия v<?= text($editable_version['version'] ?? '') ?>, статус <?= text($editable_version['status'] ?? '') ?>.</p>
+                <p class="admin-panel__description">Последняя версия: v<?= text($editable_version['version'] ?? '') ?> · <?= text($versionStatuses[$editable_version['status'] ?? ''] ?? 'Неизвестный статус') ?>.</p>
             <?php endif; ?>
             <label class="admin-field admin-field--wide">
                 <span class="admin-field__label">HTML</span>
@@ -98,12 +100,13 @@ echo $view->render('admin/_header.php', [
             <?php else: ?>
                 <div class="admin-table-wrap">
                     <table class="admin-table">
-                        <thead><tr><th>Версия</th><th>Статус</th><th>Создана</th><th>Опубликована</th></tr></thead>
+                        <thead><tr><th>Версия</th><th>Статус</th><th>Автор</th><th>Создана</th><th>Опубликована</th></tr></thead>
                         <tbody>
                         <?php foreach ($versions as $version): ?>
                             <tr>
                                 <td>v<?= text($version['version'] ?? '') ?></td>
-                                <td><?= text($version['status'] ?? '') ?></td>
+                                <td><?= text($versionStatuses[$version['status'] ?? ''] ?? 'Неизвестный статус') ?></td>
+                                <td><?= text($version['author_name'] ?? 'Не указан') ?></td>
                                 <td><?= text($version['created_at'] ?? '') ?></td>
                                 <td><?= text($version['published_at'] ?? '—') ?></td>
                             </tr>

@@ -116,10 +116,14 @@ SQL;
 
         $statement = $this->db->prepare(
             <<<'SQL'
-            SELECT id, site_id, folder_id, code, name, is_active, created_at, updated_at
-            FROM documents
-            WHERE id = :id
-              AND site_id = :site_id
+            SELECT d.id, d.site_id, d.folder_id, d.code, d.name, d.is_active, d.created_at, d.updated_at,
+                   COALESCE(v.id, 0) AS expected_revision, COALESCE(v.content, '') AS content
+            FROM documents d
+            LEFT JOIN document_versions v ON v.id = (
+                SELECT id FROM document_versions WHERE document_id = d.id ORDER BY version DESC, id DESC LIMIT 1
+            )
+            WHERE d.id = :id
+              AND d.site_id = :site_id
             LIMIT 1
             SQL
         );
@@ -139,10 +143,11 @@ SQL;
 
         $statement = $this->db->prepare(
             <<<'SQL'
-            SELECT id, document_id, version, content, status, created_at, published_at
-            FROM document_versions
-            WHERE document_id = :document_id
-            ORDER BY version DESC, id DESC
+            SELECT v.id, v.document_id, v.version, v.content, v.status, v.created_at, v.published_at,
+                   v.author_user_id, u.display_name AS author_name
+            FROM document_versions v LEFT JOIN users u ON u.id = v.author_user_id
+            WHERE v.document_id = :document_id
+            ORDER BY v.version DESC, v.id DESC
             SQL
         );
         $statement->execute(['document_id' => $documentId]);

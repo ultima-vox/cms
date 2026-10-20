@@ -29,11 +29,12 @@ final readonly class DocumentAdminService
         string $content,
         bool $publish,
         ?int $folderId = null,
+        ?int $authorUserId = null,
     ): int {
-        return $this->transaction(function () use ($code, $name, $content, $publish, $folderId): int {
+        return $this->transaction(function () use ($code, $name, $content, $publish, $folderId, $authorUserId): int {
             $documentId = $this->documents->create($this->siteId, $code, $name);
             $this->management->move($documentId, $folderId);
-            $versionId = $this->documents->createDraftVersion($documentId, $content);
+            $versionId = $this->documents->createDraftVersion($documentId, $content, $authorUserId);
             if ($publish) {
                 $this->documents->publishVersion($documentId, $versionId);
             }
@@ -48,15 +49,15 @@ final readonly class DocumentAdminService
         string $content,
         bool $publish,
         ?int $folderId = null,
+        ?int $expectedRevision = null,
+        ?int $authorUserId = null,
     ): int {
-        return $this->transaction(function () use ($documentId, $name, $content, $publish, $folderId): int {
-            if ($this->management->find($documentId) === null) {
-                throw new RuntimeException('Document was not found for the current site.');
-            }
+        return $this->transaction(function () use ($documentId, $name, $content, $publish, $folderId, $expectedRevision, $authorUserId): int {
+            $this->documents->assertCurrentRevision($documentId, $this->siteId, $expectedRevision);
 
             $this->management->updateName($documentId, $name);
             $this->management->move($documentId, $folderId);
-            $versionId = $this->documents->createDraftVersion($documentId, $content);
+            $versionId = $this->documents->createDraftVersion($documentId, $content, $authorUserId);
             if ($publish) {
                 $this->documents->publishVersion($documentId, $versionId);
             }

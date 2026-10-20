@@ -88,3 +88,6 @@ verify_infosystem_lists(request)
 
 from layout_list_http import verify_layout_lists
 verify_layout_lists(request)
+
+from document_revision_http import verify_document_revisions
+verify_document_revisions(request, handoff_fixture_query)

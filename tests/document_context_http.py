@@ -23,7 +23,7 @@ class DocumentPage(HTMLParser):
             self.anchor = [attrs.get('href', ''), '']
         if tag == 'input' and attrs.get('type') == 'hidden':
             name = attrs.get('name', '')
-            if name in ('_csrf', '_site_id', '_list_site', '_page', '_page_site') or name.startswith('_list['):
+            if name in ('_csrf', '_site_id', '_list_site', '_page', '_page_site', 'expected_revision') or name.startswith('_list['):
                 self.hidden[name] = attrs.get('value', '')
 
     def handle_data(self, value):
@@ -123,7 +123,8 @@ def verify_document_return_context(request, site_id, folder, foreign_folder=None
         assert '_list_site' not in page.hidden
     for fields in ({'_list_site': str(foreign_site or site_id + 1)},
                    {'_list[folder]': str(foreign_folder or 999999999999999999)}):
-        _, headers = request(path.removesuffix('/edit'), dict(post, **fields), expected=302)
+        current, _ = request(path)
+        _, headers = request(path.removesuffix('/edit'), dict(post, **(DocumentPage(current).hidden | fields)), expected=302)
         assert parse_qs(urlsplit(headers['Location']).query) == {'saved': ['1']}
         body, _ = request(headers['Location'])
         assert DocumentPage(body).link('К документам') == '/admin/documents'
