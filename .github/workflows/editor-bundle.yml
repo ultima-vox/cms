@@ -1,0 +1,38 @@
+name: Editor bundle
+on:
+  push:
+    branches:
+      - feature/editor-tiptap-codemirror
+  pull_request:
+    paths:
+      - 'frontend/editors/**'
+      - 'scripts/build-editors.mjs'
+      - 'package.json'
+      - 'tests/editor_integration_smoke.cjs'
+      - '.github/workflows/editor-bundle.yml'
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install editor dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify editor source and integration
+        run: |
+          npm run check:editors
+          node tests/editor_integration_smoke.cjs
+          node tests/code_formatter_smoke.cjs
+      - name: Build locally hosted editor bundle
+        run: npm run build:editors
+      - name: Verify distribution output
+        run: test -s public/assets/cms-editors.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cms-editors-browser-bundle
+          path: public/assets/cms-editors.js
+          retention-days: 7
