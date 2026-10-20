@@ -113,7 +113,11 @@ final class InfosystemItemListController
         }
 
         $schema = is_array($system['field_schema'] ?? null) ? $system['field_schema'] : [];
-        $propertyFilters = $this->propertyFilters($schema, $request->query['properties'] ?? null);
+        try {
+            $propertyFilters = $this->propertyFilters($schema, $request->query['properties'] ?? null);
+        } catch (\InvalidArgumentException $exception) {
+            return Response::html('<h1>' . htmlspecialchars($exception->getMessage(), ENT_QUOTES, 'UTF-8') . '</h1>', 422);
+        }
 
         $result = $this->search->search(
             $infosystemId,
@@ -130,7 +134,7 @@ final class InfosystemItemListController
             'group_id' => $groupId,
             'status' => $status,
             'per_page' => $result['per_page'],
-            'properties' => $propertyFilters,
+            'properties' => $this->editorFilters($schema, $propertyFilters),
         ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []));
 
         return Response::html($this->view->render('admin/infosystems/items.php', [
@@ -148,7 +152,7 @@ final class InfosystemItemListController
                 'q' => $query ?? '',
                 'group_id' => $groupId,
                 'status' => $status ?? '',
-                'properties' => $propertyFilters,
+                'properties' => $this->editorFilters($schema, $propertyFilters),
             ],
             'filterable_fields' => array_values(array_filter(
                 $schema,
@@ -201,6 +205,7 @@ final class InfosystemItemListController
 
             $type = (string) ($allowed[$code]['type'] ?? 'text');
             $filters[$code] = match ($type) {
+                'money' => \UltimaVox\Modules\Infosystem\MoneyValue::parse($string),
                 'number' => is_numeric($string)
                     ? (float) $string
                     : throw new RuntimeException(sprintf('Фильтр «%s» должен быть числом.', $allowed[$code]['name'] ?? $code)),
@@ -209,6 +214,20 @@ final class InfosystemItemListController
             };
         }
 
+        return $filters;
+    }
+
+    /** @param list<array<string, mixed>> $schema @param array<string, scalar> $filters
+     * @return array<string, scalar>
+     */
+    private function editorFilters(array $schema, array $filters): array
+    {
+        foreach ($schema as $field) {
+            $code = (string) ($field['code'] ?? '');
+            if (($field['type'] ?? '') === 'money' && isset($filters[$code])) {
+                $filters[$code] = \UltimaVox\Modules\Infosystem\MoneyValue::format($filters[$code]);
+            }
+        }
         return $filters;
     }
 
