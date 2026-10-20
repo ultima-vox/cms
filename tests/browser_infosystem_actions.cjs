@@ -54,6 +54,14 @@ const base = process.env.MVP_URL || 'http://127.0.0.1:8086';
             const box = await bar.boundingBox();
             assert(box.y >= -1 && box.y + box.height <= height + 1, `Infosystem actions outside viewport at ${width}/${height}`);
         }
+        await page.evaluate(() => window.scrollTo(0, 0));
+        const headerFocus = await page.evaluate(() => {
+            const skip = document.querySelector('.admin-skip');
+            return {focused: skip.matches(':focus'), bottom: skip.getBoundingClientRect().bottom,
+                transform: getComputedStyle(skip).transform, active: document.activeElement.tagName};
+        });
+        assert(headerFocus.focused || headerFocus.bottom <= 0, `Inactive skip link covers the header: ${JSON.stringify(headerFocus)}`);
+        await page.screenshot({path: `/tmp/cms-layout-infosystem-actions-viewport-${width}-${scripts ? 'js' : 'native'}.png`});
         await page.screenshot({path: `/tmp/cms-layout-infosystem-actions-${width}-${scripts ? 'js' : 'native'}.png`, fullPage: true});
         await Promise.all([page.waitForResponse(r => r.request().method() === 'POST' && r.status() === 422), save.click()]);
         assert.equal(await price.getAttribute('aria-invalid'), 'true');

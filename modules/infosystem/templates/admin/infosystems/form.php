@@ -50,7 +50,7 @@ echo $view->render('admin/_header.php', [
             <p class="admin-field__hint">Для типа <code>select</code> укажите опции через запятую. Флаг «фильтр» документирует поля, предназначенные для публичной фильтрации через GIN.</p>
         </section>
 
-        <div class="admin-actions admin-actions--sticky" role="group" aria-label="Действия инфосистемы"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="<?= text($infosystemId ? '/admin/infosystems/' . $infosystemId : '/admin/infosystems') ?>">Отмена</a><span role="status" aria-live="polite"></span></div>
+        <div class="admin-actions admin-actions--sticky" role="group" aria-label="Действия инфосистемы"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button admin-button--secondary" href="<?= text($infosystemId ? '/admin/infosystems/' . $infosystemId : '/admin/infosystems') ?>">Отмена</a><span role="status" aria-live="polite"></span></div>
     </form>
 
     <?php if ($infosystemId): ?>

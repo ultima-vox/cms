@@ -24,7 +24,7 @@ echo $view->render('admin/_header.php', [
             <label class="admin-field admin-field--wide"><span class="admin-field__label">Описание</span><textarea class="admin-textarea admin-textarea--small" name="description"><?= text($group['description'] ?? '') ?></textarea></label>
             <label class="admin-check admin-field--wide"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1"<?= !empty($group['is_active']) ? ' checked' : '' ?>><span>Группа активна</span></label>
         </div></section>
-        <div class="admin-actions admin-actions--sticky" role="group" aria-label="Действия группы"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?>">Отмена</a><span role="status" aria-live="polite"></span></div>
+        <div class="admin-actions admin-actions--sticky" role="group" aria-label="Действия группы"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button admin-button--secondary" href="/admin/infosystems/<?= text($infosystemId) ?>">Отмена</a><span role="status" aria-live="polite"></span></div>
     </form>
     <?php if ($groupId): ?>
         <?php $blocked = (int) ($group['child_count'] ?? 0) > 0 || (int) ($group['item_count'] ?? 0) > 0; ?>

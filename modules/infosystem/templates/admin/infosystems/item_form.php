@@ -96,7 +96,7 @@ echo $view->render('admin/_header.php', [
         </div></section>
 
         </div>
-        <div class="admin-actions admin-actions--sticky" role="group" aria-label="Действия элемента"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="<?= text($page_return['url'] ?? ('/admin/infosystems/' . $infosystemId)) ?>">Отмена</a><span class="admin-field__hint">Сохраняет выбранные статус и дату публикации.</span><span role="status" aria-live="polite"></span></div>
+        <div class="admin-actions admin-actions--sticky" role="group" aria-label="Действия элемента"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button admin-button--secondary" href="<?= text($page_return['url'] ?? ('/admin/infosystems/' . $infosystemId)) ?>">Отмена</a><span class="admin-field__hint">Сохраняет выбранные статус и дату публикации.</span><span role="status" aria-live="polite"></span></div>
     </form>
 
     <?php if ($itemId): ?><section class="admin-danger-zone"><div><strong>Удаление элемента</strong><p>Действие необратимо.</p></div><form method="post" action="/admin/infosystems/<?= text($infosystemId) ?>/items/<?= text($itemId) ?>/delete" data-confirm="Удалить элемент?"><input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>"><button class="admin-button admin-button--danger" type="submit">Удалить</button></form></section><?php endif; ?>
