@@ -15,7 +15,7 @@ for (const filename of [
 ]) {
     const form = fs.readFileSync(filename, 'utf8');
     assert.match(form, /data-cms-editor="code"/, filename);
-    assert.match(form, /is_file\(dirname\(__DIR__, [25]\) \. '\/public\/assets\/cms-editors\.js'\)/, filename);
+    assert.match(form, /is_file\(dirname\(__DIR__, [35]\) \. '\/public\/assets\/cms-editors\.js'\)/, filename);
     assert.match(form, /\/assets\/code-formatter\.js/, filename);
 }
 console.log('Editor progressive integration static checks passed');
