@@ -1,7 +1,6 @@
 {
   "name": "ultima-vox-cms-admin-editors",
   "private": true,
-  "type": "module",
   "scripts": {
     "build:editors": "node scripts/build-editors.mjs",
     "check:editors": "node --check frontend/editors/index.js && node --check scripts/build-editors.mjs"
