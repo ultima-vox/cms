@@ -39,11 +39,13 @@ def verify_infosystem_properties(request):
     request('/admin/sites/select', {'_csrf': DocumentPage(body).hidden['_csrf'], 'site_id': '1'}, expected=302)
     create = f'/admin/infosystems/{system}/items'
     body, _ = request(create + '/create')
+    assert DocumentPage(body).action_bars == 1
     valid = dict(DocumentPage(body).hidden, name='Validated item', slug='validated-item',
                  content='<p>Must survive rejected update</p>', status='draft', is_active='1',
                  **{'properties[event_date]': '2000-02-29', 'properties[amount]': '12.5', 'properties[price]': '100,05'})
 
     def assert_error(body, field, raw):
+        assert DocumentPage(body).action_bars == 1
         attrs = PropertyPage(body).inputs[f'properties[{field}]']
         assert attrs['aria-invalid'] == 'true'
         assert attrs['aria-describedby'] == 'property-error-' + field

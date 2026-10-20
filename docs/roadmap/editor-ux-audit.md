@@ -102,3 +102,7 @@ Baseline main e0476aff / dev v0.1.169. Исторические G0 наблюд�
 ### Documents actions: #158 first owner
 
 Shared `admin-actions--sticky` presentation keeps one native action set inside Documents1.5.1's form. Core0.6.1 pending handling preserves named submitters and clears canceled/pageshow state. Short viewport falls back to normal flow; focus uses measured action-height scroll margin. Native submission without JS, draft/publication redirects, 422 correction, existing list/page return contracts and three-width/zoom geometry are tested separately from editor integration PR154. This does not implement autosave, revision conflicts, dirty guard or server idempotency. Infosystem is the second owner PR.
+
+### Infosystem actions: #158 second owner
+
+Infosystem1.6.1 schema, group and item forms reuse the same single `admin-actions--sticky` group and Core0.6.1 pending mechanism. Publication still follows selected owner status/date fields; no new publication command is introduced. Independent delete forms and rich editor PR154 remain separate. A real 33-property test fixture exercises geometry, 422 focus/correction, native saves, no-JS and three widths/effective reflow. OS keyboards require separate device testing; these checks do not certify accessibility or server idempotency.

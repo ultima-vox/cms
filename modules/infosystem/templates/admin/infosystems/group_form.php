@@ -13,8 +13,8 @@ echo $view->render('admin/_header.php', [
 ?>
 <div class="admin-dashboard">
     <header class="admin-page-header"><div><p class="admin-eyebrow"><?= text($infosystem['code'] ?? '') ?></p><h1 class="admin-header__title"><?= text($groupId ? ($group['name'] ?? '') : 'Новая группа') ?></h1><?php if (!empty($group['path'])): ?><p class="admin-page-header__description"><code><?= text($group['path']) ?></code></p><?php endif; ?></div><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?>">К инфосистеме</a></header>
-    <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error"><?= text($error) ?></div><?php endif; ?>
-    <form class="admin-form" method="post" action="<?= text($groupId ? '/admin/infosystems/' . $infosystemId . '/groups/' . $groupId : '/admin/infosystems/' . $infosystemId . '/groups') ?>">
+    <?php if (!empty($error)): ?><div class="admin-notice admin-notice--error" role="alert"><?= text($error) ?></div><?php endif; ?>
+    <form class="admin-form admin-form--actions" data-submit-pending="Сохранение выполняется…" method="post" action="<?= text($groupId ? '/admin/infosystems/' . $infosystemId . '/groups/' . $groupId : '/admin/infosystems/' . $infosystemId . '/groups') ?>">
         <input type="hidden" name="_csrf" value="<?= text($csrf_token ?? '') ?>"><input type="hidden" name="_site_id" value="<?= text($admin_shell->site()->id) ?>">
         <section class="admin-panel"><h2 class="admin-panel__title">Группа</h2><div class="admin-form__grid">
             <label class="admin-field"><span class="admin-field__label">Название</span><input class="admin-input" name="name" required maxlength="255" value="<?= text($group['name'] ?? '') ?>"></label>
@@ -24,7 +24,7 @@ echo $view->render('admin/_header.php', [
             <label class="admin-field admin-field--wide"><span class="admin-field__label">Описание</span><textarea class="admin-textarea admin-textarea--small" name="description"><?= text($group['description'] ?? '') ?></textarea></label>
             <label class="admin-check admin-field--wide"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1"<?= !empty($group['is_active']) ? ' checked' : '' ?>><span>Группа активна</span></label>
         </div></section>
-        <div class="admin-actions"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?>">Отмена</a></div>
+        <div class="admin-actions admin-actions--sticky" role="group" aria-label="Действия группы"><button class="admin-button admin-button--primary" type="submit">Сохранить</button><a class="admin-button" href="/admin/infosystems/<?= text($infosystemId) ?>">Отмена</a><span role="status" aria-live="polite"></span></div>
     </form>
     <?php if ($groupId): ?>
         <?php $blocked = (int) ($group['child_count'] ?? 0) > 0 || (int) ($group['item_count'] ?? 0) > 0; ?>
